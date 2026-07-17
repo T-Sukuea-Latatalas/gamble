@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Casino Bankroll Tracker</title>
+    <style>
+        /* カラー変数定義（カジノ風ダークテーマ） */
+        :root {
+            --bg-color: #0f1115;
+            --card-bg: #161a22;
+            --border-color: #242b35;
+            --text-color: #ffffff;
+            --text-secondary: #8e9cae;
+            --accent-color: #f1c40f; /* ゴールド */
+            --win-color: #2ecc71; /* エメラルドグリーン */
+            --win-hover: #27ae60;
+            --loss-color: #e74c3c; /* ルビーレッド */
+            --loss-hover: #c0392b;
+            --btn-bg: #222933;
+            --btn-hover: #2d3744;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            padding: 16px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* 共通コンテナ */
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        header h1 {
+            font-size: 1.6rem;
+            color: var(--accent-color);
+            text-shadow: 0 0 10px rgba(241, 196, 15, 0.2);
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        header p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* ダッシュボード（ステータス表示） */
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .card .label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card .value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            word-break: break-all;
+        }
+
+        .card .btn-edit-inline {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: none;
+            border: none;
+            color: var(--accent-color);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+        }
+
+        .card .btn-edit-inline:hover {
+            background: rgba(241, 196, 15, 0.1);
+        }
+
+        /* 統計エリア */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 480px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .stat-box {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px;
+            text-align: center;
+        }
+
+        .stat-box .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .stat-box .stat-val {
+            font-size: 1rem;
+            font-weight: bold;
+            margin-top: 2px;
+        }
+
+        /* 2カラムレイアウト（PC用） */
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ベットパネル */
+        .bet-panel {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--text-color);
+            border-left: 3px solid var(--accent-color);
+            padding-left: 8px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            background-color: #0a0c0f;
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-wrapper input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .input-suffix {
+            position: absolute;
+            right: 12px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            pointer-events: none;
+        }
+
+        /* チップボタン（クイック入力） */
+        .chip-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 6px;
+        }
+
+        .chip-btn {
+            background-color: var(--btn-bg);
+            border: 1px solid var(--border-color);
+            color: #fff;
+            border-radius: 8px;
+            padding: 8px 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .chip-btn:hover {
+            background-color: var(--btn-hover);
+            border-color: var(--accent-color);
+        }
+
+        /* 勝利時設定トグル */
+        .toggle-container {
+            display: flex;
+            background-color: #0a0c0f;
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .toggle-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn.active {
+            background-color: var(--btn-bg);
+            color: var(--accent-color);
+        }
+
+        /* Win/Lossボタン */
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .btn-action {
+            padding: 16px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            color: #fff;
+            transition: transform 0.1s, opacity 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-action:active {
+            transform: scale(0.97);
+        }
+
+        .btn-win {
+            background: linear-gradient(135deg, var(--win-color), var(--win-hover));
+            box-shadow: 0 4px 12px rgba(46, 204, 113, 0.2);
+        }
+
+        .btn-loss {
+            background: linear-gradient(135deg, var(--loss-color), var(--loss-hover));
+            box-shadow: 0 4px 12px rgba(231, 76, 60, 0.2);
+        }
+
+        /* 履歴パネル */
+        .history-panel {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .history-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-secondary-sm {
+            background-color: var(--btn-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .btn-secondary-sm:hover {
+            background-color: var(--btn-hover);
+            color: var(--text-color);
+        }
+
+        /* テーブル設定 */
+        .table-container {
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            max-height: 400px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border-color);
+            white-space: nowrap;
+        }
+
+        th {
+            background-color: #0a0c0f;
+            color: var(--text-secondary);
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        tr:hover {
+            background-color: rgba(255,255,255,0.01);
+        }
+
+        .no-data {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 40px 10px;
+        }
+
+        .btn-delete {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            display: inline-flex;
+            align-items: center;
+            transition: all 0.15s;
+        }
+
+        .btn-delete:hover {
+            background-color: rgba(231, 76, 60, 0.1);
+            color: var(--loss-color);
+        }
+
+        /* 初期セットアップ画面 */
+        .setup-screen {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 400px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+            margin: auto 0;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .setup-screen h2 {
+            color: var(--accent-color);
+            margin-bottom: 8px;
+            font-size: 1.4rem;
+        }
+
+        .setup-screen p {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .btn-primary {
+            background-color: var(--accent-color);
+            color: #0f1115;
+            font-weight: bold;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            width: 100%;
+            margin-top: 12px;
+        }
+
+        .btn-primary:hover {
+            background-color: #f39c12;
+        }
+
+        /* モーダル（初期資金変更） */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            backdrop-filter: blur(4px);
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        .modal {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 360px;
+            width: 90%;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .modal h3 {
+            margin-bottom: 8px;
+            color: var(--accent-color);
+            font-size: 1.1rem;
+        }
+
+        .modal p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .btn-secondary {
+            background-color: var(--btn-bg);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .btn-secondary:hover {
+            background-color: var(--btn-hover);
+        }
+
+        /* ユーティリティ */
+        .hidden {
+            display: none !important;
+        }
+
+        .text-success {
+            color: var(--win-color) !important;
+        }
+
+        .text-danger {
+            color: var(--loss-color) !important;
+        }
+
+        .fw-bold {
+            font-weight: bold;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. 初期設定画面 -->
+    <div id="setup-screen" class="setup-screen hidden">
+        <h2>BANKROLL TRACKER</h2>
+        <p>ゲームを開始する前に、最初のバンクロール（手持ちの初期資金）を設定してください。</p>
+        <div class="form-group">
+            <div class="input-wrapper">
+                <input type="number" id="setup-amount" placeholder="例: 1000" min="1" step="any">
+            </div>
+        </div>
+        <button class="btn-primary" onclick="setupBankroll()">スタート</button>
+    </div>
+
+    <!-- 2. メインアプリ画面 -->
+    <div id="main-screen" class="container hidden">
+        <header>
+            <h1>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                Casino Bankroll Tracker
+            </h1>
+            <p>手軽に資金の増減と勝率を追跡</p>
+        </header>
+
+        <!-- 資金表示ボード -->
+        <div class="dashboard">
+            <div class="card">
+                <div class="label">現在の残高</div>
+                <div id="display-current" class="value">0</div>
+            </div>
+            <div class="card">
+                <div class="label">総収支</div>
+                <div id="display-profit" class="value text-success">+0</div>
+            </div>
+            <div class="card">
+                <div class="label">初期資金</div>
+                <div id="display-initial" class="value">0</div>
+                <button class="btn-edit-inline" onclick="openEditModal()" title="初期資金を変更">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4z"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- 統計エリア -->
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div class="stat-label">総ベット数</div>
+                <div id="stat-total-bets" class="stat-val">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">勝率</div>
+                <div id="stat-win-rate" class="stat-val">0%</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">勝</div>
+                <div id="stat-wins" class="stat-val text-success">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">負</div>
+                <div id="stat-losses" class="stat-val text-danger">0</div>
+            </div>
+        </div>
+
+        <!-- アプリのメイン領域（2カラム） -->
+        <div class="main-content">
+            <!-- 左カラム: ベット情報入力 -->
+            <div class="bet-panel">
+                <div class="panel-title">ベットを記録</div>
+                
+                <!-- ベット額 -->
+                <div class="form-group">
+                    <label for="bet-amount">1回あたりのベット額</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="bet-amount" placeholder="例: 100" min="0" step="any">
+                    </div>
+                    <!-- チップ型ボタン -->
+                    <div class="chip-container">
+                        <button type="button" class="chip-btn" onclick="adjustBet('+10')">+10</button>
+                        <button type="button" class="chip-btn" onclick="adjustBet('+50')">+50</button>
+                        <button type="button" class="chip-btn" onclick="adjustBet('+100')">+100</button>
+                        <button type="button" class="chip-btn" onclick="adjustBet('+500')">+500</button>
+                        <button type="button" class="chip-btn" onclick="adjustBet('half')">1/2</button>
+                        <button type="button" class="chip-btn" onclick="adjustBet('double')">2x</button>
+                        <button type="button" class="chip-btn" onclick="adjustBet('max')">Max</button>
+                        <button type="button" class="chip-btn" onclick="adjustBet('clear')">Clear</button>
+                    </div>
+                </div>
+
+                <!-- 勝利時配当設定 -->
+                <div class="form-group">
+                    <label>勝利時の設定</label>
+                    <div class="toggle-container">
+                        <button type="button" id="toggle-multiplier" class="toggle-btn active" onclick="setProfitMode('multiplier')">配当倍率</button>
+                        <button type="button" id="toggle-profit" class="toggle-btn" onclick="setProfitMode('profit')">純利益額</button>
+                    </div>
+                    
+                    <!-- 倍率指定 -->
+                    <div id="multiplier-input-group" class="input-wrapper">
+                        <input type="number" id="payout-multiplier" value="2.0" step="0.1" min="1.0">
+                        <span class="input-suffix">倍</span>
+                    </div>
+                    
+                    <!-- 純利益指定 -->
+                    <div id="profit-input-group" class="input-wrapper hidden">
+                        <input type="number" id="net-profit" placeholder="未入力時はベット額と同額">
+                    </div>
+                </div>
+
+                <!-- WIN/LOSS ボタン -->
+                <div class="action-buttons">
+                    <button class="btn-action btn-loss" onclick="submitBet(false)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        LOSS
+                    </button>
+                    <button class="btn-action btn-win" onclick="submitBet(true)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+                        WIN
+                    </button>
+                </div>
+            </div>
+
+            <!-- 右カラム: 履歴 -->
+            <div class="history-panel">
+                <div class="history-header">
+                    <div class="panel-title">履歴ログ</div>
+                    <div class="history-actions">
+                        <button class="btn-secondary-sm" onclick="undo()" title="1手戻す">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+                            1手戻す
+                        </button>
+                        <button class="btn-secondary-sm text-danger" onclick="resetAll()" title="リセット">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                            リセット
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>回数</th>
+                                <th>ベット額</th>
+                                <th>勝敗</th>
+                                <th>損益</th>
+                                <th>残高</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="history-tbody">
+                            <!-- JSで挿入 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 初期資金編集用モーダル -->
+    <div id="edit-bankroll-modal" class="modal-overlay hidden">
+        <div class="modal">
+            <h3>初期資金の変更</h3>
+            <p>初期資金を編集すると、過去の履歴を引き継いだまま全体の残高が自動的に再計算されます。</p>
+            <div class="form-group">
+                <div class="input-wrapper">
+                    <input type="number" id="edit-bankroll-amount" min="1" step="any">
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-secondary" onclick="closeModal()">キャンセル</button>
+                <button class="btn-primary" style="margin-top:0;" onclick="updateInitialBankroll()">変更を適用</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 状態管理オブジェクト ---
+        let appState = {
+            initialBankroll: 0,
+            currentBankroll: 0,
+            history: [],
+            profitMode: 'multiplier' // 'multiplier' or 'profit'
+        };
+
+        // --- 初期化処理 ---
+        window.onload = function() {
+            init();
+        };
+
+        function init() {
+            const savedData = localStorage.getItem('casino_bankroll_tracker_data');
+            if (savedData) {
+                try {
+                    appState = JSON.parse(savedData);
+                    // 以前のセッションデータの確認
+                    if (!appState.history) appState.history = [];
+                    if (!appState.profitMode) appState.profitMode = 'multiplier';
+                } catch (e) {
+                    console.error("データの読み込みに失敗しました。リセットします。", e);
+                }
+            }
+
+            if (appState.initialBankroll <= 0) {
+                showSetupScreen();
+            } else {
+                showMainScreen();
+                recalculate();
+            }
+        }
+
+        // --- 画面表示の切り替え ---
+        function showSetupScreen() {
+            document.getElementById('setup-screen').classList.remove('hidden');
+            document.getElementById('main-screen').classList.add('hidden');
+            document.getElementById('setup-amount').focus();
+        }
+
+        function showMainScreen() {
+            document.getElementById('setup-screen').classList.add('hidden');
+            document.getElementById('main-screen').classList.remove('hidden');
+        }
+
+        // --- 初期資金の登録 ---
+        function setupBankroll() {
+            const input = document.getElementById('setup-amount');
+            const amount = parseFloat(input.value);
+            if (isNaN(amount) || amount <= 0) {
+                alert('有効な初期資金を入力してください。');
+                return;
+            }
+            appState.initialBankroll = amount;
+            appState.currentBankroll = amount;
+            appState.history = [];
+            
+            saveAndRender();
+            showMainScreen();
+            document.getElementById('bet-amount').focus();
+        }
+
+        // --- クイックベット額の調整 ---
+        function adjustBet(action) {
+            const betInput = document.getElementById('bet-amount');
+            let currentBet = parseFloat(betInput.value) || 0;
+
+            if (action === 'clear') {
+                currentBet = 0;
+            } else if (action === 'half') {
+                currentBet = Math.round((currentBet / 2) * 100) / 100;
+            } else if (action === 'double') {
+                currentBet = currentBet * 2;
+            } else if (action === 'max') {
+                currentBet = Math.max(0, appState.currentBankroll);
+            } else {
+                const val = parseFloat(action);
+                if (!isNaN(val)) {
+                    currentBet += val;
+                }
+            }
+
+            if (currentBet < 0) currentBet = 0;
+            betInput.value = currentBet;
+        }
+
+        // --- 勝利時の損益設定モード切替 ---
+        function setProfitMode(mode) {
+            appState.profitMode = mode;
+            
+            const multBtn = document.getElementById('toggle-multiplier');
+            const profitBtn = document.getElementById('toggle-profit');
+            const multGroup = document.getElementById('multiplier-input-group');
+            const profitGroup = document.getElementById('profit-input-group');
+            
+            if (mode === 'multiplier') {
+                multBtn.classList.add('active');
+                profitBtn.classList.remove('active');
+                multGroup.classList.remove('hidden');
+                profitGroup.classList.add('hidden');
+            } else {
+                multBtn.classList.remove('active');
+                profitBtn.classList.add('active');
+                multGroup.classList.add('hidden');
+                profitGroup.classList.remove('hidden');
+            }
+            saveAndRender();
+        }
+
+        // --- ベット情報の登録 (Win/Loss) ---
+        function submitBet(isWin) {
+            const betInput = document.getElementById('bet-amount');
+            const betAmount = parseFloat(betInput.value);
+
+            if (isNaN(betAmount) || betAmount <= 0) {
+                alert('有効なベット額を入力してください。');
+                betInput.focus();
+                return;
+            }
+
+            // 資金不足時の警告（確認ダイアログ付き）
+            if (!isWin && betAmount > appState.currentBankroll) {
+                if (!confirm('ベット額が現在の残高を超えています。続行しますか？')) {
+                    return;
+                }
+            }
+
+            let netProfit = 0;
+            let displayMultiplier = 2.0;
+
+            if (isWin) {
+                if (appState.profitMode === 'multiplier') {
+                    const multInput = document.getElementById('payout-multiplier');
+                    const multValue = parseFloat(multInput.value);
+                    if (isNaN(multValue) || multValue < 1) {
+                        alert('有効な配当倍率（1.0以上）を入力してください。');
+                        multInput.focus();
+                        return;
+                    }
+                    displayMultiplier = multValue;
+                    netProfit = betAmount * (displayMultiplier - 1);
+                } else {
+                    const profitInput = document.getElementById('net-profit');
+                    const profitValue = parseFloat(profitInput.value);
+                    if (isNaN(profitValue)) {
+                        // 空欄の場合は、等価配当（倍率2.0と同じ）
+                        netProfit = betAmount;
+                        displayMultiplier = 2.0;
+                    } else if (profitValue < 0) {
+                        alert('純利益には0以上の値を入力してください。');
+                        profitInput.focus();
+                        return;
+                    } else {
+                        netProfit = profitValue;
+                        displayMultiplier = (netProfit / betAmount) + 1;
+                    }
+                }
+            } else {
+                netProfit = -betAmount;
+                displayMultiplier = 0;
+            }
+
+            const betItem = {
+                id: Date.now(),
+                betAmount: betAmount,
+                isWin: isWin,
+                payoutMultiplier: isWin ? displayMultiplier : 0,
+                netProfit: netProfit,
+                balance: 0, // recalculateにて適用
+                timestamp: new Date().toLocaleString()
+            };
+
+            appState.history.push(betItem);
+            recalculate();
+
+            // 入力項目の整理 (利益を毎回クリア、ベット額はそのまま残す)
+            if (appState.profitMode === 'profit') {
+                document.getElementById('net-profit').value = '';
+            }
+            betInput.focus();
+        }
+
+        // --- 全データの再計算 ---
+        function recalculate() {
+            let current = appState.initialBankroll;
+            for (let i = 0; i < appState.history.length; i++) {
+                current += appState.history[i].netProfit;
+                appState.history[i].balance = current;
+            }
+            appState.currentBankroll = current;
+            saveAndRender();
+        }
+
+        // --- ローカルストレージへの書き込みと描画 ---
+        function saveAndRender() {
+            localStorage.setItem('casino_bankroll_tracker_data', JSON.stringify(appState));
+            render();
+        }
+
+        // --- UI表示のアップデート ---
+        function render() {
+            // 基本金額情報
+            document.getElementById('display-current').textContent = formatCurrency(appState.currentBankroll);
+            document.getElementById('display-initial').textContent = formatCurrency(appState.initialBankroll);
+
+            const totalProfit = appState.currentBankroll - appState.initialBankroll;
+            const profitEl = document.getElementById('display-profit');
+            
+            // プラス・マイナスの表記および色付け
+            profitEl.className = 'value';
+            if (totalProfit > 0) {
+                profitEl.textContent = '+' + formatCurrency(totalProfit);
+                profitEl.classList.add('text-success');
+            } else if (totalProfit < 0) {
+                profitEl.textContent = formatCurrency(totalProfit);
+                profitEl.classList.add('text-danger');
+            } else {
+                profitEl.textContent = formatCurrency(totalProfit);
+            }
+
+            // 統計データの算出
+            const totalBets = appState.history.length;
+            const winCount = appState.history.filter(h => h.isWin).length;
+            const winRate = totalBets > 0 ? ((winCount / totalBets) * 100).toFixed(1) : '0.0';
+
+            document.getElementById('stat-total-bets').textContent = totalBets;
+            document.getElementById('stat-win-rate').textContent = winRate + '%';
+            document.getElementById('stat-wins').textContent = winCount;
+            document.getElementById('stat-losses').textContent = totalBets - winCount;
+
+            // 履歴テーブルの描画
+            const tbody = document.getElementById('history-tbody');
+            tbody.innerHTML = '';
+
+            if (appState.history.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="no-data">履歴はありません。ベットを記録してください。</td></tr>`;
+                return;
+            }
+
+            // 降順（最新の履歴が一番上）で表示
+            for (let i = appState.history.length - 1; i >= 0; i--) {
+                const item = appState.history[i];
+                const tr = document.createElement('tr');
+
+                const winLossClass = item.isWin ? 'text-success' : 'text-danger';
+                const winLossText = item.isWin ? 'WIN' : 'LOSS';
+                const multiplierText = item.isWin ? ` <small>(${item.payoutMultiplier.toFixed(1)}x)</small>` : '';
+                
+                const profitText = item.isWin 
+                    ? `+${formatCurrency(item.netProfit)}` 
+                    : `-${formatCurrency(Math.abs(item.netProfit))}`;
+
+                tr.innerHTML = `
+                    <td class="fw-bold">#${i + 1}</td>
+                    <td>${formatCurrency(item.betAmount)}</td>
+                    <td class="${winLossClass} fw-bold">${winLossText}${multiplierText}</td>
+                    <td class="${winLossClass}">${profitText}</td>
+                    <td>${formatCurrency(item.balance)}</td>
+                    <td>
+                        <button class="btn-delete" onclick="deleteBet(${item.id})" title="削除">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            }
+        }
+
+        // --- 各数値のフォーマット ---
+        function formatCurrency(value) {
+            if (Number.isInteger(value)) {
+                return value.toLocaleString('ja-JP');
+            }
+            return value.toLocaleString('ja-JP', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        }
+
+        // --- 1手戻す (Undo) ---
+        function undo() {
+            if (appState.history.length === 0) {
+                alert('戻せる履歴がありません。');
+                return;
+            }
+            if (confirm('直前のベット履歴を削除してもよろしいですか？')) {
+                appState.history.pop();
+                recalculate();
+            }
+        }
+
+        // --- 特定行の履歴削除 ---
+        function deleteBet(id) {
+            if (confirm('この履歴を削除しますか？\n（削除以降の残高履歴は自動的に再計算されます）')) {
+                appState.history = appState.history.filter(item => item.id !== id);
+                recalculate();
+            }
+        }
+
+        // --- 全て初期化 (Reset) ---
+        function resetAll() {
+            if (confirm('保存されているすべてのデータ（初期資金・履歴）を削除して最初からやり直します。よろしいですか？')) {
+                localStorage.removeItem('casino_bankroll_tracker_data');
+                appState = {
+                    initialBankroll: 0,
+                    currentBankroll: 0,
+                    history: [],
+                    profitMode: 'multiplier'
+                };
+                
+                // 設定を倍率モードにリセット
+                setProfitMode('multiplier');
+                document.getElementById('bet-amount').value = '';
+                document.getElementById('payout-multiplier').value = '2.0';
+                
+                showSetupScreen();
+            }
+        }
+
+        // --- 初期資金変更用のモーダル操作 ---
+        function openEditModal() {
+            document.getElementById('edit-bankroll-amount').value = appState.initialBankroll;
+            document.getElementById('edit-bankroll-modal').classList.remove('hidden');
+            document.getElementById('edit-bankroll-amount').focus();
+        }
+
+        function closeModal() {
+            document.getElementById('edit-bankroll-modal').classList.add('hidden');
+        }
+
+        function updateInitialBankroll() {
+            const input = document.getElementById('edit-bankroll-amount');
+            const amount = parseFloat(input.value);
+            if (isNaN(amount) || amount <= 0) {
+                alert('有効な数値を入力してください。');
+                return;
+            }
+            appState.initialBankroll = amount;
+            recalculate();
+            closeModal();
+        }
+    </script>
+</body>
+</html>
