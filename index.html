@@ -747,7 +747,7 @@
         const dealerHasBJ = dealerHand.score === 21;
 
         if (playerHasBJ || dealerHasBJ) {
-            // いずれかが21なら、即座にディーラーのターン（公開）に進み結果判定
+            // いずれかが 21 なら、即座にディーラーのターン（公開）に進み結果判定
             gameState = 'dealer-turn';
             updateUI();
             setTimeout(() => {
@@ -1209,4 +1209,67 @@
 
             const activeHand = playerHands[activeHandIndex];
 
-            // ダブルダウン判定: 2枚、かつ追加で同額ベ
+            // ダブルダウン判定: 2枚、かつ追加で同額ベット可能か
+            if (activeHand && activeHand.cards.length === 2 && bankroll >= activeHand.bet) {
+                btnDouble.disabled = false;
+            } else {
+                btnDouble.disabled = true;
+            }
+
+            // スプリット判定: スプリットまだしていない、2枚のペア、同額ベット可能か
+            if (activeHand && playerHands.length === 1 && activeHand.cards.length === 2 &&
+                activeHand.cards[0].name === activeHand.cards[1].name && bankroll >= activeHand.bet) {
+                btnSplit.disabled = false;
+            } else {
+                btnSplit.disabled = true;
+            }
+
+            if (playerHands.length > 1) {
+                logMessage(`Hand ${activeHandIndex + 1} をプレイ中。HITまたはSTANDを選択してください。`);
+            } else {
+                logMessage("アクションを選択してください。");
+            }
+        } else if (gameState === 'dealer-turn') {
+            // ディーラーターン中はすべての入力を無効化
+            btnDeal.disabled = true;
+            btnHit.disabled = true;
+            btnStand.disabled = true;
+            btnDouble.disabled = true;
+            btnSplit.disabled = true;
+
+            logMessage("ディーラーのターンです...");
+        } else if (gameState === 'round-over') {
+            // ラウンド終了時はDEALボタンを「NEXT ROUND」に切り替え
+            btnDeal.disabled = false;
+            btnDeal.textContent = 'NEXT ROUND';
+
+            btnHit.disabled = true;
+            btnStand.disabled = true;
+            btnDouble.disabled = true;
+            btnSplit.disabled = true;
+
+            // 結果を分析してメッセージを生成
+            const wins = playerHands.filter(h => h.result === 'WIN' || h.result === 'BLACKJACK').length;
+            const pushes = playerHands.filter(h => h.result === 'PUSH').length;
+            const loses = playerHands.filter(h => h.result === 'LOSE').length;
+
+            if (playerHands.length === 1) {
+                const res = playerHands[0].result;
+                if (res === 'BLACKJACK') logMessage("ブラックジャック！お見事！");
+                else if (res === 'WIN') logMessage("あなたの勝ちです！");
+                else if (res === 'LOSE') logMessage(playerHands[0].status === 'busted' ? "バストしました。あなたの負けです。" : "ディーラーの勝ちです。");
+                else logMessage("引き分け（プッシュ）です。");
+            } else {
+                logMessage(`ラウンド終了: ${wins}勝 ${loses}敗 ${pushes}分。NEXT ROUNDを押してください。`);
+            }
+        }
+    }
+
+    // 初期化ロード
+    deck = createDeck();
+    shuffle(deck);
+    updateUI();
+</script>
+
+</body>
+</html>
