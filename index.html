@@ -6,28 +6,40 @@
     <title>Blackjack Classic</title>
     <style>
         /* ==========================================================================
-           1. 基本レイアウトとカラーテーマ
+           1. 基本レイアウトとカラーテーマ (スクロール不要化)
            ========================================================================== */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* スクロールを完全に無効化 */
+        }
+
         body {
             background: radial-gradient(circle, #1a4d1a 0%, #0d260d 100%);
             color: #ffffff;
             font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
-            margin: 0;
-            padding: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-height: 100vh;
+            justify-content: center;
+            height: 100dvh;
             box-sizing: border-box;
             user-select: none;
+            padding: 1vh;
         }
 
         .game-container {
             width: 100%;
             max-width: 1000px;
+            height: 100%;
+            max-height: 100dvh;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            justify-content: space-between;
+            gap: 1vh;
+            box-sizing: border-box;
+            overflow: hidden;
         }
 
         /* 画面上部のリセットバー */
@@ -35,16 +47,17 @@
             display: flex;
             justify-content: flex-end;
             width: 100%;
+            flex-shrink: 0;
         }
 
         .reset-btn {
             background-color: transparent;
             border: 1px solid rgba(255, 255, 255, 0.4);
             color: rgba(255, 255, 255, 0.7);
-            padding: 5px 12px;
+            padding: 4px 10px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 11px;
             transition: all 0.2s;
         }
 
@@ -58,12 +71,13 @@
         .header {
             text-align: center;
             border-bottom: 2px solid #ffd700;
-            padding-bottom: 10px;
+            padding-bottom: 5px;
+            flex-shrink: 0;
         }
 
         .header h1 {
-            margin: 0 0 10px 0;
-            font-size: 28px;
+            margin: 0 0 5px 0;
+            font-size: clamp(18px, 3vh, 26px);
             letter-spacing: 2px;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
             color: #ffd700;
@@ -72,16 +86,16 @@
         .balance-container {
             display: flex;
             justify-content: center;
-            gap: 20px;
+            gap: 15px;
         }
 
         .info-box {
             background-color: rgba(0, 0, 0, 0.6);
             border: 1px solid #ffd700;
-            padding: 8px 16px;
+            padding: 4px 12px;
             border-radius: 6px;
-            font-size: 16px;
-            min-width: 120px;
+            font-size: clamp(12px, 1.8vh, 16px);
+            min-width: 100px;
             box-shadow: inset 0 0 10px rgba(255, 215, 0, 0.2);
         }
 
@@ -96,26 +110,45 @@
         .table-area {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            justify-content: space-around;
+            flex: 1;
+            min-height: 0; /* 縦潰れを防止し、はみ出ないように縮小 */
+            gap: 10px;
             background-color: rgba(0, 0, 0, 0.25);
             border-radius: 15px;
-            padding: 15px;
+            padding: 10px;
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
+        .dealer-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 0;
+        }
+
+        .player-section {
+            flex: 1.3;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 0;
+        }
+
         .section-title {
-            margin: 0 0 8px 0;
-            font-size: 18px;
+            margin: 0 0 5px 0;
+            font-size: clamp(12px, 2vh, 18px);
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             color: #ccc;
         }
 
         .score-badge {
             background-color: #e53935;
             color: white;
-            font-size: 14px;
+            font-size: clamp(11px, 1.6vh, 14px);
             padding: 2px 8px;
             border-radius: 10px;
             font-weight: bold;
@@ -124,30 +157,37 @@
         .cards-container {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
-            min-height: 140px;
+            gap: 6px;
+            min-height: 0;
             align-items: center;
+            justify-content: center;
+            padding: 4px;
         }
 
         /* スプリット対応のプレイヤーエリア */
         .hands-container {
             display: flex;
             justify-content: center;
-            flex-wrap: wrap;
-            gap: 20px;
+            gap: 10px;
+            height: 100%;
+            min-height: 0;
+            align-items: stretch;
         }
 
         .hand-wrapper {
             background-color: rgba(0, 0, 0, 0.4);
             border: 2px solid transparent;
             border-radius: 10px;
-            padding: 15px;
+            padding: 8px;
             flex: 1;
-            min-width: 250px;
+            min-width: 0;
             max-width: 450px;
             position: relative;
             box-sizing: border-box;
             transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
         }
 
         /* アクティブな手札を目立たせる */
@@ -161,46 +201,48 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
 
         .hand-title {
             font-weight: bold;
-            font-size: 16px;
+            font-size: clamp(12px, 1.8vh, 16px);
         }
 
         .hand-footer {
-            margin-top: 10px;
-            font-size: 14px;
+            margin-top: 5px;
+            font-size: clamp(11px, 1.6vh, 14px);
             color: #ffd700;
             text-align: right;
         }
 
         /* ==========================================================================
-           3. カード（トランプ）のCSSデザイン
+           3. カード（トランプ）のCSSデザイン（emによる完全スケール化）
            ========================================================================== */
         .card {
-            width: 90px;
-            height: 130px;
+            font-size: clamp(8px, 1.4vh, 13px); /* 画面の高さに応じてカード基準サイズが決定 */
+            width: 6.2em;
+            height: 9em;
             background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+            border-radius: 0.6em;
+            box-shadow: 0 0.3em 0.6em rgba(0, 0, 0, 0.4);
             position: relative;
             color: #000000;
             box-sizing: border-box;
             animation: card-appear 0.25s ease-out forwards;
             transition: transform 0.2s, box-shadow 0.2s;
+            flex-shrink: 0;
         }
 
         .card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+            transform: translateY(-0.3em);
+            box-shadow: 0 0.6em 1.2em rgba(0, 0, 0, 0.5);
         }
 
         @keyframes card-appear {
             from {
                 opacity: 0;
-                transform: translateY(-20px) rotate(-5deg);
+                transform: translateY(-1.5em) rotate(-5deg);
             }
             to {
                 opacity: 1;
@@ -218,15 +260,15 @@
 
         .card-corner-top {
             position: absolute;
-            top: 5px;
-            left: 8px;
-            font-size: 16px;
+            top: 0.4em;
+            left: 0.6em;
+            font-size: 1.1em;
             font-weight: bold;
-            line-height: 1.1;
+            line-height: 1;
         }
 
         .card-suit-center {
-            font-size: 36px;
+            font-size: 2.6em;
             position: absolute;
             top: 50%;
             left: 50%;
@@ -235,11 +277,11 @@
 
         .card-corner-bottom {
             position: absolute;
-            bottom: 5px;
-            right: 8px;
-            font-size: 16px;
+            bottom: 0.4em;
+            right: 0.6em;
+            font-size: 1.1em;
             font-weight: bold;
-            line-height: 1.1;
+            line-height: 1;
             transform: rotate(180deg);
         }
 
@@ -248,12 +290,12 @@
             background: repeating-linear-gradient(
                 45deg,
                 #9a0007,
-                #9a0007 10px,
-                #d32f2f 10px,
-                #d32f2f 20px
+                #9a0007 0.6em,
+                #d32f2f 0.6em,
+                #d32f2f 1.2em
             );
-            border: 4px solid #ffffff;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+            border: 0.2em solid #ffffff;
+            box-shadow: 0 0.3em 0.6em rgba(0, 0, 0, 0.4);
         }
 
         .card.hidden * {
@@ -265,12 +307,12 @@
            ========================================================================== */
         .result-badge {
             position: absolute;
-            top: 55%;
+            top: 50%;
             left: 50%;
             transform: translate(-50%, -50%) rotate(-12deg);
-            background: rgba(0, 0, 0, 0.9);
-            padding: 8px 16px;
-            font-size: 18px;
+            background: rgba(0, 0, 0, 0.95);
+            padding: 6px 12px;
+            font-size: clamp(14px, 2.2vh, 18px);
             font-weight: bold;
             border-radius: 6px;
             z-index: 10;
@@ -312,21 +354,23 @@
         #message-bar {
             background-color: rgba(0, 0, 0, 0.7);
             border-left: 5px solid #ffd700;
-            padding: 12px;
+            padding: 8px 10px;
             border-radius: 4px;
-            font-size: 15px;
-            min-height: 20px;
+            font-size: clamp(12px, 1.8vh, 15px);
+            min-height: 1.2em;
             text-align: center;
             font-weight: bold;
+            flex-shrink: 0;
         }
 
         .controls {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 8px;
             background-color: rgba(0, 0, 0, 0.4);
-            padding: 15px;
+            padding: 10px;
             border-radius: 12px;
+            flex-shrink: 0;
         }
 
         /* チップ操作 */
@@ -335,24 +379,23 @@
             justify-content: center;
             align-items: center;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 6px;
         }
 
         .chip {
-            width: 55px;
-            height: 55px;
+            width: clamp(38px, 6.5vh, 52px);
+            height: clamp(38px, 6.5vh, 52px);
             border-radius: 50%;
-            border: 4px dashed #ffffff;
+            border: 3px dashed #ffffff;
             color: #ffffff;
-            font-size: 14px;
+            font-size: clamp(11px, 1.4vh, 14px);
             font-weight: bold;
             display: inline-flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.5);
             transition: transform 0.15s, opacity 0.2s;
-            background-color: #333;
         }
 
         .chip:active:not(:disabled) {
@@ -365,24 +408,29 @@
             transform: none;
         }
 
+        /* チップカラーの定義 */
+        .chip-1 { background-color: #78909c; }
+        .chip-5 { background-color: #ff7043; }
         .chip-10 { background-color: #1e88e5; }
         .chip-50 { background-color: #43a047; }
         .chip-100 { background-color: #e53935; }
-        .chip-500 { background-color: #ffb300; color: #111; border-color: #111; }
+        .chip-500 { background-color: #8e24aa; }
+        .chip-1000 { background-color: #ffb300; color: #111; border-color: #111; }
+        .chip-5000 { background-color: #00e5ff; color: #111; border-color: #111; }
 
         /* アクションボタン共通設定 */
         .action-btn {
             background-color: #2e7d32;
             color: #ffffff;
             border: none;
-            padding: 12px 20px;
-            font-size: 15px;
+            padding: 10px 16px;
+            font-size: clamp(12px, 1.6vh, 15px);
             font-weight: bold;
             border-radius: 5px;
             cursor: pointer;
             box-shadow: 0 4px 0 #1b5e20;
             transition: all 0.1s ease;
-            min-width: 90px;
+            min-width: 80px;
             text-transform: uppercase;
         }
 
@@ -415,7 +463,7 @@
         .deal-btn {
             background-color: #d32f2f;
             box-shadow: 0 4px 0 #9a0007;
-            min-width: 130px;
+            min-width: 120px;
         }
         .deal-btn:hover:not(:disabled) { background-color: #e53935; }
         .deal-btn:active:not(:disabled) { box-shadow: 0 1px 0 #9a0007; }
@@ -427,38 +475,37 @@
         .clear-btn:hover:not(:disabled) { background-color: #9e9e9e; }
         .clear-btn:active:not(:disabled) { box-shadow: 0 1px 0 #424242; }
 
+        .allin-btn {
+            background-color: #ff9100;
+            box-shadow: 0 4px 0 #b36400;
+        }
+        .allin-btn:hover:not(:disabled) { background-color: #ffa726; }
+        .allin-btn:active:not(:disabled) { box-shadow: 0 1px 0 #b36400; }
+
         /* ==========================================================================
            6. レスポンシブ設計（スマートフォン対応）
            ========================================================================== */
         @media (max-width: 600px) {
             .card {
-                width: 65px;
-                height: 95px;
-                border-radius: 6px;
+                font-size: clamp(6px, 1.2vh, 11px);
             }
-            .card-corner-top { font-size: 11px; top: 3px; left: 5px; }
-            .card-corner-bottom { font-size: 11px; bottom: 3px; right: 5px; }
-            .card-suit-center { font-size: 24px; }
-            .cards-container { min-height: 105px; gap: 6px; }
-
             .chip {
-                width: 45px;
-                height: 45px;
-                font-size: 11px;
-                margin: 0;
+                width: 38px;
+                height: 38px;
+                font-size: 10px;
+                border-width: 2px;
             }
             .action-btn {
-                padding: 10px 14px;
-                font-size: 13px;
-                min-width: 75px;
+                padding: 8px 12px;
+                font-size: 12px;
+                min-width: 65px;
             }
-            .deal-btn { min-width: 100px; }
+            .deal-btn { min-width: 90px; }
             .hand-wrapper {
-                min-width: 100%;
-                padding: 10px;
+                padding: 6px;
             }
-            .header h1 { font-size: 22px; }
-            .info-box { font-size: 14px; padding: 6px 12px; min-width: 100px; }
+            .header h1 { font-size: 18px; }
+            .info-box { font-size: 12px; padding: 4px 8px; min-width: 80px; }
         }
     </style>
 </head>
@@ -500,14 +547,8 @@
 
     <!-- コントロール類 -->
     <div class="controls">
-        <!-- チップ選択 -->
-        <div class="chip-controls" id="chip-area">
-            <button class="chip chip-10" onclick="addBet(10)">$10</button>
-            <button class="chip chip-50" onclick="addBet(50)">$50</button>
-            <button class="chip chip-100" onclick="addBet(100)">$100</button>
-            <button class="chip chip-500" onclick="addBet(500)">$500</button>
-            <button class="action-btn clear-btn" id="btn-clear" onclick="clearBet()">Clear</button>
-        </div>
+        <!-- チップ選択（JavaScriptにより動的に描画されます） -->
+        <div class="chip-controls" id="chip-area"></div>
 
         <!-- ゲームアクション -->
         <div class="action-controls">
@@ -542,6 +583,19 @@
         { name: 'Q', value: 10 },
         { name: 'K', value: 10 }
     ];
+
+    // チップ構成の定義
+    const CHIP_VALUES = [1, 5, 10, 50, 100, 500, 1000, 5000];
+    const CHIP_CLASSES = {
+        1: 'chip-1',
+        5: 'chip-5',
+        10: 'chip-10',
+        50: 'chip-50',
+        100: 'chip-100',
+        500: 'chip-500',
+        1000: 'chip-1000',
+        5000: 'chip-5000'
+    };
 
     // ゲーム状態変数
     let bankroll = 1000;
@@ -634,6 +688,15 @@
     function clearBet() {
         if (gameState !== 'betting') return;
         currentBet = 0;
+        updateUI();
+    }
+
+    /**
+     * 所持金をすべてベットする（ALL IN）
+     */
+    function allIn() {
+        if (gameState !== 'betting' || bankroll <= 0) return;
+        currentBet = bankroll;
         updateUI();
     }
 
@@ -978,12 +1041,60 @@
     }
 
     /**
+     * 所持金および制限に基づいた動的チップ選択エリアの再描画
+     */
+    function updateChips() {
+        const chipArea = document.getElementById('chip-area');
+        chipArea.innerHTML = '';
+
+        // 1. 所持金（bankroll）以下の金額のチップのみを画面に描画
+        CHIP_VALUES.forEach(val => {
+            if (val <= bankroll) {
+                const btn = document.createElement('button');
+                btn.className = `chip ${CHIP_CLASSES[val]}`;
+                btn.textContent = `$${val}`;
+                btn.onclick = () => addBet(val);
+
+                // 2. 「追加でベットできる金額（残高 - 現在のベット）」を上回る場合は非活性（disabled）
+                // かつベット可能なフェーズ（gameState === 'betting'）のみ有効
+                const isBettingPhase = (gameState === 'betting');
+                const hasEnoughRoom = (val <= (bankroll - currentBet));
+                btn.disabled = !(isBettingPhase && hasEnoughRoom);
+
+                chipArea.appendChild(btn);
+            }
+        });
+
+        // 3. ALL IN ボタンの生成
+        const allInBtn = document.createElement('button');
+        allInBtn.className = 'action-btn allin-btn';
+        allInBtn.id = 'btn-allin';
+        allInBtn.textContent = 'All In';
+        allInBtn.onclick = allIn;
+        // ベットフェーズであり、残高が1以上、かつ現在全額を賭けきっていない時のみ有効
+        allInBtn.disabled = (gameState !== 'betting' || bankroll <= 0 || currentBet === bankroll);
+        chipArea.appendChild(allInBtn);
+
+        // 4. Clear ボタンの生成
+        const clearBtn = document.createElement('button');
+        clearBtn.className = 'action-btn clear-btn';
+        clearBtn.id = 'btn-clear';
+        clearBtn.textContent = 'Clear';
+        clearBtn.onclick = clearBet;
+        clearBtn.disabled = (gameState !== 'betting' || currentBet <= 0);
+        chipArea.appendChild(clearBtn);
+    }
+
+    /**
      * 画面UIの完全な同期更新
      */
     function updateUI() {
         // 残高とベット表示の更新
         document.getElementById('bankroll-val').textContent = `$${bankroll}`;
         document.getElementById('bet-val').textContent = `$${currentBet}`;
+
+        // チップエリアを動的に生成・描画
+        updateChips();
 
         // ==========================================
         // 1. ディーラーエリアの更新
@@ -1073,24 +1184,18 @@
         // 3. ボタン等のアクティブ/非アクティブ状態制御
         // ==========================================
         const btnDeal = document.getElementById('btn-deal');
-        const btnClear = document.getElementById('btn-clear');
         const btnHit = document.getElementById('btn-hit');
         const btnStand = document.getElementById('btn-stand');
         const btnDouble = document.getElementById('btn-double');
         const btnSplit = document.getElementById('btn-split');
 
-        const chipButtons = document.querySelectorAll('.chip');
-
         if (gameState === 'betting') {
             btnDeal.disabled = (currentBet <= 0);
             btnDeal.textContent = 'DEAL';
-            btnClear.disabled = (currentBet <= 0);
             btnHit.disabled = true;
             btnStand.disabled = true;
             btnDouble.disabled = true;
             btnSplit.disabled = true;
-
-            chipButtons.forEach(btn => btn.disabled = false);
 
             if (currentBet === 0) {
                 logMessage("チップをクリックしてベットを決め、DEALを押してください。");
@@ -1099,80 +1204,9 @@
             }
         } else if (gameState === 'player-turn') {
             btnDeal.disabled = true;
-            btnClear.disabled = true;
             btnHit.disabled = false;
             btnStand.disabled = false;
 
-            chipButtons.forEach(btn => btn.disabled = true);
-
             const activeHand = playerHands[activeHandIndex];
 
-            // ダブルダウン判定: 2枚、かつ追加で同額ベット可能か
-            if (activeHand && activeHand.cards.length === 2 && bankroll >= activeHand.bet) {
-                btnDouble.disabled = false;
-            } else {
-                btnDouble.disabled = true;
-            }
-
-            // スプリット判定: スプリットまだしていない、2枚のペア、同額ベット可能か
-            if (activeHand && playerHands.length === 1 && activeHand.cards.length === 2 &&
-                activeHand.cards[0].name === activeHand.cards[1].name && bankroll >= activeHand.bet) {
-                btnSplit.disabled = false;
-            } else {
-                btnSplit.disabled = true;
-            }
-
-            if (playerHands.length > 1) {
-                logMessage(`Hand ${activeHandIndex + 1} をプレイ中。HITまたはSTANDを選択してください。`);
-            } else {
-                logMessage("アクションを選択してください。");
-            }
-        } else if (gameState === 'dealer-turn') {
-            // ディーラーターン中はすべての入力を無効化
-            btnDeal.disabled = true;
-            btnClear.disabled = true;
-            btnHit.disabled = true;
-            btnStand.disabled = true;
-            btnDouble.disabled = true;
-            btnSplit.disabled = true;
-            chipButtons.forEach(btn => btn.disabled = true);
-
-            logMessage("ディーラーのターンです...");
-        } else if (gameState === 'round-over') {
-            // ラウンド終了時はDEALボタンを「NEXT ROUND」に切り替え
-            btnDeal.disabled = false;
-            btnDeal.textContent = 'NEXT ROUND';
-            btnClear.disabled = false;
-
-            btnHit.disabled = true;
-            btnStand.disabled = true;
-            btnDouble.disabled = true;
-            btnSplit.disabled = true;
-
-            chipButtons.forEach(btn => btn.disabled = false);
-
-            // 結果を分析してメッセージを生成
-            const wins = playerHands.filter(h => h.result === 'WIN' || h.result === 'BLACKJACK').length;
-            const pushes = playerHands.filter(h => h.result === 'PUSH').length;
-            const loses = playerHands.filter(h => h.result === 'LOSE').length;
-
-            if (playerHands.length === 1) {
-                const res = playerHands[0].result;
-                if (res === 'BLACKJACK') logMessage("ブラックジャック！お見事！");
-                else if (res === 'WIN') logMessage("あなたの勝ちです！");
-                else if (res === 'LOSE') logMessage(playerHands[0].status === 'busted' ? "バストしました。あなたの負けです。" : "ディーラーの勝ちです。");
-                else logMessage("引き分け（プッシュ）です。");
-            } else {
-                logMessage(`ラウンド終了: ${wins}勝 ${loses}敗 ${pushes}分。NEXT ROUNDを押してください。`);
-            }
-        }
-    }
-
-    // 初期化ロード
-    deck = createDeck();
-    shuffle(deck);
-    updateUI();
-</script>
-
-</body>
-</html>
+            // ダブルダウン判定: 2枚、かつ追加で同額ベ
