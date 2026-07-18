@@ -217,44 +217,71 @@
         }
 
         /* ==========================================================================
-           3. カード（トランプ）のCSSデザイン（emによる完全スケール化）
+           3. カード（トランプ）の3Dフリップ＆スライドデザイン（emによるスケール化）
            ========================================================================== */
-        .card {
+        .card-wrapper-3d {
             font-size: clamp(8px, 1.4vh, 13px); /* 画面の高さに応じてカード基準サイズが決定 */
             width: 6.2em;
             height: 9em;
-            background-color: #ffffff;
-            border-radius: 0.6em;
-            box-shadow: 0 0.3em 0.6em rgba(0, 0, 0, 0.4);
-            position: relative;
-            color: #000000;
-            box-sizing: border-box;
-            animation: card-appear 0.25s ease-out forwards;
-            transition: transform 0.2s, box-shadow 0.2s;
+            perspective: 1000px;
             flex-shrink: 0;
+            position: relative;
+            opacity: 0;
         }
 
-        .card:hover {
-            transform: translateY(-0.3em);
-            box-shadow: 0 0.6em 1.2em rgba(0, 0, 0, 0.5);
+        /* 配る時のスライド出現アニメーション */
+        .card-wrapper-3d.deal-animate {
+            animation: card-slide 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.1) forwards;
         }
 
-        @keyframes card-appear {
+        @keyframes card-slide {
             from {
                 opacity: 0;
-                transform: translateY(-1.5em) rotate(-5deg);
+                transform: translate(150px, -150px) scale(0.6) rotate(20deg);
             }
             to {
                 opacity: 1;
-                transform: translateY(0) rotate(0);
+                transform: translate(0, 0) scale(1) rotate(0);
             }
         }
 
-        .card.red {
+        .card-inner {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.15);
+        }
+
+        /* 表を向けたときに裏返す */
+        .card-wrapper-3d.revealed .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border-radius: 0.6em;
+            box-shadow: 0 0.3em 0.6em rgba(0, 0, 0, 0.4);
+            box-sizing: border-box;
+        }
+
+        /* カードの表面 */
+        .card-front {
+            background-color: #ffffff;
+            transform: rotateY(180deg);
+            color: #000000;
+            position: relative;
+        }
+
+        .card-front.red {
             color: #d32f2f;
         }
 
-        .card.black {
+        .card-front.black {
             color: #1a1a1a;
         }
 
@@ -285,8 +312,8 @@
             transform: rotate(180deg);
         }
 
-        /* ディーラーの裏向きカード */
-        .card.hidden {
+        /* カードの裏面（ディーラーホールカード等） */
+        .card-back {
             background: repeating-linear-gradient(
                 45deg,
                 #9a0007,
@@ -295,31 +322,44 @@
                 #d32f2f 1.2em
             );
             border: 0.2em solid #ffffff;
-            box-shadow: 0 0.3em 0.6em rgba(0, 0, 0, 0.4);
-        }
-
-        .card.hidden * {
-            display: none;
         }
 
         /* ==========================================================================
-           4. 結果通知バッジ
+           4. 結果通知バッジ（登場バウンドアニメーション）
            ========================================================================== */
         .result-badge {
             position: absolute;
             top: 50%;
             left: 50%;
-            transform: translate(-50%, -50%) rotate(-12deg);
+            transform: translate(-50%, -50%) scale(0) rotate(-12deg);
             background: rgba(0, 0, 0, 0.95);
-            padding: 6px 12px;
+            padding: 8px 16px;
             font-size: clamp(14px, 2.2vh, 18px);
             font-weight: bold;
             border-radius: 6px;
             z-index: 10;
             pointer-events: none;
             white-space: nowrap;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
             text-align: center;
+            opacity: 0;
+            /* バウンド登場アニメーション */
+            animation: badge-bounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        @keyframes badge-bounce {
+            0% {
+                transform: translate(-50%, -50%) scale(0) rotate(-30deg);
+                opacity: 0;
+            }
+            70% {
+                transform: translate(-50%, -50%) scale(1.2) rotate(-10deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1) rotate(-12deg);
+                opacity: 1;
+            }
         }
 
         .result-badge.win {
@@ -340,12 +380,33 @@
         .result-badge.bj {
             border: 3px solid #ffd700;
             color: #ffd700;
-            animation: pulse 1s infinite alternate;
+            animation: badge-bounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards, pulse 1.2s infinite alternate 0.5s;
         }
 
         @keyframes pulse {
             0% { transform: translate(-50%, -50%) rotate(-12deg) scale(1.0); }
             100% { transform: translate(-50%, -50%) rotate(-12deg) scale(1.1); }
+        }
+
+        /* 紙吹雪・パーティクル演出用 */
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 1;
+            animation: explode 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+        }
+
+        @keyframes explode {
+            0% {
+                transform: translate3d(0, 0, 0) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate3d(var(--tx), var(--ty), 0) scale(0);
+                opacity: 0;
+            }
         }
 
         /* ==========================================================================
@@ -501,7 +562,7 @@
            6. レスポンシブ設計（スマートフォン対応）
            ========================================================================== */
         @media (max-width: 600px) {
-            .card {
+            .card-wrapper-3d {
                 font-size: clamp(6px, 1.2vh, 11px);
             }
             .chip {
@@ -579,6 +640,138 @@
 
 <script>
     /* ==========================================================================
+       Web Audio APIによるシンセ効果音クラス
+       ========================================================================== */
+    class SoundEffects {
+        constructor() {
+            this.ctx = null;
+        }
+
+        init() {
+            if (!this.ctx) {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+        }
+
+        // カードが配られる・めくれる時の摩擦音
+        playCard() {
+            this.init();
+            const ctx = this.ctx;
+            const now = ctx.currentTime;
+            
+            // ノイズバッファの生成（シュッという摩擦音を表現）
+            const bufferSize = ctx.sampleRate * 0.12;
+            const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            const noise = ctx.createBufferSource();
+            noise.buffer = buffer;
+
+            // バンドパスフィルタ
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.setValueAtTime(1000, now);
+            filter.frequency.exponentialRampToValueAtTime(3000, now + 0.12);
+
+            // 音量調整
+            const gain = ctx.createGain();
+            gain.gain.setValueAtTime(0.08, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(ctx.destination);
+
+            noise.start(now);
+        }
+
+        // コインクリック・ベット時の音（チリン）
+        playCoin() {
+            this.init();
+            const ctx = this.ctx;
+            const now = ctx.currentTime;
+
+            // 金属音をシミュレートする2基のサイン波
+            const osc1 = ctx.createOscillator();
+            const osc2 = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc1.type = 'sine';
+            osc1.frequency.setValueAtTime(987.77, now); // B5
+            osc2.type = 'sine';
+            osc2.frequency.setValueAtTime(1318.51, now); // E6
+
+            gain.gain.setValueAtTime(0.06, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+            osc1.start(now);
+            osc2.start(now);
+            osc1.stop(now + 0.25);
+            osc2.stop(now + 0.25);
+        }
+
+        // プレイヤーバスト・負け時（ソ〜ファ〜ミ〜の下りコード）
+        playLose() {
+            this.init();
+            const ctx = this.ctx;
+            const now = ctx.currentTime;
+            
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(392.00, now); // G4
+            osc.frequency.linearRampToValueAtTime(349.23, now + 0.2); // F4
+            osc.frequency.linearRampToValueAtTime(311.13, now + 0.4); // Eb4
+
+            gain.gain.setValueAtTime(0.06, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+
+            osc.start(now);
+            osc.stop(now + 0.6);
+        }
+
+        // 勝ち・ブラックジャック時（アルペジオ上昇音）
+        playWin() {
+            this.init();
+            const ctx = this.ctx;
+            const now = ctx.currentTime;
+            const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+
+            notes.forEach((freq, idx) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+
+                gain.gain.setValueAtTime(0, now);
+                gain.gain.setValueAtTime(0.05, now + idx * 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.35);
+
+                osc.start(now + idx * 0.1);
+                osc.stop(now + idx * 0.1 + 0.4);
+            });
+        }
+    }
+
+    const sfx = new SoundEffects();
+
+    /* ==========================================================================
        JavaScript ゲームロジック
        ========================================================================== */
 
@@ -618,10 +811,15 @@
     let currentBet = 0;
     let debt = 0; // 借金額
     let deck = [];
-    let dealerHand = { cards: [], score: 0 };
+    let dealerHand = { cards: [], score: 0, visibleScore: 0 };
     let playerHands = []; // 複数の手を管理（スプリット対応）
     let activeHandIndex = 0; // 現在操作中の手札のインデックス
-    let gameState = 'betting'; // 'betting' | 'player-turn' | 'dealer-turn' | 'round-over' | 'game-over'
+    let gameState = 'betting'; // 'betting' | 'dealing' | 'player-turn' | 'dealer-turn' | 'round-over' | 'game-over'
+
+    // 汎用ウェイト用Promise
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
 
     /**
      * デッキを作成する（4デッキ構成）
@@ -663,7 +861,11 @@
             shuffle(deck);
             logMessage("シューに新しいカードを追加し、シャッフルしました。");
         }
-        return deck.pop();
+        const card = deck.pop();
+        // ユニークなIDと初期状態を設定
+        card.id = 'card-' + Math.random().toString(36).substr(2, 9);
+        card.isRevealed = false;
+        return card;
     }
 
     /**
@@ -690,9 +892,11 @@
      * チップボタンクリック時のベット追加
      */
     function addBet(amount) {
+        sfx.init();
         if (gameState !== 'betting') return;
         if (bankroll >= currentBet + amount) {
             currentBet += amount;
+            sfx.playCoin();
             updateUI();
         } else {
             logMessage("残高が不足しています。");
@@ -703,8 +907,10 @@
      * ベット額のクリア
      */
     function clearBet() {
+        sfx.init();
         if (gameState !== 'betting') return;
         currentBet = 0;
+        sfx.playCoin();
         updateUI();
     }
 
@@ -712,8 +918,10 @@
      * 所持金をすべてベットする（ALL IN）
      */
     function allIn() {
+        sfx.init();
         if (gameState !== 'betting' || bankroll <= 0) return;
         currentBet = bankroll;
+        sfx.playCoin();
         updateUI();
     }
 
@@ -721,11 +929,13 @@
      * 借金する (Borrow)
      */
     function borrow() {
+        sfx.init();
         if (gameState !== 'betting') return;
         if (debt >= 5000) {
             logMessage("借金は上限（$5000）に達しています。");
             return;
         }
+        sfx.playCoin();
         debt += 1000;
         bankroll += 1000;
         logMessage("$1000を借金しました。");
@@ -736,6 +946,7 @@
      * 返済する (Repay)
      */
     function repay() {
+        sfx.init();
         if (gameState !== 'betting') return;
         const repayAmount = Math.min(1000, debt);
         if (debt <= 0) return;
@@ -743,6 +954,7 @@
             logMessage("返済に必要な残高が不足しています。");
             return;
         }
+        sfx.playCoin();
         bankroll -= repayAmount;
         debt -= repayAmount;
         logMessage(`借金を$${repayAmount}返済しました。`);
@@ -753,6 +965,7 @@
      * DEAL / NEXT ROUND の一括管理ボタン処理
      */
     function handleDealBtn() {
+        sfx.init();
         if (gameState === 'betting') {
             deal();
         } else if (gameState === 'round-over') {
@@ -761,9 +974,78 @@
     }
 
     /**
+     * プレイヤーにカードを1枚配る（アニメーション同期用）
+     */
+    async function dealCardToPlayer(handIndex) {
+        const card = drawCard();
+        playerHands[handIndex].cards.push(card);
+        updateUI(); // 一度裏向き（Revealed無し）でDOMに追加
+
+        sfx.playCard();
+        await sleep(50); // DOMに要素がマウントされる僅かなタイミングを待つ
+
+        // 状態を反転
+        card.isRevealed = true;
+        const cardEl = document.getElementById(card.id);
+        if (cardEl) {
+            cardEl.classList.add('revealed');
+        }
+
+        // フリップが完了する時間（約350ms）を待ってスコアを更新
+        await sleep(350);
+        playerHands[handIndex].visibleScore = calculateScore(playerHands[handIndex].cards.filter(c => c.isRevealed));
+        updateUI();
+    }
+
+    /**
+     * ディーラーにカードを1枚配る（アニメーション同期用）
+     */
+    async function dealCardToDealer(isHoleCard) {
+        const card = drawCard();
+        dealerHand.cards.push(card);
+        updateUI();
+
+        sfx.playCard();
+        await sleep(50);
+
+        if (!isHoleCard) {
+            card.isRevealed = true;
+            const cardEl = document.getElementById(card.id);
+            if (cardEl) {
+                cardEl.classList.add('revealed');
+            }
+            await sleep(350);
+        } else {
+            // 裏面（ホールカード）の場合はスライド停止後そのまま終了
+            await sleep(350);
+        }
+
+        dealerHand.visibleScore = calculateScore(dealerHand.cards.filter(c => c.isRevealed));
+        updateUI();
+    }
+
+    /**
+     * ディーラーの2枚目（ホールカード）を開示する
+     */
+    async function revealDealerHoleCard() {
+        const holeCard = dealerHand.cards.find(c => !c.isRevealed);
+        if (holeCard) {
+            holeCard.isRevealed = true;
+            sfx.playCard();
+            const cardEl = document.getElementById(holeCard.id);
+            if (cardEl) {
+                cardEl.classList.add('revealed');
+            }
+            await sleep(350);
+            dealerHand.visibleScore = calculateScore(dealerHand.cards.filter(c => c.isRevealed));
+            updateUI();
+        }
+    }
+
+    /**
      * ラウンドを開始する（DEAL）
      */
-    function deal() {
+    async function deal() {
         if (currentBet <= 0 || gameState !== 'betting') return;
 
         // ベット金額を残高から引き出す
@@ -775,33 +1057,49 @@
             shuffle(deck);
         }
 
-        // 初期カード配布
-        dealerHand = { cards: [drawCard(), drawCard()], score: 0 };
+        // ゲーム状態をロック
+        gameState = 'dealing';
+        dealerHand = { cards: [], score: 0, visibleScore: 0 };
         playerHands = [{
-            cards: [drawCard(), drawCard()],
+            cards: [],
             bet: currentBet,
             status: 'playing',
             score: 0,
+            visibleScore: 0,
             result: ''
         }];
-
         activeHandIndex = 0;
+        updateUI();
 
-        // スコア計算
+        // 1枚ずつ「引く → 演出を待つ」の順序配布
+        // 配布：Player 1枚目 → Dealer 1枚目(表) → Player 2枚目 → Dealer 2枚目(裏)
+        await dealCardToPlayer(0);
+        await sleep(250);
+
+        await dealCardToDealer(false);
+        await sleep(250);
+
+        await dealCardToPlayer(0);
+        await sleep(250);
+
+        await dealCardToDealer(true);
+        await sleep(250);
+
+        // スコアを内部的に同期
         dealerHand.score = calculateScore(dealerHand.cards);
         playerHands[0].score = calculateScore(playerHands[0].cards);
 
-        // ナチュラル・ブラックジャック（最初から21）の確認
         const playerHasBJ = playerHands[0].score === 21;
         const dealerHasBJ = dealerHand.score === 21;
 
         if (playerHasBJ || dealerHasBJ) {
-            // いずれかが21なら、即座にディーラーのターン（公開）に進み結果判定
+            // ナチュラルBJの場合は即終了（ディーラーのホールカードを開く）
             gameState = 'dealer-turn';
             updateUI();
+            await revealDealerHoleCard();
             setTimeout(() => {
                 endRound();
-            }, 1000);
+            }, 800);
         } else {
             gameState = 'player-turn';
             updateUI();
@@ -811,22 +1109,30 @@
     /**
      * カードを引く（HIT）
      */
-    function hit() {
+    async function hit() {
         if (gameState !== 'player-turn') return;
         const activeHand = playerHands[activeHandIndex];
 
-        activeHand.cards.push(drawCard());
+        // ロック
+        gameState = 'dealing';
+        updateUI();
+
+        await dealCardToPlayer(activeHandIndex);
+
         activeHand.score = calculateScore(activeHand.cards);
 
         if (activeHand.score > 21) {
             activeHand.status = 'busted';
             activeHand.result = 'LOSE';
             logMessage(`Hand ${playerHands.length > 1 ? (activeHandIndex + 1) : ""} がバストしました！`);
-            moveToNextHand();
+            gameState = 'player-turn';
+            await moveToNextHand();
         } else if (activeHand.score === 21) {
             activeHand.status = 'stood';
-            moveToNextHand();
+            gameState = 'player-turn';
+            await moveToNextHand();
         } else {
+            gameState = 'player-turn';
             updateUI();
         }
     }
@@ -834,27 +1140,30 @@
     /**
      * 手札を確定（STAND）
      */
-    function stand() {
+    async function stand() {
         if (gameState !== 'player-turn') return;
         const activeHand = playerHands[activeHandIndex];
         activeHand.status = 'stood';
-        moveToNextHand();
+        await moveToNextHand();
     }
 
     /**
      * 賭け金を倍にする（DOUBLE DOWN）
      */
-    function doubleDown() {
+    async function doubleDown() {
         if (gameState !== 'player-turn') return;
         const activeHand = playerHands[activeHandIndex];
 
-        // 最初の2枚であり、残高が十分であるかチェック
         if (activeHand.cards.length !== 2 || bankroll < activeHand.bet) return;
 
+        // ベットを引く
+        gameState = 'dealing';
         bankroll -= activeHand.bet;
         activeHand.bet *= 2;
+        updateUI();
 
-        activeHand.cards.push(drawCard());
+        await dealCardToPlayer(activeHandIndex);
+
         activeHand.score = calculateScore(activeHand.cards);
 
         if (activeHand.score > 21) {
@@ -864,47 +1173,53 @@
             activeHand.status = 'stood';
         }
 
-        moveToNextHand();
+        gameState = 'player-turn';
+        await moveToNextHand();
     }
 
     /**
      * 手札の分割（SPLIT）
      */
-    function split() {
+    async function split() {
         if (gameState !== 'player-turn') return;
         const activeHand = playerHands[activeHandIndex];
 
-        // スプリット条件: 1つの手札だけがプレイされており、2枚のランクが同じ、残高がある
         if (playerHands.length > 1 || activeHand.cards.length !== 2) return;
         if (activeHand.cards[0].name !== activeHand.cards[1].name) return;
         if (bankroll < activeHand.bet) return;
 
-        // ベットを別途引き出し
+        gameState = 'dealing';
         bankroll -= activeHand.bet;
 
-        // 2枚目を取り出す
+        // 2枚目を取り出し、新規のハンドを作成
         const secondCard = activeHand.cards.pop();
-
-        // 新しい手札オブジェクトの生成
         const newHand = {
             cards: [secondCard],
             bet: activeHand.bet,
             status: 'playing',
             score: 0,
+            visibleScore: secondCard.isRevealed ? calculateScore([secondCard]) : 0,
             result: ''
         };
 
         playerHands.push(newHand);
+        activeHand.visibleScore = calculateScore(activeHand.cards);
+        updateUI();
 
-        // それぞれに1枚追加
-        activeHand.cards.push(drawCard());
-        newHand.cards.push(drawCard());
+        await sleep(350);
 
-        // スコア更新
+        // それぞれにカードを1枚ずつ配る
+        await dealCardToPlayer(0);
+        await sleep(250);
+
+        await dealCardToPlayer(1);
+        await sleep(250);
+
         activeHand.score = calculateScore(activeHand.cards);
         newHand.score = calculateScore(newHand.cards);
 
-        activeHandIndex = 0; // 手前（Hand 1）からプレイ再開
+        activeHandIndex = 0;
+        gameState = 'player-turn';
         logMessage("スプリットしました。Hand 1からプレイしてください。");
         updateUI();
     }
@@ -912,45 +1227,43 @@
     /**
      * 次の手札へ切り替え、もしくはディーラーのターンに移行
      */
-    function moveToNextHand() {
+    async function moveToNextHand() {
         if (activeHandIndex < playerHands.length - 1) {
             activeHandIndex++;
             updateUI();
         } else {
-            playDealerTurn();
+            await playDealerTurn();
         }
     }
 
     /**
      * ディーラーのターン
      */
-    function playDealerTurn() {
+    async function playDealerTurn() {
         gameState = 'dealer-turn';
         updateUI();
+
+        // 伏せていたホールカードをオープン
+        await revealDealerHoleCard();
 
         // プレイヤーのすべての手がバストしているかチェック
         const allBusted = playerHands.every(hand => hand.score > 21);
 
         if (allBusted) {
             // 全てバストしていればディーラーは引かずに終了
+            await sleep(500);
             endRound();
             return;
         }
 
         // ディーラーの追加引き込み（時間差演出）
-        function dealerHitStep() {
-            dealerHand.score = calculateScore(dealerHand.cards);
-            if (dealerHand.score < 17) {
-                dealerHand.cards.push(drawCard());
-                dealerHand.score = calculateScore(dealerHand.cards);
-                updateUI();
-                setTimeout(dealerHitStep, 700);
-            } else {
-                endRound();
-            }
+        while (calculateScore(dealerHand.cards) < 17) {
+            await sleep(600);
+            await dealCardToDealer(false);
         }
 
-        dealerHitStep();
+        await sleep(500);
+        endRound();
     }
 
     /**
@@ -960,27 +1273,37 @@
         gameState = 'round-over';
         const dScore = dealerHand.score;
 
+        let hasWin = false;
+        let hasBJ = false;
+        let hasLose = false;
+
         playerHands.forEach((hand) => {
             const pScore = hand.score;
 
             if (pScore > 21) {
                 hand.result = 'LOSE';
                 hand.status = 'busted';
+                hasLose = true;
             } else if (dScore > 21) {
                 // ディーラーバスト時の勝ち
                 if (pScore === 21 && hand.cards.length === 2 && playerHands.length === 1) {
-                    hand.result = 'BLACKJACK'; // 分割なし＆初期21はブラックジャック
+                    hand.result = 'BLACKJACK';
+                    hasBJ = true;
                 } else {
                     hand.result = 'WIN';
+                    hasWin = true;
                 }
             } else if (pScore > dScore) {
                 if (pScore === 21 && hand.cards.length === 2 && playerHands.length === 1) {
                     hand.result = 'BLACKJACK';
+                    hasBJ = true;
                 } else {
                     hand.result = 'WIN';
+                    hasWin = true;
                 }
             } else if (pScore < dScore) {
                 hand.result = 'LOSE';
+                hasLose = true;
             } else {
                 // スコア同点時のブラックジャック優位判定
                 const playerIsBJ = pScore === 21 && hand.cards.length === 2 && playerHands.length === 1;
@@ -988,8 +1311,10 @@
 
                 if (playerIsBJ && !dealerIsBJ) {
                     hand.result = 'BLACKJACK';
+                    hasBJ = true;
                 } else if (!playerIsBJ && dealerIsBJ) {
                     hand.result = 'LOSE';
+                    hasLose = true;
                 } else {
                     hand.result = 'PUSH';
                 }
@@ -1005,6 +1330,17 @@
             }
         });
 
+        // 勝利・敗北効果音とパーティクルのトリガー
+        if (hasBJ) {
+            sfx.playWin();
+            createParticles('#ffd700'); // 金色の星屑
+        } else if (hasWin) {
+            sfx.playWin();
+            createParticles('#4caf50'); // 緑の星屑
+        } else if (hasLose) {
+            sfx.playLose();
+        }
+
         // 破産・極小金額時の救済および無効ベットの調整
         checkBankruptcy();
         if (gameState !== 'game-over') {
@@ -1012,6 +1348,48 @@
         }
 
         updateUI();
+    }
+
+    /**
+     * 星屑風のパーティクル生成エフェクト
+     */
+    function createParticles(color) {
+        const container = document.body;
+        const numParticles = 40;
+
+        for (let i = 0; i < numParticles; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.backgroundColor = color;
+
+            // 画面の中央（もしくはテーブルの中心）付近を起点とする
+            const x = window.innerWidth / 2;
+            const y = window.innerHeight * 0.45;
+
+            particle.style.left = `${x}px`;
+            particle.style.top = `${y}px`;
+
+            // ランダムな方向と強さを割り当て
+            const angle = Math.random() * Math.PI * 2;
+            const distance = Math.random() * 250 + 100;
+            const tx = Math.cos(angle) * distance;
+            const ty = Math.sin(angle) * distance;
+
+            particle.style.setProperty('--tx', `${tx}px`);
+            particle.style.setProperty('--ty', `${ty}px`);
+
+            // ランダムサイズ
+            const size = Math.random() * 7 + 4;
+            particle.style.width = `${size}px`;
+            particle.style.height = `${size}px`;
+
+            container.appendChild(particle);
+
+            // 終了後にDOMから消去
+            setTimeout(() => {
+                particle.remove();
+            }, 1200);
+        }
     }
 
     /**
@@ -1023,7 +1401,7 @@
         checkBetValidity();
 
         gameState = 'betting';
-        dealerHand = { cards: [], score: 0 };
+        dealerHand = { cards: [], score: 0, visibleScore: 0 };
         playerHands = [];
         activeHandIndex = 0;
 
@@ -1047,6 +1425,7 @@
             if (debt < 5000) {
                 debt += 1000;
                 bankroll = 1000;
+                sfx.playCoin();
                 logMessage("残高がなくなりました。自動借金により$1000を調達しました（借金が$1000増えました）。");
             } else {
                 gameState = 'game-over';
@@ -1059,12 +1438,13 @@
      * ゲームを完全に初期状態にリセットする
      */
     function resetGame() {
+        sfx.init();
         if (confirm("ゲーム全体を初期状態にリセットし、資金を$1000に戻しますか？")) {
             bankroll = 1000;
             currentBet = 0;
             debt = 0;
             gameState = 'betting';
-            dealerHand = { cards: [], score: 0 };
+            dealerHand = { cards: [], score: 0, visibleScore: 0 };
             playerHands = [];
             activeHandIndex = 0;
             deck = createDeck();
@@ -1082,18 +1462,21 @@
     }
 
     /**
-     * トランプカードのHTML生成
+     * トランプカードのHTML生成（3Dモデル構造）
      */
-    function createCardHTML(card, isHidden) {
-        if (isHidden) {
-            return `<div class="card hidden"></div>`;
-        }
+    function createCardHTML(card) {
         const colorClass = card.isRed ? 'red' : 'black';
+        const revealedClass = card.isRevealed ? 'revealed' : '';
         return `
-            <div class="card ${colorClass}">
-                <div class="card-corner-top">${card.name}<br>${card.suit}</div>
-                <div class="card-suit-center">${card.suit}</div>
-                <div class="card-corner-bottom">${card.name}<br>${card.suit}</div>
+            <div class="card-wrapper-3d deal-animate ${revealedClass}" id="${card.id}">
+                <div class="card-inner">
+                    <div class="card-front ${colorClass}">
+                        <div class="card-corner-top">${card.name}<br>${card.suit}</div>
+                        <div class="card-suit-center">${card.suit}</div>
+                        <div class="card-corner-bottom">${card.name}<br>${card.suit}</div>
+                    </div>
+                    <div class="card-back"></div>
+                </div>
             </div>
         `;
     }
@@ -1179,15 +1562,8 @@
         const dealerCardsDiv = document.getElementById('dealer-cards');
         dealerCardsDiv.innerHTML = '';
 
-        const showDealerHoleCard = (gameState === 'dealer-turn' || gameState === 'round-over');
-
-        dealerHand.cards.forEach((card, index) => {
-            // プレイヤーのターン中、ディーラーの2枚目は伏せる
-            if (index === 1 && !showDealerHoleCard) {
-                dealerCardsDiv.innerHTML += createCardHTML(card, true);
-            } else {
-                dealerCardsDiv.innerHTML += createCardHTML(card, false);
-            }
+        dealerHand.cards.forEach((card) => {
+            dealerCardsDiv.innerHTML += createCardHTML(card);
         });
 
         // ディーラーのスコアバッジ表示
@@ -1196,12 +1572,13 @@
             dBadge.style.display = 'none';
         } else {
             dBadge.style.display = 'inline-block';
-            if (!showDealerHoleCard) {
+            
+            const hasHoleCard = dealerHand.cards.some(c => !c.isRevealed);
+            if (hasHoleCard) {
                 // 伏せられている場合は1枚目のスコア + ?
-                const visibleScore = calculateScore([dealerHand.cards[0]]);
-                dBadge.textContent = `${visibleScore} + ?`;
+                dBadge.textContent = `${dealerHand.visibleScore} + ?`;
             } else {
-                dBadge.textContent = dealerHand.score;
+                dBadge.textContent = dealerHand.visibleScore;
             }
         }
 
@@ -1220,9 +1597,9 @@
                 wrapper.classList.add('active');
             }
 
-            let scoreText = hand.score;
-            if (hand.score > 21) {
-                scoreText = `${hand.score} (Bust!)`;
+            let scoreText = hand.visibleScore;
+            if (hand.visibleScore > 21) {
+                scoreText = `${hand.visibleScore} (Bust!)`;
             }
 
             // 手札の結果バッジ
@@ -1241,7 +1618,7 @@
 
             let cardsHTML = '';
             hand.cards.forEach(card => {
-                cardsHTML += createCardHTML(card, false);
+                cardsHTML += createCardHTML(card);
             });
 
             wrapper.innerHTML = `
@@ -1279,6 +1656,14 @@
             } else {
                 logMessage(`$${currentBet} をベット中。よろしければDEALを押してください。`);
             }
+        } else if (gameState === 'dealing') {
+            // アニメーションおよび配布処理ロック時
+            btnDeal.disabled = true;
+            btnHit.disabled = true;
+            btnStand.disabled = true;
+            btnDouble.disabled = true;
+            btnSplit.disabled = true;
+            logMessage("カードを配っています...");
         } else if (gameState === 'player-turn') {
             btnDeal.disabled = true;
             btnHit.disabled = false;
