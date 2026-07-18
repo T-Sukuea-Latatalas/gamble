@@ -482,6 +482,21 @@
         .allin-btn:hover:not(:disabled) { background-color: #ffa726; }
         .allin-btn:active:not(:disabled) { box-shadow: 0 1px 0 #b36400; }
 
+        /* 借金・返済ボタンのカラー */
+        .borrow-btn {
+            background-color: #0288d1;
+            box-shadow: 0 4px 0 #01579b;
+        }
+        .borrow-btn:hover:not(:disabled) { background-color: #03a9f4; }
+        .borrow-btn:active:not(:disabled) { box-shadow: 0 1px 0 #01579b; }
+
+        .repay-btn {
+            background-color: #f57c00;
+            box-shadow: 0 4px 0 #e65100;
+        }
+        .repay-btn:hover:not(:disabled) { background-color: #ff9800; }
+        .repay-btn:active:not(:disabled) { box-shadow: 0 1px 0 #e65100; }
+
         /* ==========================================================================
            6. レスポンシブ設計（スマートフォン対応）
            ========================================================================== */
@@ -517,12 +532,13 @@
         <button class="reset-btn" onclick="resetGame()">RESET GAME</button>
     </div>
 
-    <!-- ヘッダー（残高・ベット額） -->
+    <!-- ヘッダー（残高・ベット額・借金） -->
     <div class="header">
         <h1>♠ Blackjack Classic ♦</h1>
         <div class="balance-container">
             <div class="info-box">残高: <span id="bankroll-val">$1000</span></div>
             <div class="info-box">ベット: <span id="bet-val">$0</span></div>
+            <div class="info-box">借金: <span id="debt-val">$0</span></div>
         </div>
     </div>
 
@@ -600,11 +616,12 @@
     // ゲーム状態変数
     let bankroll = 1000;
     let currentBet = 0;
+    let debt = 0; // 借金額
     let deck = [];
     let dealerHand = { cards: [], score: 0 };
     let playerHands = []; // 複数の手を管理（スプリット対応）
     let activeHandIndex = 0; // 現在操作中の手札のインデックス
-    let gameState = 'betting'; // 'betting' | 'player-turn' | 'dealer-turn' | 'round-over'
+    let gameState = 'betting'; // 'betting' | 'player-turn' | 'dealer-turn' | 'round-over' | 'game-over'
 
     /**
      * デッキを作成する（4デッキ構成）
@@ -701,6 +718,38 @@
     }
 
     /**
+     * 借金する (Borrow)
+     */
+    function borrow() {
+        if (gameState !== 'betting') return;
+        if (debt >= 5000) {
+            logMessage("借金は上限（$5000）に達しています。");
+            return;
+        }
+        debt += 1000;
+        bankroll += 1000;
+        logMessage("$1000を借金しました。");
+        updateUI();
+    }
+
+    /**
+     * 返済する (Repay)
+     */
+    function repay() {
+        if (gameState !== 'betting') return;
+        const repayAmount = Math.min(1000, debt);
+        if (debt <= 0) return;
+        if (bankroll < repayAmount) {
+            logMessage("返済に必要な残高が不足しています。");
+            return;
+        }
+        bankroll -= repayAmount;
+        debt -= repayAmount;
+        logMessage(`借金を$${repayAmount}返済しました。`);
+        updateUI();
+    }
+
+    /**
      * DEAL / NEXT ROUND の一括管理ボタン処理
      */
     function handleDealBtn() {
@@ -747,7 +796,7 @@
         const dealerHasBJ = dealerHand.score === 21;
 
         if (playerHasBJ || dealerHasBJ) {
-            // いずれかが 21 なら、即座にディーラーのターン（公開）に進み結果判定
+            // いずれかが21なら、即座にディーラーのターン（公開）に進み結果判定
             gameState = 'dealer-turn';
             updateUI();
             setTimeout(() => {
@@ -958,7 +1007,9 @@
 
         // 破産・極小金額時の救済および無効ベットの調整
         checkBankruptcy();
-        checkBetValidity();
+        if (gameState !== 'game-over') {
+            checkBetValidity();
+        }
 
         updateUI();
     }
@@ -989,12 +1040,18 @@
     }
 
     /**
-     * 万が一全財産を失った場合の救済措置
+     * 万が一全財産を失った場合の救済措置（仕様変更）
      */
     function checkBankruptcy() {
         if (bankroll === 0 && currentBet === 0) {
-            logMessage("破産しました！カジノから$1000が再支給されました。");
-            bankroll = 1000;
+            if (debt < 5000) {
+                debt += 1000;
+                bankroll = 1000;
+                logMessage("残高がなくなりました。自動借金により$1000を調達しました（借金が$1000増えました）。");
+            } else {
+                gameState = 'game-over';
+                logMessage("借金上限に達し、全財産を失いました。GAME OVERです。RESET GAMEを押して最初からやり直してください。");
+            }
         }
     }
 
@@ -1005,6 +1062,7 @@
         if (confirm("ゲーム全体を初期状態にリセットし、資金を$1000に戻しますか？")) {
             bankroll = 1000;
             currentBet = 0;
+            debt = 0;
             gameState = 'betting';
             dealerHand = { cards: [], score: 0 };
             playerHands = [];
@@ -1071,7 +1129,6 @@
         allInBtn.id = 'btn-allin';
         allInBtn.textContent = 'All In';
         allInBtn.onclick = allIn;
-        // ベットフェーズであり、残高が1以上、かつ現在全額を賭けきっていない時のみ有効
         allInBtn.disabled = (gameState !== 'betting' || bankroll <= 0 || currentBet === bankroll);
         chipArea.appendChild(allInBtn);
 
@@ -1083,15 +1140,35 @@
         clearBtn.onclick = clearBet;
         clearBtn.disabled = (gameState !== 'betting' || currentBet <= 0);
         chipArea.appendChild(clearBtn);
+
+        // 5. Borrow（借金）ボタンの生成
+        const borrowBtn = document.createElement('button');
+        borrowBtn.className = 'action-btn borrow-btn';
+        borrowBtn.id = 'btn-borrow';
+        borrowBtn.textContent = 'Borrow';
+        borrowBtn.onclick = borrow;
+        borrowBtn.disabled = (gameState !== 'betting' || debt >= 5000);
+        chipArea.appendChild(borrowBtn);
+
+        // 6. Repay（返済）ボタンの生成
+        const repayBtn = document.createElement('button');
+        repayBtn.className = 'action-btn repay-btn';
+        repayBtn.id = 'btn-repay';
+        repayBtn.textContent = 'Repay';
+        repayBtn.onclick = repay;
+        const repayAmount = Math.min(1000, debt);
+        repayBtn.disabled = (gameState !== 'betting' || debt <= 0 || bankroll < repayAmount);
+        chipArea.appendChild(repayBtn);
     }
 
     /**
      * 画面UIの完全な同期更新
      */
     function updateUI() {
-        // 残高とベット表示の更新
+        // 残高、ベット、借金表示の更新
         document.getElementById('bankroll-val').textContent = `$${bankroll}`;
         document.getElementById('bet-val').textContent = `$${currentBet}`;
+        document.getElementById('debt-val').textContent = `$${debt}`;
 
         // チップエリアを動的に生成・描画
         updateChips();
@@ -1209,67 +1286,48 @@
 
             const activeHand = playerHands[activeHandIndex];
 
-            // ダブルダウン判定: 2枚、かつ追加で同額ベット可能か
-            if (activeHand && activeHand.cards.length === 2 && bankroll >= activeHand.bet) {
-                btnDouble.disabled = false;
-            } else {
-                btnDouble.disabled = true;
-            }
+            // ダブルダウン判定: 2枚、かつ追加で同額ベット可能な残高がある
+            const canDouble = activeHand.cards.length === 2 && bankroll >= activeHand.bet;
+            btnDouble.disabled = !canDouble;
 
-            // スプリット判定: スプリットまだしていない、2枚のペア、同額ベット可能か
-            if (activeHand && playerHands.length === 1 && activeHand.cards.length === 2 &&
-                activeHand.cards[0].name === activeHand.cards[1].name && bankroll >= activeHand.bet) {
-                btnSplit.disabled = false;
-            } else {
-                btnSplit.disabled = true;
-            }
+            // スプリット判定: 手札が1つのみ（最初のスプリットのみ）、カードが2枚で同じランク、かつ追加で同額ベット可能な残高がある
+            const canSplit = playerHands.length === 1 && 
+                              activeHand.cards.length === 2 && 
+                              activeHand.cards[0].name === activeHand.cards[1].name && 
+                              bankroll >= activeHand.bet;
+            btnSplit.disabled = !canSplit;
 
-            if (playerHands.length > 1) {
-                logMessage(`Hand ${activeHandIndex + 1} をプレイ中。HITまたはSTANDを選択してください。`);
+            logMessage(`Hand ${playerHands.length > 1 ? (activeHandIndex + 1) : ""} のアクションを選択してください。`);
+        } else {
+            // ディーラーターン、ラウンド終了、またはゲームオーバー
+            btnDeal.disabled = (gameState !== 'round-over' || currentBet <= 0);
+            if (gameState === 'round-over') {
+                btnDeal.textContent = 'NEXT ROUND';
             } else {
-                logMessage("アクションを選択してください。");
+                btnDeal.textContent = 'DEAL';
             }
-        } else if (gameState === 'dealer-turn') {
-            // ディーラーターン中はすべての入力を無効化
-            btnDeal.disabled = true;
             btnHit.disabled = true;
             btnStand.disabled = true;
             btnDouble.disabled = true;
             btnSplit.disabled = true;
 
-            logMessage("ディーラーのターンです...");
-        } else if (gameState === 'round-over') {
-            // ラウンド終了時はDEALボタンを「NEXT ROUND」に切り替え
-            btnDeal.disabled = false;
-            btnDeal.textContent = 'NEXT ROUND';
-
-            btnHit.disabled = true;
-            btnStand.disabled = true;
-            btnDouble.disabled = true;
-            btnSplit.disabled = true;
-
-            // 結果を分析してメッセージを生成
-            const wins = playerHands.filter(h => h.result === 'WIN' || h.result === 'BLACKJACK').length;
-            const pushes = playerHands.filter(h => h.result === 'PUSH').length;
-            const loses = playerHands.filter(h => h.result === 'LOSE').length;
-
-            if (playerHands.length === 1) {
-                const res = playerHands[0].result;
-                if (res === 'BLACKJACK') logMessage("ブラックジャック！お見事！");
-                else if (res === 'WIN') logMessage("あなたの勝ちです！");
-                else if (res === 'LOSE') logMessage(playerHands[0].status === 'busted' ? "バストしました。あなたの負けです。" : "ディーラーの勝ちです。");
-                else logMessage("引き分け（プッシュ）です。");
-            } else {
-                logMessage(`ラウンド終了: ${wins}勝 ${loses}敗 ${pushes}分。NEXT ROUNDを押してください。`);
+            if (gameState === 'dealer-turn') {
+                logMessage("ディーラーのターンです...");
+            } else if (gameState === 'round-over') {
+                logMessage("ラウンド終了。NEXT ROUNDを押して次のゲームに進んでください。");
+            } else if (gameState === 'game-over') {
+                btnDeal.disabled = true;
+                logMessage("GAME OVER! RESET GAMEボタンを押してリセットしてください。");
             }
         }
     }
 
     // 初期化ロード
-    deck = createDeck();
-    shuffle(deck);
-    updateUI();
+    window.onload = function() {
+        deck = createDeck();
+        shuffle(deck);
+        updateUI();
+    };
 </script>
-
 </body>
 </html>
