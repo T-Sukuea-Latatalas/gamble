@@ -36,8 +36,44 @@ body {
 }
 
 /* ==========================================================================
-   LOBBY (ゲーム選択画面)
+   LOBBY (ゲーム選択画面 / 左右2カラム分割)
    ========================================================================== */
+.lobby-container-two-column {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    height: 100%;
+    min-height: 0; /* flexの子要素が突き抜けるのを防止 */
+    gap: 24px;
+    box-sizing: border-box;
+    padding: 10px;
+}
+
+/* 左ペイン (ランキングエリア) */
+.lobby-left-pane {
+    flex: 4.5;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 215, 0, 0.15);
+    border-radius: 12px;
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+/* 右ペイン (ゲーム選択エリア) */
+.lobby-right-pane {
+    flex: 5.5;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
 .lobby-container {
     display: flex;
     flex-direction: column;
@@ -50,7 +86,7 @@ body {
 }
 
 .lobby-title {
-    font-size: clamp(24px, 5vh, 40px);
+    font-size: clamp(24px, 4.5vh, 36px);
     color: #ffd700;
     text-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
     letter-spacing: 2px;
@@ -59,9 +95,9 @@ body {
 
 .lobby-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 20px;
-    width: 90%;
+    width: 100%;
     max-width: 800px;
 }
 
@@ -122,23 +158,24 @@ body {
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-    gap: 15px;
-    padding: 10px;
+    gap: 12px;
+    min-height: 0; /* 内部テーブルのスクロールに必須 */
 }
 
 .ranking-top-bar {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     width: 100%;
 }
 
 .ranking-title {
-    font-size: clamp(20px, 3.5vh, 28px);
+    font-size: clamp(18px, 3vh, 24px);
     color: #ffd700;
     margin: 0;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     letter-spacing: 1px;
+    text-align: center;
 }
 
 /* ユーザー名設定セクション */
@@ -146,7 +183,7 @@ body {
     background-color: rgba(0, 0, 0, 0.5);
     border: 1px solid rgba(255, 215, 0, 0.3);
     border-radius: 8px;
-    padding: 12px 15px;
+    padding: 10px 15px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -155,51 +192,50 @@ body {
 }
 
 .username-display-label {
-    font-size: 14px;
+    font-size: 13px;
     color: #ccc;
 }
 
 .username-display-label strong {
     color: #ffd700;
-    font-size: 16px;
+    font-size: 15px;
     margin-left: 5px;
 }
 
 .username-input-group {
     display: flex;
-    gap: 8px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
 }
 
 .username-input {
     background-color: rgba(0, 0, 0, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 215, 0, 0.4);
     color: #ffffff;
-    padding: 6px 12px;
-    border-radius: 4px;
-    font-size: 14px;
-    width: 150px;
+    padding: 6px 14px;
+    border-radius: 20px; /* モダンな楕円形に */
+    font-size: 13px;
+    width: 140px;
     outline: none;
-    transition: border-color 0.2s;
+    transition: all 0.2s ease;
+    box-shadow: 0 0 5px rgba(255, 215, 0, 0.1);
+    text-align: center;
 }
 
 .username-input:focus {
     border-color: #ffd700;
+    box-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+    background-color: rgba(15, 15, 15, 0.95);
 }
 
-.username-btn {
-    background-color: #ffd700;
-    color: #111;
-    border: none;
-    padding: 6px 15px;
-    border-radius: 4px;
-    font-weight: bold;
-    font-size: 13px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.username-btn:hover {
-    background-color: #ffe066;
+/* 「Enterで確定」の視覚的補助テキスト */
+.username-input-group::after {
+    content: "Enterキーまたは枠外クリックで確定";
+    font-size: 9px;
+    color: #888;
+    transform: scale(0.9);
+    transform-origin: right top;
 }
 
 /* ランキングタブ選択 */
@@ -214,8 +250,8 @@ body {
     background: transparent;
     border: none;
     color: #888;
-    padding: 8px 16px;
-    font-size: clamp(12px, 1.8vh, 15px);
+    padding: 8px 12px;
+    font-size: clamp(11px, 1.6vh, 14px);
     font-weight: bold;
     cursor: pointer;
     transition: all 0.2s;
@@ -241,18 +277,19 @@ body {
     background-color: rgba(0, 0, 0, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
+    min-height: 0; /* 親のフレキシブル縮小に対応しスクロールさせる */
 }
 
 .ranking-table {
     width: 100%;
     border-collapse: collapse;
     text-align: left;
-    font-size: clamp(12px, 1.6vh, 15px);
+    font-size: clamp(11px, 1.5vh, 14px);
 }
 
 .ranking-table th,
 .ranking-table td {
-    padding: 12px;
+    padding: 10px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -281,7 +318,7 @@ body {
 
 .rank-num {
     font-weight: bold;
-    width: 50px;
+    width: 45px;
 }
 
 .rank-1 { color: #ffd700; text-shadow: 0 0 5px rgba(255, 215, 0, 0.5); }
@@ -297,14 +334,14 @@ body {
     height: 100%;
     gap: 15px;
     color: #ccc;
-    font-size: 16px;
+    font-size: 14px;
 }
 
 .spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid rgba(255, 215, 0, 0.1);
-    border-top: 4px solid #ffd700;
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(255, 215, 0, 0.1);
+    border-top: 3px solid #ffd700;
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -312,6 +349,44 @@ body {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   モバイルレスポンシブ対応
+   ========================================================================== */
+@media (max-width: 768px) {
+    .lobby-container-two-column {
+        flex-direction: column;
+        overflow-y: auto;
+        height: 100%;
+        padding: 5px;
+        gap: 15px;
+    }
+
+    .lobby-left-pane,
+    .lobby-right-pane {
+        flex: none;
+        width: 100%;
+        height: auto;
+    }
+
+    .lobby-left-pane {
+        order: 2; /* モバイルではゲーム選択を上に、ランキングを下に配置 */
+        padding: 10px;
+    }
+
+    .lobby-right-pane {
+        order: 1;
+    }
+
+    .ranking-container {
+        height: 380px; /* モバイル時は固定高を確保して内側をスクロールさせる */
+    }
+
+    .lobby-container {
+        gap: 2vh;
+        padding: 10px 0;
+    }
 }
 
 /* ==========================================================================
