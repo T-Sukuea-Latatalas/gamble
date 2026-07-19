@@ -42,37 +42,13 @@
             overflow: hidden;
         }
 
-        /* 画面上部のリセットバー */
-        .top-bar {
-            display: flex;
-            justify-content: flex-end;
-            width: 100%;
-            flex-shrink: 0;
-        }
-
-        .reset-btn {
-            background-color: transparent;
-            border: 1px solid rgba(255, 255, 255, 0.4);
-            color: rgba(255, 255, 255, 0.7);
-            padding: 4px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 11px;
-            transition: all 0.2s;
-        }
-
-        .reset-btn:hover {
-            border-color: #ffffff;
-            color: #ffffff;
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
         /* ヘッダーエリア */
         .header {
             text-align: center;
             border-bottom: 2px solid #ffd700;
             padding-bottom: 5px;
             flex-shrink: 0;
+            margin-top: 1vh;
         }
 
         .header h1 {
@@ -162,6 +138,7 @@
             align-items: center;
             justify-content: center;
             padding: 4px;
+            perspective: 1000px; /* カード個別の3D歪みを防ぐため、親コンテナに消失点を設定 */
         }
 
         /* スプリット対応のプレイヤーエリア */
@@ -223,7 +200,6 @@
             font-size: clamp(8px, 1.4vh, 13px); /* 画面の高さに応じてカード基準サイズが決定 */
             width: 6.2em;
             height: 9em;
-            perspective: 1000px;
             flex-shrink: 0;
             position: relative;
             opacity: 1; /* 初期不透明度を1にし、スライド完了後の急な消滅を防ぐ */
@@ -593,11 +569,6 @@
 <body>
 
 <div class="game-container">
-    <!-- リセットボタン -->
-    <div class="top-bar">
-        <button class="reset-btn" onclick="resetGame()">RESET GAME</button>
-    </div>
-
     <!-- ヘッダー（残高・ベット額・借金） -->
     <div class="header">
         <h1>♠ Blackjack Classic ♦</h1>
@@ -819,12 +790,38 @@
     let dealerHand = { cards: [], score: 0, visibleScore: 0 };
     let playerHands = []; // 複数の手を管理（スプリット対応）
     let activeHandIndex = 0; // 現在操作中の手札のインデックス
-    let gameState = 'betting'; // 'betting' | 'dealing' | 'player-turn' | 'dealer-turn' | 'round-over' | 'game-over'
+    let gameState = 'betting'; // 'betting' | 'dealing' | 'player-turn' | 'dealer-turn' | 'round-over'
     let isProcessing = false; // 非同期連打・衝突防止用フラグ
 
     // 汎用ウェイト用Promise
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    /**
+     * プレイデータのローカル保存機能 (localStorage)
+     */
+    function saveGameData() {
+        localStorage.setItem('bj_classic_bankroll', bankroll);
+        localStorage.setItem('bj_classic_debt', debt);
+    }
+
+    /**
+     * プレイデータのローカル読込機能
+     */
+    function loadGameData() {
+        const savedBankroll = localStorage.getItem('bj_classic_bankroll');
+        const savedDebt = localStorage.getItem('bj_classic_debt');
+        if (savedBankroll !== null) {
+            bankroll = parseInt(savedBankroll, 10);
+        } else {
+            bankroll = 1000;
+        }
+        if (savedDebt !== null) {
+            debt = parseInt(savedDebt, 10);
+        } else {
+            debt = 0;
+        }
     }
 
     /**
@@ -920,7 +917,7 @@
         if (gameState !== 'betting' || isProcessing) return;
         currentBet = 0;
         sfx.playCoin();
-        checkBankruptcy(); // クリアしたことによる$0フリーズを監視
+        checkBankruptcy(); // クリアしたことによる$0スタックを監視
         updateUI();
     }
 
@@ -937,19 +934,16 @@
     }
 
     /**
-     * 借金する (Borrow)
+     * 借金する (Borrow - 上限撤廃)
      */
     function borrow() {
         sfx.init();
         if (gameState !== 'betting' || isProcessing) return;
-        if (debt >= 5000) {
-            logMessage("借金は上限（$5000）に達しています。");
-            return;
-        }
         sfx.playCoin();
         debt += 1000;
         bankroll += 1000;
         logMessage("$1000を借金しました。");
+        saveGameData();
         updateUI();
     }
 
@@ -969,6 +963,7 @@
         bankroll -= repayAmount;
         debt -= repayAmount;
         logMessage(`借金を$${repayAmount}返済しました。`);
+        saveGameData();
         checkBankruptcy(); // 返済時の$0スタック条件をチェック
         updateUI();
     }
@@ -1004,12 +999,13 @@
             cardEl.classList.add('revealed');
         }
 
-        // フリップが完了する時間（約350ms）を待つ
-        await sleep(350);
+        // フリップが完了する時間（400msのアニメーションに対し余裕を持たせる）
+        await sleep(450);
         
         // 表面フリップ完了をフラグに反映
         card.hasAnimatedReveal = true;
 
+        playerHands[handIndex].score = calculateScore(playerHands[handIndex].cards);
         playerHands[handIndex].visibleScore = calculateScore(playerHands[handIndex].cards.filter(c => c.isRevealed));
         updateUI(); // すでに hasAnimatedReveal が true なので、no-transition付きで安定再描画される
     }
@@ -1031,14 +1027,16 @@
             if (cardEl) {
                 cardEl.classList.add('revealed');
             }
-            await sleep(350);
+            await sleep(450);
             // 表面フリップ完了を記録
             card.hasAnimatedReveal = true;
         } else {
             // 裏面（ホールカード）の場合はスライド停止後そのまま終了
-            await sleep(350);
+            await sleep(450);
         }
 
+        // バグ①：ディーラー追加時の内部スコア再計算・同期を確実に行う
+        dealerHand.score = calculateScore(dealerHand.cards);
         dealerHand.visibleScore = calculateScore(dealerHand.cards.filter(c => c.isRevealed));
         updateUI();
     }
@@ -1055,9 +1053,12 @@
             if (cardEl) {
                 cardEl.classList.add('revealed');
             }
-            await sleep(350);
+            await sleep(450);
             // フリップ完了を記録
             holeCard.hasAnimatedReveal = true;
+
+            // バグ①：ホールカード開示時の内部スコア再計算・同期を確実に行う
+            dealerHand.score = calculateScore(dealerHand.cards);
             dealerHand.visibleScore = calculateScore(dealerHand.cards.filter(c => c.isRevealed));
             updateUI();
         }
@@ -1073,6 +1074,7 @@
 
         // ベット金額を残高から引き出す
         bankroll -= currentBet;
+        saveGameData();
 
         // 手元デッキチェック
         if (deck.length < 20) {
@@ -1186,6 +1188,7 @@
         gameState = 'dealing';
         bankroll -= activeHand.bet;
         activeHand.bet *= 2;
+        saveGameData();
         updateUI();
 
         await dealCardToPlayer(activeHandIndex);
@@ -1217,6 +1220,7 @@
         isProcessing = true; // 操作をロック
         gameState = 'dealing';
         bankroll -= activeHand.bet;
+        saveGameData();
 
         // 【視覚的向上】2枚目のカードを滑らかに横にスライド移動させる一時演出
         const cardsInContainer = document.querySelectorAll('#player-hands-container .hand-wrapper .cards-container .card-wrapper-3d');
@@ -1243,14 +1247,14 @@
         activeHand.visibleScore = calculateScore(activeHand.cards);
         updateUI();
 
-        await sleep(350);
+        await sleep(450);
 
         // それぞれにカードを1枚ずつ配る
         await dealCardToPlayer(0);
-        await sleep(250);
+        await sleep(500);
 
         await dealCardToPlayer(1);
-        await sleep(250);
+        await sleep(500);
 
         activeHand.score = calculateScore(activeHand.cards);
         newHand.score = calculateScore(newHand.cards);
@@ -1382,9 +1386,9 @@
 
         // 破産・極小金額時の救済および無効ベットの調整
         checkBankruptcy();
-        if (gameState !== 'game-over') {
-            checkBetValidity();
-        }
+        checkBetValidity();
+
+        saveGameData(); // 精算結果を保存
 
         isProcessing = false; // 一連のターン非同期処理の完全解放
         updateUI();
@@ -1460,45 +1464,16 @@
     }
 
     /**
-     * 万が一全財産を失った場合の救済措置（スタック防止）
+     * 万が一全財産を失った場合の救済措置（仕様変更：上限なしで無限自動救済）
      */
     function checkBankruptcy() {
         if (bankroll === 0 && currentBet === 0) {
-            if (debt < 5000) {
-                debt += 1000;
-                bankroll = 1000;
-                sfx.playCoin();
-                logMessage("残高がなくなりました。自動借金により$1000を調達し、救済されました。");
-            } else {
-                gameState = 'game-over';
-                logMessage("借金上限（$5000）に達し、救済不可能です。RESET GAMEボタンでやり直してください。");
-            }
-        }
-    }
-
-    /**
-     * ゲームを完全に初期状態にリセットする
-     */
-    function resetGame() {
-        sfx.init();
-        if (confirm("ゲーム全体を初期状態にリセットし、資金を$1000に戻しますか？")) {
+            debt += 1000;
             bankroll = 1000;
-            currentBet = 0;
-            debt = 0;
-            isProcessing = false;
-            gameState = 'betting';
-            dealerHand = { cards: [], score: 0, visibleScore: 0 };
-            playerHands = [];
-            activeHandIndex = 0;
-            deck = createDeck();
-            shuffle(deck);
-            
-            // DOMの全クリアを最初だけ実行
-            document.getElementById('dealer-cards').innerHTML = '';
-            document.getElementById('player-hands-container').innerHTML = '';
-
+            sfx.playCoin();
+            logMessage("残高がなくなりました。自動借金により$1000を調達し、救済されました。");
+            saveGameData();
             updateUI();
-            logMessage("ゲームをリセットしました。ベットを選択してスタートしてください。");
         }
     }
 
@@ -1724,13 +1699,13 @@
         clearBtn.disabled = (gameState !== 'betting' || isProcessing || currentBet <= 0);
         chipArea.appendChild(clearBtn);
 
-        // 5. Borrow（借金）ボタンの生成
+        // 5. Borrow（借金）ボタンの生成 (仕様変更：上限チェックを排除)
         const borrowBtn = document.createElement('button');
         borrowBtn.className = 'action-btn borrow-btn';
         borrowBtn.id = 'btn-borrow';
         borrowBtn.textContent = 'Borrow';
         borrowBtn.onclick = borrow;
-        borrowBtn.disabled = (gameState !== 'betting' || isProcessing || debt >= 5000);
+        borrowBtn.disabled = (gameState !== 'betting' || isProcessing);
         chipArea.appendChild(borrowBtn);
 
         // 6. Repay（返済）ボタンの生成
@@ -1817,7 +1792,7 @@
 
             logMessage(`Hand ${playerHands.length > 1 ? (activeHandIndex + 1) : ""} のアクションを選択してください。`);
         } else {
-            // ディーラーターン、ラウンド終了、またはゲームオーバー
+            // ディーラーターン、ラウンド終了
             btnDeal.disabled = (gameState !== 'round-over' || currentBet <= 0);
             if (gameState === 'round-over') {
                 btnDeal.textContent = 'NEXT ROUND';
@@ -1833,15 +1808,13 @@
                 logMessage("ディーラーのターンです...");
             } else if (gameState === 'round-over') {
                 logMessage("ラウンド終了。NEXT ROUNDを押して次のゲームに進んでください。");
-            } else if (gameState === 'game-over') {
-                btnDeal.disabled = true;
-                logMessage("GAME OVER! RESET GAMEボタンを押してリセットしてください。");
             }
         }
     }
 
     // 初期化ロード
     window.onload = function() {
+        loadGameData(); // 保存されたプレイデータを読み込む
         deck = createDeck();
         shuffle(deck);
         updateUI();
