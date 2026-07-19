@@ -1,6 +1,8 @@
 /* css/blackjack.css */
 
-/* バックボタン（ロビーに戻る）用の独自スタイル */
+/* ==========================================================================
+   1. レイアウト・ヘッダー装飾
+   ========================================================================== */
 .back-lobby-btn {
     background-color: transparent;
     border: 1px solid rgba(255, 255, 255, 0.4);
@@ -18,7 +20,6 @@
     background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* 画面上部のバー構造 */
 .blackjack-top-bar {
     display: flex;
     justify-content: flex-start;
@@ -26,8 +27,46 @@
     flex-shrink: 0;
 }
 
+/* ヘッダーエリア */
+.header {
+    text-align: center;
+    border-bottom: 2px solid #ffd700;
+    padding-bottom: 5px;
+    flex-shrink: 0;
+    margin-top: 1vh;
+}
+
+.header h1 {
+    margin: 0 0 5px 0;
+    font-size: clamp(18px, 3vh, 26px);
+    letter-spacing: 2px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    color: #ffd700;
+}
+
+.balance-container {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+.info-box {
+    background-color: rgba(0, 0, 0, 0.6);
+    border: 1px solid #ffd700;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: clamp(12px, 1.8vh, 16px);
+    min-width: 100px;
+    box-shadow: inset 0 0 10px rgba(255, 215, 0, 0.2);
+}
+
+.info-box span {
+    font-weight: bold;
+    color: #ffd700;
+}
+
 /* ==========================================================================
-   テーブルエリア（カード配置・状況表示）
+   2. テーブルエリア（カード配置・状況表示）
    ========================================================================== */
 .table-area {
     display: flex;
@@ -84,7 +123,7 @@
     align-items: center;
     justify-content: center;
     padding: 4px;
-    perspective: 1000px;
+    perspective: 1000px; /* 同一消失点の確保 */
 }
 
 /* スプリット対応のプレイヤーエリア */
@@ -140,7 +179,7 @@
 }
 
 /* ==========================================================================
-   カード（トランプ）の3Dフリップ＆スライドデザイン（emによるスケール化）
+   3. カード（トランプ）の3Dフリップ＆スライドデザイン（emによるスケール化）
    ========================================================================== */
 .card-wrapper-3d {
     font-size: clamp(8px, 1.4vh, 13px);
@@ -239,7 +278,7 @@
     transform: rotate(180deg);
 }
 
-/* カードの裏面（ディーラーホールカード等） */
+/* カードの裏面 */
 .card-back {
     background: repeating-linear-gradient(
         45deg,
@@ -252,7 +291,7 @@
 }
 
 /* ==========================================================================
-   結果通知バッジ（登場バウンドアニメーション）
+   4. 結果通知バッジ（登場バウンドアニメーション）
    ========================================================================== */
 .result-badge {
     position: absolute;
@@ -312,4 +351,177 @@
 @keyframes pulse {
     0% { transform: translate(-50%, -50%) rotate(-12deg) scale(1.0); }
     100% { transform: translate(-50%, -50%) rotate(-12deg) scale(1.1); }
+}
+
+/* ==========================================================================
+   5. メッセージ・操作パネル
+   ========================================================================== */
+#message-bar {
+    background-color: rgba(0, 0, 0, 0.7);
+    border-left: 5px solid #ffd700;
+    padding: 8px 10px;
+    border-radius: 4px;
+    font-size: clamp(12px, 1.8vh, 15px);
+    min-height: 1.2em;
+    text-align: center;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background-color: rgba(0, 0, 0, 0.4);
+    padding: 10px;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+
+/* チップ操作 */
+.chip-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.chip {
+    width: clamp(38px, 6.5vh, 52px);
+    height: clamp(38px, 6.5vh, 52px);
+    border-radius: 50%;
+    border: 3px dashed #ffffff;
+    color: #ffffff;
+    font-size: clamp(11px, 1.4vh, 14px);
+    font-weight: bold;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.5);
+    transition: transform 0.15s, opacity 0.2s;
+}
+
+.chip:active:not(:disabled) {
+    transform: scale(0.9);
+}
+
+.chip:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* チップカラーの定義 */
+.chip-1 { background-color: #78909c; }
+.chip-5 { background-color: #ff7043; }
+.chip-10 { background-color: #1e88e5; }
+.chip-50 { background-color: #43a047; }
+.chip-100 { background-color: #e53935; }
+.chip-500 { background-color: #8e24aa; }
+.chip-1000 { background-color: #ffb300; color: #111; border-color: #111; }
+.chip-5000 { background-color: #00e5ff; color: #111; border-color: #111; }
+
+/* アクションボタン共通設定 */
+.action-btn {
+    background-color: #2e7d32;
+    color: #ffffff;
+    border: none;
+    padding: 10px 16px;
+    font-size: clamp(12px, 1.6vh, 15px);
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #1b5e20;
+    transition: all 0.1s ease;
+    min-width: 80px;
+    text-transform: uppercase;
+}
+
+.action-btn:hover:not(:disabled) {
+    background-color: #388e3c;
+}
+
+.action-btn:active:not(:disabled) {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #1b5e20;
+}
+
+.action-btn:disabled {
+    background-color: #555555;
+    color: #888888;
+    box-shadow: none;
+    cursor: not-allowed;
+    transform: none;
+    opacity: 0.5;
+}
+
+.action-controls {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* 個別ボタンのカラー */
+.deal-btn {
+    background-color: #d32f2f;
+    box-shadow: 0 4px 0 #9a0007;
+    min-width: 120px;
+}
+.deal-btn:hover:not(:disabled) { background-color: #e53935; }
+.deal-btn:active:not(:disabled) { box-shadow: 0 1px 0 #9a0007; }
+
+.clear-btn {
+    background-color: #757575;
+    box-shadow: 0 4px 0 #424242;
+}
+.clear-btn:hover:not(:disabled) { background-color: #9e9e9e; }
+.clear-btn:active:not(:disabled) { box-shadow: 0 1px 0 #424242; }
+
+.allin-btn {
+    background-color: #ff9100;
+    box-shadow: 0 4px 0 #b36400;
+}
+.allin-btn:hover:not(:disabled) { background-color: #ffa726; }
+.allin-btn:active:not(:disabled) { box-shadow: 0 1px 0 #b36400; }
+
+/* 借金・返済ボタンのカラー */
+.borrow-btn {
+    background-color: #0288d1;
+    box-shadow: 0 4px 0 #01579b;
+}
+.borrow-btn:hover:not(:disabled) { background-color: #03a9f4; }
+.borrow-btn:active:not(:disabled) { box-shadow: 0 1px 0 #01579b; }
+
+.repay-btn {
+    background-color: #f57c00;
+    box-shadow: 0 4px 0 #e65100;
+}
+.repay-btn:hover:not(:disabled) { background-color: #ff9800; }
+.repay-btn:active:not(:disabled) { box-shadow: 0 1px 0 #e65100; }
+
+/* ==========================================================================
+   6. レスポンシブ設計（スマートフォン対応）
+   ========================================================================== */
+@media (max-width: 600px) {
+    .card-wrapper-3d {
+        font-size: clamp(6px, 1.2vh, 11px);
+    }
+    .chip {
+        width: 38px;
+        height: 38px;
+        font-size: 10px;
+        border-width: 2px;
+    }
+    .action-btn {
+        padding: 8px 12px;
+        font-size: 12px;
+        min-width: 65px;
+    }
+    .deal-btn { min-width: 90px; }
+    .hand-wrapper {
+        padding: 6px;
+    }
 }
