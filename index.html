@@ -226,7 +226,7 @@
             perspective: 1000px;
             flex-shrink: 0;
             position: relative;
-            opacity: 1; /* 初期状態を不透明に変更し、アニメーション終了後の消滅を防ぐ */
+            opacity: 1; /* 初期不透明度を1にし、スライド完了後の急な消滅を防ぐ */
         }
 
         /* 配る時のスライド出現アニメーション */
@@ -236,7 +236,7 @@
 
         @keyframes card-slide {
             from {
-                opacity: 0; /* スライド開始時にフェードインさせる */
+                opacity: 0; /* 開始時に透明から入るようにしてフェードインを維持 */
                 transform: translate(150px, -150px) scale(0.6) rotate(20deg);
             }
             to {
@@ -820,6 +820,7 @@
     let playerHands = []; // 複数の手を管理（スプリット対応）
     let activeHandIndex = 0; // 現在操作中の手札のインデックス
     let gameState = 'betting'; // 'betting' | 'dealing' | 'player-turn' | 'dealer-turn' | 'round-over' | 'game-over'
+    let isProcessing = false; // 非同期連打・衝突防止用フラグ
 
     // 汎用ウェイト用Promise
     function sleep(ms) {
@@ -900,10 +901,11 @@
      */
     function addBet(amount) {
         sfx.init();
-        if (gameState !== 'betting') return;
+        if (gameState !== 'betting' || isProcessing) return;
         if (bankroll >= currentBet + amount) {
             currentBet += amount;
             sfx.playCoin();
+            checkBankruptcy();
             updateUI();
         } else {
             logMessage("残高が不足しています。");
@@ -915,9 +917,10 @@
      */
     function clearBet() {
         sfx.init();
-        if (gameState !== 'betting') return;
+        if (gameState !== 'betting' || isProcessing) return;
         currentBet = 0;
         sfx.playCoin();
+        checkBankruptcy(); // クリアしたことによる$0フリーズを監視
         updateUI();
     }
 
@@ -926,9 +929,10 @@
      */
     function allIn() {
         sfx.init();
-        if (gameState !== 'betting' || bankroll <= 0) return;
+        if (gameState !== 'betting' || isProcessing || bankroll <= 0) return;
         currentBet = bankroll;
         sfx.playCoin();
+        checkBankruptcy();
         updateUI();
     }
 
@@ -937,7 +941,7 @@
      */
     function borrow() {
         sfx.init();
-        if (gameState !== 'betting') return;
+        if (gameState !== 'betting' || isProcessing) return;
         if (debt >= 5000) {
             logMessage("借金は上限（$5000）に達しています。");
             return;
@@ -954,7 +958,7 @@
      */
     function repay() {
         sfx.init();
-        if (gameState !== 'betting') return;
+        if (gameState !== 'betting' || isProcessing) return;
         const repayAmount = Math.min(1000, debt);
         if (debt <= 0) return;
         if (bankroll < repayAmount) {
@@ -965,6 +969,7 @@
         bankroll -= repayAmount;
         debt -= repayAmount;
         logMessage(`借金を$${repayAmount}返済しました。`);
+        checkBankruptcy(); // 返済時の$0スタック条件をチェック
         updateUI();
     }
 
@@ -973,6 +978,7 @@
      */
     function handleDealBtn() {
         sfx.init();
+        if (isProcessing) return;
         if (gameState === 'betting') {
             deal();
         } else if (gameState === 'round-over') {
@@ -1061,7 +1067,9 @@
      * ラウンドを開始する（DEAL）
      */
     async function deal() {
-        if (currentBet <= 0 || gameState !== 'betting') return;
+        if (currentBet <= 0 || gameState !== 'betting' || isProcessing) return;
+
+        isProcessing = true; // 操作をロック
 
         // ベット金額を残高から引き出す
         bankroll -= currentBet;
@@ -1086,19 +1094,18 @@
         activeHandIndex = 0;
         updateUI();
 
-        // 1枚ずつ「引く → 演出を待つ」の順序配布
-        // 配布：Player 1枚目 → Dealer 1枚目(表) → Player 2枚目 → Dealer 2枚目(裏)
+        // 1枚ずつ「引く → 演出を完全に待つ(500ms)」の順序配布
         await dealCardToPlayer(0);
-        await sleep(250);
+        await sleep(500);
 
         await dealCardToDealer(false);
-        await sleep(250);
+        await sleep(500);
 
         await dealCardToPlayer(0);
-        await sleep(250);
+        await sleep(500);
 
         await dealCardToDealer(true);
-        await sleep(250);
+        await sleep(500);
 
         // スコアを内部的に同期
         dealerHand.score = calculateScore(dealerHand.cards);
@@ -1117,6 +1124,7 @@
             }, 800);
         } else {
             gameState = 'player-turn';
+            isProcessing = false; // 操作を解放
             updateUI();
         }
     }
@@ -1125,7 +1133,8 @@
      * カードを引く（HIT）
      */
     async function hit() {
-        if (gameState !== 'player-turn') return;
+        if (gameState !== 'player-turn' || isProcessing) return;
+        isProcessing = true; // 操作をロック
         const activeHand = playerHands[activeHandIndex];
 
         // ロック
@@ -1148,6 +1157,7 @@
             await moveToNextHand();
         } else {
             gameState = 'player-turn';
+            isProcessing = false; // 操作を再解放
             updateUI();
         }
     }
@@ -1156,7 +1166,8 @@
      * 手札を確定（STAND）
      */
     async function stand() {
-        if (gameState !== 'player-turn') return;
+        if (gameState !== 'player-turn' || isProcessing) return;
+        isProcessing = true; // 処理完了までロックをかける
         const activeHand = playerHands[activeHandIndex];
         activeHand.status = 'stood';
         await moveToNextHand();
@@ -1166,12 +1177,12 @@
      * 賭け金を倍にする（DOUBLE DOWN）
      */
     async function doubleDown() {
-        if (gameState !== 'player-turn') return;
+        if (gameState !== 'player-turn' || isProcessing) return;
         const activeHand = playerHands[activeHandIndex];
 
         if (activeHand.cards.length !== 2 || bankroll < activeHand.bet) return;
 
-        // ベットを引く
+        isProcessing = true; // 操作をロック
         gameState = 'dealing';
         bankroll -= activeHand.bet;
         activeHand.bet *= 2;
@@ -1196,15 +1207,26 @@
      * 手札の分割（SPLIT）
      */
     async function split() {
-        if (gameState !== 'player-turn') return;
+        if (gameState !== 'player-turn' || isProcessing) return;
         const activeHand = playerHands[activeHandIndex];
 
         if (playerHands.length > 1 || activeHand.cards.length !== 2) return;
         if (activeHand.cards[0].name !== activeHand.cards[1].name) return;
         if (bankroll < activeHand.bet) return;
 
+        isProcessing = true; // 操作をロック
         gameState = 'dealing';
         bankroll -= activeHand.bet;
+
+        // 【視覚的向上】2枚目のカードを滑らかに横にスライド移動させる一時演出
+        const cardsInContainer = document.querySelectorAll('#player-hands-container .hand-wrapper .cards-container .card-wrapper-3d');
+        if (cardsInContainer.length === 2) {
+            const secondCardEl = cardsInContainer[1];
+            secondCardEl.style.transition = 'transform 0.4s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.4s ease';
+            secondCardEl.style.transform = 'translate(150px, 50px) rotate(15deg)';
+            secondCardEl.style.opacity = '0.7';
+            await sleep(400); // 演出完了まで待つ
+        }
 
         // 2枚目を取り出し、新規のハンドを作成
         const secondCard = activeHand.cards.pop();
@@ -1236,6 +1258,7 @@
         activeHandIndex = 0;
         gameState = 'player-turn';
         logMessage("スプリットしました。Hand 1からプレイしてください。");
+        isProcessing = false; // 開放
         updateUI();
     }
 
@@ -1245,6 +1268,7 @@
     async function moveToNextHand() {
         if (activeHandIndex < playerHands.length - 1) {
             activeHandIndex++;
+            isProcessing = false; // 次のハンドの操作を解放
             updateUI();
         } else {
             await playDealerTurn();
@@ -1271,9 +1295,9 @@
             return;
         }
 
-        // ディーラーの追加引き込み（時間差演出）
+        // 【最適化ウェイト】1枚配るごとに完全に表を向くまで1000ms間隔に広げて美しく配布
         while (calculateScore(dealerHand.cards) < 17) {
-            await sleep(600);
+            await sleep(1000);
             await dealCardToDealer(false);
         }
 
@@ -1362,6 +1386,7 @@
             checkBetValidity();
         }
 
+        isProcessing = false; // 一連のターン非同期処理の完全解放
         updateUI();
     }
 
@@ -1420,6 +1445,8 @@
         playerHands = [];
         activeHandIndex = 0;
 
+        checkBankruptcy(); // 新規ラウンド遷移時のスタックを自動チェック
+
         updateUI();
     }
 
@@ -1433,7 +1460,7 @@
     }
 
     /**
-     * 万が一全財産を失った場合の救済措置（仕様変更）
+     * 万が一全財産を失った場合の救済措置（スタック防止）
      */
     function checkBankruptcy() {
         if (bankroll === 0 && currentBet === 0) {
@@ -1441,10 +1468,10 @@
                 debt += 1000;
                 bankroll = 1000;
                 sfx.playCoin();
-                logMessage("残高がなくなりました。自動借金により$1000を調達しました（借金が$1000増えました）。");
+                logMessage("残高がなくなりました。自動借金により$1000を調達し、救済されました。");
             } else {
                 gameState = 'game-over';
-                logMessage("借金上限に達し、全財産を失いました。GAME OVERです。RESET GAMEを押して最初からやり重してください。");
+                logMessage("借金上限（$5000）に達し、救済不可能です。RESET GAMEボタンでやり直してください。");
             }
         }
     }
@@ -1458,12 +1485,18 @@
             bankroll = 1000;
             currentBet = 0;
             debt = 0;
+            isProcessing = false;
             gameState = 'betting';
             dealerHand = { cards: [], score: 0, visibleScore: 0 };
             playerHands = [];
             activeHandIndex = 0;
             deck = createDeck();
             shuffle(deck);
+            
+            // DOMの全クリアを最初だけ実行
+            document.getElementById('dealer-cards').innerHTML = '';
+            document.getElementById('player-hands-container').innerHTML = '';
+
             updateUI();
             logMessage("ゲームをリセットしました。ベットを選択してスタートしてください。");
         }
@@ -1507,6 +1540,148 @@
     }
 
     /**
+     * DOM要素の差分更新・維持制御（DOM破壊の完全防止）
+     */
+    function syncCardsDOM(container, cards) {
+        // 1. 不要なDOM（配列にないidのDOM）を削除
+        const cardIds = new Set(cards.map(c => c.id));
+        Array.from(container.children).forEach(child => {
+            if (!cardIds.has(child.id)) {
+                child.remove();
+            }
+        });
+
+        // 2. 配列の順番に沿ってDOMを挿入・更新
+        cards.forEach((card, idx) => {
+            let cardEl = document.getElementById(card.id);
+            if (!cardEl) {
+                // 新規カードをDOMに挿入
+                const temp = document.createElement('div');
+                temp.innerHTML = createCardHTML(card);
+                cardEl = temp.firstElementChild;
+                
+                // 順番を守るために insertBefore または appendChild
+                if (idx < container.children.length) {
+                    container.insertBefore(cardEl, container.children[idx]);
+                } else {
+                    container.appendChild(cardEl);
+                }
+            } else {
+                // 既存カードの状態更新（トランジションを壊さずに同期）
+                if (card.isRevealed && !cardEl.classList.contains('revealed')) {
+                    cardEl.classList.add('revealed');
+                }
+                if (card.hasAnimatedReveal && !cardEl.classList.contains('no-transition')) {
+                    cardEl.classList.add('no-transition');
+                }
+                // 位置の検証（スプリット時のハンド間カード移動に対応）
+                if (container.children[idx] !== cardEl) {
+                    if (idx < container.children.length) {
+                        container.insertBefore(cardEl, container.children[idx]);
+                    } else {
+                        container.appendChild(cardEl);
+                    }
+                }
+            }
+        });
+    }
+
+    /**
+     * ディーラーハンドDOMの差分更新
+     */
+    function updateDealerHandDOM() {
+        const dealerCardsDiv = document.getElementById('dealer-cards');
+        syncCardsDOM(dealerCardsDiv, dealerHand.cards);
+
+        const dBadge = document.getElementById('dealer-score-badge');
+        if (dealerHand.cards.length === 0) {
+            dBadge.style.display = 'none';
+        } else {
+            dBadge.style.display = 'inline-block';
+            const hasHoleCard = dealerHand.cards.some(c => !c.isRevealed);
+            if (hasHoleCard) {
+                dBadge.textContent = `${dealerHand.visibleScore} + ?`;
+            } else {
+                dBadge.textContent = dealerHand.visibleScore;
+            }
+        }
+    }
+
+    /**
+     * プレイヤーの複数ハンドDOMの差分更新・再利用ロジック
+     */
+    function updatePlayerHandsDOM() {
+        const playerContainer = document.getElementById('player-hands-container');
+        
+        // 1. 必要に応じて wrapper コンテナを追加・破棄（スプリット時対応）
+        while (playerContainer.children.length < playerHands.length) {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'hand-wrapper';
+            wrapper.innerHTML = `
+                <div class="hand-header">
+                    <span class="hand-title"></span>
+                    <span class="score-badge"></span>
+                </div>
+                <div class="cards-container"></div>
+                <div class="hand-footer"></div>
+                <div class="badge-placeholder"></div>
+            `;
+            playerContainer.appendChild(wrapper);
+        }
+        
+        while (playerContainer.children.length > playerHands.length) {
+            playerContainer.lastElementChild.remove();
+        }
+
+        // 2. 各ハンドラッパーを全初期化せず中の個別テキスト・カードコンテナのみ同期
+        playerHands.forEach((hand, index) => {
+            const wrapper = playerContainer.children[index];
+            
+            // 操作対象のアクティブハンド表現
+            if (gameState === 'player-turn' && index === activeHandIndex) {
+                wrapper.classList.add('active');
+            } else {
+                wrapper.classList.remove('active');
+            }
+
+            // タイトルの書き換え
+            const titleEl = wrapper.querySelector('.hand-title');
+            titleEl.textContent = `Hand ${playerHands.length > 1 ? (index + 1) : ""}`;
+
+            // スコア表示の更新
+            const scoreBadge = wrapper.querySelector('.score-badge');
+            let scoreText = hand.visibleScore;
+            if (hand.visibleScore > 21) {
+                scoreText = `${hand.visibleScore} (Bust!)`;
+            }
+            scoreBadge.textContent = scoreText;
+
+            // フッターベット金額の書き換え
+            const footer = wrapper.querySelector('.hand-footer');
+            footer.textContent = `Bet: $${hand.bet}`;
+
+            // 結果通知バッジの追加・削除（不要なチラつきを排除）
+            const badgePlaceholder = wrapper.querySelector('.badge-placeholder');
+            badgePlaceholder.innerHTML = '';
+            if (gameState === 'round-over' || hand.status === 'busted') {
+                if (hand.result === 'WIN') {
+                    badgePlaceholder.innerHTML = `<div class="result-badge win">WIN</div>`;
+                } else if (hand.result === 'LOSE') {
+                    badgePlaceholder.innerHTML = `<div class="result-badge lose">LOSE</div>`;
+                } else if (hand.result === 'PUSH') {
+                    badgePlaceholder.innerHTML = `<div class="result-badge push">PUSH</div>`;
+                } else if (hand.result === 'BLACKJACK') {
+                    badgePlaceholder.innerHTML = `<div class="result-badge bj">BLACKJACK!</div>`;
+                }
+            }
+
+            // 本ハンド配下のカードのみDOM同期
+            const cardsContainer = wrapper.querySelector('.cards-container');
+            syncCardsDOM(cardsContainer, hand.cards);
+        });
+    }
+
+    /**
      * 所持金および制限に基づいた動的チップ選択エリアの再描画
      */
     function updateChips() {
@@ -1523,7 +1698,7 @@
 
                 // 2. 「追加でベットできる金額（残高 - 現在のベット）」を上回る場合は非活性（disabled）
                 // かつベット可能なフェーズ（gameState === 'betting'）のみ有効
-                const isBettingPhase = (gameState === 'betting');
+                const isBettingPhase = (gameState === 'betting' && !isProcessing);
                 const hasEnoughRoom = (val <= (bankroll - currentBet));
                 btn.disabled = !(isBettingPhase && hasEnoughRoom);
 
@@ -1537,7 +1712,7 @@
         allInBtn.id = 'btn-allin';
         allInBtn.textContent = 'All In';
         allInBtn.onclick = allIn;
-        allInBtn.disabled = (gameState !== 'betting' || bankroll <= 0 || currentBet === bankroll);
+        allInBtn.disabled = (gameState !== 'betting' || isProcessing || bankroll <= 0 || currentBet === bankroll);
         chipArea.appendChild(allInBtn);
 
         // 4. Clear ボタンの生成
@@ -1546,7 +1721,7 @@
         clearBtn.id = 'btn-clear';
         clearBtn.textContent = 'Clear';
         clearBtn.onclick = clearBet;
-        clearBtn.disabled = (gameState !== 'betting' || currentBet <= 0);
+        clearBtn.disabled = (gameState !== 'betting' || isProcessing || currentBet <= 0);
         chipArea.appendChild(clearBtn);
 
         // 5. Borrow（借金）ボタンの生成
@@ -1555,7 +1730,7 @@
         borrowBtn.id = 'btn-borrow';
         borrowBtn.textContent = 'Borrow';
         borrowBtn.onclick = borrow;
-        borrowBtn.disabled = (gameState !== 'betting' || debt >= 5000);
+        borrowBtn.disabled = (gameState !== 'betting' || isProcessing || debt >= 5000);
         chipArea.appendChild(borrowBtn);
 
         // 6. Repay（返済）ボタンの生成
@@ -1565,7 +1740,7 @@
         repayBtn.textContent = 'Repay';
         repayBtn.onclick = repay;
         const repayAmount = Math.min(1000, debt);
-        repayBtn.disabled = (gameState !== 'betting' || debt <= 0 || bankroll < repayAmount);
+        repayBtn.disabled = (gameState !== 'betting' || isProcessing || debt <= 0 || bankroll < repayAmount);
         chipArea.appendChild(repayBtn);
     }
 
@@ -1581,92 +1756,26 @@
         // チップエリアを動的に生成・描画
         updateChips();
 
-        // ==========================================
-        // 1. ディーラーエリアの更新
-        // ==========================================
-        const dealerCardsDiv = document.getElementById('dealer-cards');
-        dealerCardsDiv.innerHTML = '';
+        // ディーラーとプレイヤーエリアのDOMを差分同期（破棄・再生成なし）
+        updateDealerHandDOM();
+        updatePlayerHandsDOM();
 
-        dealerHand.cards.forEach((card) => {
-            dealerCardsDiv.innerHTML += createCardHTML(card);
-        });
-
-        // ディーラーのスコアバッジ表示
-        const dBadge = document.getElementById('dealer-score-badge');
-        if (dealerHand.cards.length === 0) {
-            dBadge.style.display = 'none';
-        } else {
-            dBadge.style.display = 'inline-block';
-            
-            const hasHoleCard = dealerHand.cards.some(c => !c.isRevealed);
-            if (hasHoleCard) {
-                // 伏せられている場合は1枚目のスコア + ?
-                dBadge.textContent = `${dealerHand.visibleScore} + ?`;
-            } else {
-                dBadge.textContent = dealerHand.visibleScore;
-            }
-        }
-
-        // ==========================================
-        // 2. プレイヤーエリアの更新（スプリット対応）
-        // ==========================================
-        const playerContainer = document.getElementById('player-hands-container');
-        playerContainer.innerHTML = '';
-
-        playerHands.forEach((hand, index) => {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'hand-wrapper';
-
-            // 操作中の手札は黄金色の輪郭で表示
-            if (gameState === 'player-turn' && index === activeHandIndex) {
-                wrapper.classList.add('active');
-            }
-
-            let scoreText = hand.visibleScore;
-            if (hand.visibleScore > 21) {
-                scoreText = `${hand.visibleScore} (Bust!)`;
-            }
-
-            // 手札の結果バッジ
-            let badgeHTML = '';
-            if (gameState === 'round-over' || hand.status === 'busted') {
-                if (hand.result === 'WIN') {
-                    badgeHTML = `<div class="result-badge win">WIN</div>`;
-                } else if (hand.result === 'LOSE') {
-                    badgeHTML = `<div class="result-badge lose">LOSE</div>`;
-                } else if (hand.result === 'PUSH') {
-                    badgeHTML = `<div class="result-badge push">PUSH</div>`;
-                } else if (hand.result === 'BLACKJACK') {
-                    badgeHTML = `<div class="result-badge bj">BLACKJACK!</div>`;
-                }
-            }
-
-            let cardsHTML = '';
-            hand.cards.forEach(card => {
-                cardsHTML += createCardHTML(card);
-            });
-
-            wrapper.innerHTML = `
-                <div class="hand-header">
-                    <span class="hand-title">Hand ${playerHands.length > 1 ? (index + 1) : ""}</span>
-                    <span class="score-badge">${scoreText}</span>
-                </div>
-                <div class="cards-container">${cardsHTML}</div>
-                <div class="hand-footer">Bet: $${hand.bet}</div>
-                ${badgeHTML}
-            `;
-
-            playerContainer.appendChild(wrapper);
-        });
-
-        // ==========================================
-        // 3. ボタン等のアクティブ/非アクティブ状態制御
-        // ==========================================
+        // ボタン等のアクティブ/非アクティブ状態制御
         const btnDeal = document.getElementById('btn-deal');
         const btnHit = document.getElementById('btn-hit');
         const btnStand = document.getElementById('btn-stand');
         const btnDouble = document.getElementById('btn-double');
         const btnSplit = document.getElementById('btn-split');
+
+        // 非同期処理進行中（isProcessing）は全アクションボタンを完全に無効化し連打を防ぐ
+        if (isProcessing) {
+            btnDeal.disabled = true;
+            btnHit.disabled = true;
+            btnStand.disabled = true;
+            btnDouble.disabled = true;
+            btnSplit.disabled = true;
+            return;
+        }
 
         if (gameState === 'betting') {
             btnDeal.disabled = (currentBet <= 0);
@@ -1682,7 +1791,6 @@
                 logMessage(`$${currentBet} をベット中。よろしければDEALを押してください。`);
             }
         } else if (gameState === 'dealing') {
-            // アニメーションおよび配布処理ロック時
             btnDeal.disabled = true;
             btnHit.disabled = true;
             btnStand.disabled = true;
