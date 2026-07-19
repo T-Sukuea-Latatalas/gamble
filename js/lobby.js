@@ -4,7 +4,6 @@ const CasinoLobby = {
         this.renderLobby();
     },
 
-    // ポータルの共通メインコンテナにロビー画面を描画
     renderLobby() {
         const viewport = document.getElementById('game-viewport');
         if (!viewport) return;
@@ -18,23 +17,26 @@ const CasinoLobby = {
                         <h2 class="lobby-card-title">Blackjack Classic</h2>
                         <p class="lobby-card-desc">王道の4デッキブラックジャック。ダブルダウン、スプリット搭載。</p>
                     </div>
+                    <div class="lobby-card" id="btn-show-ranking">
+                        <div class="lobby-card-icon">🏆</div>
+                        <h2 class="lobby-card-title">Ranking Board</h2>
+                        <p class="lobby-card-desc">リアルタイムオンラインランキング。世界中のプレイヤーと資産を競おう！</p>
+                    </div>
                     <div class="lobby-card disabled">
                         <div class="lobby-card-icon">🎰</div>
                         <h2 class="lobby-card-title">Slots</h2>
-                        <p class="lobby-card-desc">Coming Soon...</p>
-                    </div>
-                    <div class="lobby-card disabled">
-                        <div class="lobby-card-icon">🎡</div>
-                        <h2 class="lobby-card-title">Roulette</h2>
                         <p class="lobby-card-desc">Coming Soon...</p>
                     </div>
                 </div>
             </div>
         `;
 
-        // ブラックジャック起動
         document.getElementById('btn-play-blackjack').addEventListener('click', () => {
             this.launchGame('blackjack');
+        });
+
+        document.getElementById('btn-show-ranking').addEventListener('click', () => {
+            this.launchGame('ranking');
         });
     },
 
@@ -42,16 +44,175 @@ const CasinoLobby = {
         const viewport = document.getElementById('game-viewport');
         if (!viewport) return;
 
-        viewport.innerHTML = ''; // ロビー画面を破棄（クリーンアンマウント）
+        viewport.innerHTML = '';
 
         if (gameId === 'blackjack') {
-            // ブラックジャックゲームモジュールを起動
             window.BlackjackGame.init(viewport);
+        } else if (gameId === 'ranking') {
+            this.renderRanking(viewport);
         }
+    },
+
+    /**
+     * ランキング画面全体のレンダリングと制御
+     */
+    async renderRanking(viewport) {
+        const currentUsername = window.CasinoStorage.getUsername();
+
+        viewport.innerHTML = `
+            <div class="ranking-container">
+                <div class="ranking-top-bar">
+                    <button class="back-lobby-btn" id="btn-ranking-back-lobby">← LOBBY</button>
+                    <h1 class="ranking-title">🏆 Online Leaderboard</h1>
+                    <div style="width: 70px;"></div> <!-- レイアウト均等化用スペーサー -->
+                </div>
+
+                <div class="username-setting-area">
+                    <div class="username-display-label">
+                        現在のユーザー名:<strong id="display-username-val">${currentUsername}</strong>
+                    </div>
+                    <div class="username-input-group">
+                        <input type="text" class="username-input" id="input-new-username" placeholder="新しい名前を入力" maxlength="15" value="${currentUsername}">
+                        <button class="username-btn" id="btn-update-username">更新</button>
+                    </div>
+                </div>
+
+                <div class="ranking-tabs">
+                    <button class="ranking-tab active" data-tab="net_worth">純資産部門</button>
+                    <button class="ranking-tab" data-tab="blackjack_max_win">BJ最大勝利</button>
+                    <button class="ranking-tab" data-tab="slots_max_win">スロット(Coming Soon)</button>
+                </div>
+
+                <div id="ranking-content-area" style="flex: 1; min-height: 0;">
+                    <div class="ranking-loading">
+                        <div class="spinner"></div>
+                        <p>クラウドからランキング情報を取得中...</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // ロビーへ戻る処理
+        document.getElementById('btn-ranking-back-lobby').addEventListener('click', () => {
+            this.renderLobby();
+        });
+
+        // ユーザー名更新処理
+        document.getElementById('btn-update-username').addEventListener('click', async () => {
+            const inputEl = document.getElementById('input-new-username');
+            const newName = inputEl.value.trim();
+            if (newName.length === 0) {
+                alert("有効なユーザー名を入力してください。");
+                return;
+            }
+
+            window.CasinoStorage.setUsername(newName);
+            document.getElementById('display-username-val').textContent = newName;
+
+            // クラウドへ名前を同期
+            await window.CasinoRanking.registerUser(newName);
+            // 同期された名前で最新資産スコアを併せて再送信
+            const netWorth = window.CasinoStorage.getBankroll() - window.CasinoStorage.getDebt();
+            await window.CasinoRanking.submitScore('net_worth', netWorth);
+
+            // 変更を即座に反映するためにランキング表示を更新
+            loadAndRenderTables();
+        });
+
+        let activeTab = 'net_worth';
+        let leaderboardData = null;
+        const myUUID = window.CasinoStorage.getUUID();
+
+        const tabButtons = viewport.querySelectorAll('.ranking-tab');
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const targetTab = e.target.getAttribute('data-tab');
+                if (targetTab === 'slots_max_win') return; // Coming Soonの制限
+
+                tabButtons.forEach(b => b.classList.remove('active'));
+                e.target.classList.add('active');
+                activeTab = targetTab;
+                renderActiveTable();
+            });
+        });
+
+        const loadAndRenderTables = async () => {
+            const contentArea = document.getElementById('ranking-content-area');
+            contentArea.innerHTML = `
+                <div class="ranking-loading">
+                    <div class="spinner"></div>
+                    <p>ランキングをロード中...</p>
+                </div>
+            `;
+            leaderboardData = await window.CasinoRanking.fetchLeaderboard();
+            renderActiveTable();
+        };
+
+        const renderActiveTable = () => {
+            const contentArea = document.getElementById('ranking-content-area');
+            if (!leaderboardData) return;
+
+            const list = leaderboardData[activeTab] || [];
+            let tableRowsHTML = '';
+
+            if (list.length === 0) {
+                tableRowsHTML = `<tr><td colspan="3" style="text-align: center; color: #888; padding: 30px;">記録がありません</td></tr>`;
+            } else {
+                list.forEach((item, index) => {
+                    const rank = index + 1;
+                    let rankClass = `rank-num`;
+                    if (rank <= 3) {
+                        rankClass += ` rank-${rank}`;
+                    }
+                    const isMe = item.uuid === myUUID;
+                    const rowClass = isMe ? 'class="my-rank-row"' : '';
+
+                    let formattedScore = '';
+                    if (activeTab === 'net_worth') {
+                        formattedScore = `$${item.score.toLocaleString()}`;
+                    } else {
+                        formattedScore = `$${item.score.toLocaleString()}`;
+                    }
+
+                    tableRowsHTML += `
+                        <tr ${rowClass}>
+                            <td class="${rankClass}">${rank}</td>
+                            <td>${escapeHTML(item.username)} ${isMe ? ' (あなた)' : ''}</td>
+                            <td>${formattedScore}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            contentArea.innerHTML = `
+                <div class="ranking-table-wrapper">
+                    <table class="ranking-table">
+                        <thead>
+                            <tr>
+                                <th>順位</th>
+                                <th>ユーザー名</th>
+                                <th>${activeTab === 'net_worth' ? '純資産' : '最大勝利額'}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableRowsHTML}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        };
+
+        const escapeHTML = (str) => {
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        };
+
+        // 初回データロード
+        loadAndRenderTables();
     }
 };
 
-// 起動開始
 window.addEventListener('DOMContentLoaded', () => {
     CasinoLobby.init();
 });
