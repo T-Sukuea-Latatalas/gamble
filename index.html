@@ -226,7 +226,7 @@
             perspective: 1000px;
             flex-shrink: 0;
             position: relative;
-            opacity: 0;
+            opacity: 1; /* 初期状態を不透明に変更し、アニメーション終了後の消滅を防ぐ */
         }
 
         /* 配る時のスライド出現アニメーション */
@@ -236,7 +236,7 @@
 
         @keyframes card-slide {
             from {
-                opacity: 0;
+                opacity: 0; /* スライド開始時にフェードインさせる */
                 transform: translate(150px, -150px) scale(0.6) rotate(20deg);
             }
             to {
@@ -998,10 +998,14 @@
             cardEl.classList.add('revealed');
         }
 
-        // フリップが完了する時間（約350ms）を待ってスコアを更新
+        // フリップが完了する時間（約350ms）を待つ
         await sleep(350);
+        
+        // 表面フリップ完了をフラグに反映
+        card.hasAnimatedReveal = true;
+
         playerHands[handIndex].visibleScore = calculateScore(playerHands[handIndex].cards.filter(c => c.isRevealed));
-        updateUI();
+        updateUI(); // すでに hasAnimatedReveal が true なので、no-transition付きで安定再描画される
     }
 
     /**
@@ -1022,6 +1026,8 @@
                 cardEl.classList.add('revealed');
             }
             await sleep(350);
+            // 表面フリップ完了を記録
+            card.hasAnimatedReveal = true;
         } else {
             // 裏面（ホールカード）の場合はスライド停止後そのまま終了
             await sleep(350);
@@ -1044,6 +1050,8 @@
                 cardEl.classList.add('revealed');
             }
             await sleep(350);
+            // フリップ完了を記録
+            holeCard.hasAnimatedReveal = true;
             dealerHand.visibleScore = calculateScore(dealerHand.cards.filter(c => c.isRevealed));
             updateUI();
         }
@@ -1436,7 +1444,7 @@
                 logMessage("残高がなくなりました。自動借金により$1000を調達しました（借金が$1000増えました）。");
             } else {
                 gameState = 'game-over';
-                logMessage("借金上限に達し、全財産を失いました。GAME OVERです。RESET GAMEを押して最初からやり直してください。");
+                logMessage("借金上限に達し、全財産を失いました。GAME OVERです。RESET GAMEを押して最初からやり重してください。");
             }
         }
     }
@@ -1475,17 +1483,14 @@
         const colorClass = card.isRed ? 'red' : 'black';
         const revealedClass = card.isRevealed ? 'revealed' : '';
         
-        // 配るアニメーションクラスの付与（一度アニメーションしたカードは空文字にする）
+        // 配るアニメーションクラスの付与（一度描画されたら deal-animate を外す）
         const animateClass = card.hasAnimatedDeal ? '' : 'deal-animate';
 
-        // すでに裏から表へめくられているカードはフリップ効果（トランジション）を無効化
+        // すでに裏から表へめくられている（フリップが完了している）カードはフリップ効果（トランジション）を無効化
         const noTransitionClass = card.hasAnimatedReveal ? 'no-transition' : '';
 
         // フラグを更新（初回HTML生成の評価が終わった後に切り替え）
         card.hasAnimatedDeal = true;
-        if (card.isRevealed) {
-            card.hasAnimatedReveal = true;
-        }
 
         return `
             <div class="card-wrapper-3d ${animateClass} ${revealedClass} ${noTransitionClass}" id="${card.id}">
