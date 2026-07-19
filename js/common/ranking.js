@@ -1,7 +1,7 @@
 // js/common/ranking.js
 const CasinoRanking = {
     // ⚠️ 設定手順4で取得したご自身のGASウェブアプリURLをここに設定してください。
-    GAS_URL: 'YOUR_GAS_WEB_APP_URL_HERE',
+    GAS_URL: 'https://script.google.com/macros/s/AKfycbznfjuWiAfLUE1vkrDPgc14HX5BDl9iqtHjkclYcIGS4XBRfkjxmbNwmYdeCHe-N6zG3A/exec',
 
     /**
      * ユーザー名の新規登録および更新要求
@@ -87,7 +87,7 @@ const CasinoRanking = {
     },
 
     _isValidUrl() {
-        return this.GAS_URL && this.GAS_URL !== 'YOUR_GAS_WEB_APP_URL_HERE' && this.GAS_URL.startsWith('http');
+        return this.GAS_URL && this.GAS_URL !== 'https://script.google.com/macros/s/AKfycbznfjuWiAfLUE1vkrDPgc14HX5BDl9iqtHjkclYcIGS4XBRfkjxmbNwmYdeCHe-N6zG3A/exec' && this.GAS_URL.startsWith('http');
     },
 
     /**
