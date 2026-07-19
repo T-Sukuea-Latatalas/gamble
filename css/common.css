@@ -1,0 +1,266 @@
+/* css/common.css */
+/* 基本レイアウトとカラーテーマ (ポータル共用) */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: radial-gradient(circle, #1a4d1a 0%, #0d260d 100%);
+    color: #ffffff;
+    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+    user-select: none;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100dvh;
+    box-sizing: border-box;
+    padding: 1vh;
+}
+
+/* ポータルのメインラッパー */
+.game-container {
+    width: 100%;
+    max-width: 1000px;
+    height: 100%;
+    max-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 1vh;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* ==========================================================================
+   LOBBY (ゲーム選択画面)
+   ========================================================================== */
+.lobby-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    gap: 3vh;
+    text-align: center;
+}
+
+.lobby-title {
+    font-size: clamp(24px, 5vh, 40px);
+    color: #ffd700;
+    text-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+    letter-spacing: 2px;
+    margin: 0;
+}
+
+.lobby-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    width: 90%;
+    max-width: 700px;
+}
+
+.lobby-card {
+    background: rgba(0, 0, 0, 0.6);
+    border: 2px solid #ffd700;
+    border-radius: 12px;
+    padding: 25px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.lobby-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(255, 215, 0, 0.3);
+    border-color: #ffffff;
+}
+
+.lobby-card-icon {
+    font-size: 48px;
+}
+
+.lobby-card-title {
+    font-size: clamp(16px, 2.5vh, 22px);
+    font-weight: bold;
+    color: #ffffff;
+    margin: 0;
+}
+
+.lobby-card-desc {
+    font-size: 12px;
+    color: #ccc;
+    margin: 0;
+}
+
+.lobby-card.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    border-color: rgba(255, 215, 0, 0.2);
+}
+
+.lobby-card.disabled:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: rgba(255, 215, 0, 0.2);
+}
+
+/* ==========================================================================
+   インゲーム・テンキーモーダル
+   ========================================================================== */
+.numpad-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.75);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.numpad-modal {
+    background: linear-gradient(135deg, #1e1e1e 0%, #121212 100%);
+    border: 2px solid #ffd700;
+    border-radius: 15px;
+    padding: 20px;
+    width: 90%;
+    max-width: 320px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    box-sizing: border-box;
+}
+
+.numpad-header {
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    color: #ffd700;
+    letter-spacing: 1px;
+}
+
+.numpad-display-container {
+    background-color: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: 8px;
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 50px;
+    box-sizing: border-box;
+}
+
+.numpad-currency {
+    color: #ffd700;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.numpad-value {
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: right;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.numpad-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.numpad-btn {
+    background: #2c2c2c;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: bold;
+    height: 52px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background 0.1s, transform 0.05s;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.numpad-btn:active {
+    background: #444444;
+    transform: scale(0.95);
+}
+
+.numpad-btn-c {
+    background: #d32f2f;
+    color: #ffffff;
+}
+.numpad-btn-c:active {
+    background: #b71c1c;
+}
+
+.numpad-btn-back {
+    background: #757575;
+}
+.numpad-btn-back:active {
+    background: #616161;
+}
+
+.numpad-btn-max {
+    grid-column: span 2;
+    background: #ff9100;
+    color: #ffffff;
+    font-size: 16px;
+    height: 52px;
+}
+.numpad-btn-max:active {
+    background: #b36400;
+}
+
+.numpad-footer-btns {
+    display: flex;
+    gap: 10px;
+}
+
+.numpad-footer-btn {
+    flex: 1;
+    height: 44px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: opacity 0.1s;
+}
+
+.numpad-footer-btn:active {
+    opacity: 0.8;
+}
+
+.numpad-footer-btn.cancel {
+    background-color: #616161;
+    color: #ffffff;
+}
+
+.numpad-footer-btn.confirm {
+    background-color: #2e7d32;
+    color: #ffffff;
+}
