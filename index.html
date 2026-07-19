@@ -338,7 +338,7 @@
                 opacity: 1;
             }
             100% {
-                transform: translate(-50%, -50%) scale(1) rotate(-12deg);
+                transform: translate(-50%, -50%) scale(1.2) rotate(-10deg);
                 opacity: 1;
             }
         }
@@ -540,7 +540,159 @@
         .repay-btn:active:not(:disabled) { box-shadow: 0 1px 0 #e65100; }
 
         /* ==========================================================================
-           6. レスポンシブ設計（スマートフォン対応）
+           7. インゲーム・テンキーモーダル
+           ========================================================================== */
+        .numpad-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .numpad-modal {
+            background: linear-gradient(135deg, #1e1e1e 0%, #121212 100%);
+            border: 2px solid #ffd700;
+            border-radius: 15px;
+            padding: 20px;
+            width: 90%;
+            max-width: 320px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            box-sizing: border-box;
+        }
+
+        .numpad-header {
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffd700;
+            letter-spacing: 1px;
+        }
+
+        .numpad-display-container {
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            border-radius: 8px;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 50px;
+            box-sizing: border-box;
+        }
+
+        .numpad-currency {
+            color: #ffd700;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .numpad-value {
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: bold;
+            text-align: right;
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .numpad-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .numpad-btn {
+            background: #2c2c2c;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: bold;
+            height: 52px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.1s, transform 0.05s;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .numpad-btn:active {
+            background: #444444;
+            transform: scale(0.95);
+        }
+
+        .numpad-btn-c {
+            background: #d32f2f;
+            color: #ffffff;
+        }
+        .numpad-btn-c:active {
+            background: #b71c1c;
+        }
+
+        .numpad-btn-back {
+            background: #757575;
+        }
+        .numpad-btn-back:active {
+            background: #616161;
+        }
+
+        .numpad-btn-max {
+            grid-column: span 2;
+            background: #ff9100;
+            color: #ffffff;
+            font-size: 16px;
+            height: 52px;
+        }
+        .numpad-btn-max:active {
+            background: #b36400;
+        }
+
+        .numpad-footer-btns {
+            display: flex;
+            gap: 10px;
+        }
+
+        .numpad-footer-btn {
+            flex: 1;
+            height: 44px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: opacity 0.1s;
+        }
+
+        .numpad-footer-btn:active {
+            opacity: 0.8;
+        }
+
+        .numpad-footer-btn.cancel {
+            background-color: #616161;
+            color: #ffffff;
+        }
+
+        .numpad-footer-btn.confirm {
+            background-color: #2e7d32;
+            color: #ffffff;
+        }
+
+        /* ==========================================================================
+           8. レスポンシブ設計（スマートフォン対応）
            ========================================================================== */
         @media (max-width: 600px) {
             .card-wrapper-3d {
@@ -610,6 +762,37 @@
             <button class="action-btn" id="btn-stand" onclick="stand()">STAND</button>
             <button class="action-btn" id="btn-double" onclick="doubleDown()">DOUBLE</button>
             <button class="action-btn" id="btn-split" onclick="split()">SPLIT</button>
+        </div>
+    </div>
+</div>
+
+<!-- テンキーモーダルのHTML構造 -->
+<div id="numpad-overlay" class="numpad-overlay" style="display: none;">
+    <div class="numpad-modal">
+        <div class="numpad-header" id="numpad-title">借金額を入力</div>
+        <div class="numpad-display-container">
+            <span class="numpad-currency">$</span>
+            <div id="numpad-val" class="numpad-value">0</div>
+        </div>
+        <div class="numpad-grid">
+            <button class="numpad-btn" onclick="pressNum(1)">1</button>
+            <button class="numpad-btn" onclick="pressNum(2)">2</button>
+            <button class="numpad-btn" onclick="pressNum(3)">3</button>
+            <button class="numpad-btn" onclick="pressNum(4)">4</button>
+            <button class="numpad-btn" onclick="pressNum(5)">5</button>
+            <button class="numpad-btn" onclick="pressNum(6)">6</button>
+            <button class="numpad-btn" onclick="pressNum(7)">7</button>
+            <button class="numpad-btn" onclick="pressNum(8)">8</button>
+            <button class="numpad-btn" onclick="pressNum(9)">9</button>
+            <button class="numpad-btn numpad-btn-c" onclick="clearNum()">C</button>
+            <button class="numpad-btn" onclick="pressNum(0)">0</button>
+            <button class="numpad-btn" onclick="pressNum('00')">00</button>
+            <button class="numpad-btn numpad-btn-back" onclick="pressBackspace()">←</button>
+            <button class="numpad-btn numpad-btn-max" id="numpad-max-btn" onclick="pressMax()">MAX</button>
+        </div>
+        <div class="numpad-footer-btns">
+            <button class="numpad-footer-btn cancel" onclick="closeNumpad()">CANCEL</button>
+            <button class="numpad-footer-btn confirm" onclick="confirmNumpad()">CONFIRM</button>
         </div>
     </div>
 </div>
@@ -793,6 +976,10 @@
     let gameState = 'betting'; // 'betting' | 'dealing' | 'player-turn' | 'dealer-turn' | 'round-over'
     let isProcessing = false; // 非同期連打・衝突防止用フラグ
 
+    // テンキー変数
+    let numpadMode = 'borrow'; // 'borrow' | 'repay'
+    let numpadCurrentValStr = '0';
+
     // 汎用ウェイト用Promise
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -894,18 +1081,35 @@
     }
 
     /**
-     * チップボタンクリック時のベット追加
+     * チップボタンクリック時のベット追加（仕様変更：残高不足時に自動借金）
      */
     function addBet(amount) {
         sfx.init();
         if (gameState !== 'betting' || isProcessing) return;
-        if (bankroll >= currentBet + amount) {
+        
+        const needed = currentBet + amount;
+        if (bankroll >= needed) {
             currentBet += amount;
             sfx.playCoin();
             checkBankruptcy();
             updateUI();
         } else {
-            logMessage("残高が不足しています。");
+            // 不足金額を算出し、補うための1000ドル単位の自動借金処理
+            const deficit = needed - bankroll;
+            const borrowCount = Math.ceil(deficit / 1000);
+            const borrowAmount = borrowCount * 1000;
+            const proceed = confirm(`残高が不足しています。自動で$${borrowAmount}を借金してベットを追加しますか？`);
+            if (proceed) {
+                debt += borrowAmount;
+                bankroll += borrowAmount;
+                currentBet += amount;
+                sfx.playCoin();
+                saveGameData();
+                checkBankruptcy();
+                updateUI();
+            } else {
+                logMessage("ベットの追加がキャンセルされました。");
+            }
         }
     }
 
@@ -934,38 +1138,134 @@
     }
 
     /**
-     * 借金する (Borrow - 上限撤廃)
+     * 借金する (Borrow - テンキー起動)
      */
     function borrow() {
         sfx.init();
         if (gameState !== 'betting' || isProcessing) return;
-        sfx.playCoin();
-        debt += 1000;
-        bankroll += 1000;
-        logMessage("$1000を借金しました。");
-        saveGameData();
-        updateUI();
+        openNumpad('borrow');
     }
 
     /**
-     * 返済する (Repay)
+     * 返済する (Repay - テンキー起動)
      */
     function repay() {
         sfx.init();
         if (gameState !== 'betting' || isProcessing) return;
-        const repayAmount = Math.min(1000, debt);
-        if (debt <= 0) return;
-        if (bankroll < repayAmount) {
-            logMessage("返済に必要な残高が不足しています。");
+        if (debt <= 0 || bankroll <= 0) return;
+        openNumpad('repay');
+    }
+
+    /**
+     * テンキーモーダル制御ロジック
+     */
+    function openNumpad(mode) {
+        numpadMode = mode;
+        numpadCurrentValStr = '0';
+        
+        const titleEl = document.getElementById('numpad-title');
+        const maxBtn = document.getElementById('numpad-max-btn');
+        
+        if (mode === 'borrow') {
+            titleEl.textContent = '借金額を入力';
+            maxBtn.style.display = 'none'; // 借金時は上限なしのためMAXボタンを非表示
+        } else {
+            titleEl.textContent = '返済額を入力';
+            maxBtn.style.display = 'block'; // 返済時は上限があるため表示
+        }
+        
+        updateNumpadDisplay();
+        document.getElementById('numpad-overlay').style.display = 'flex';
+    }
+
+    function updateNumpadDisplay() {
+        const valEl = document.getElementById('numpad-val');
+        valEl.textContent = parseInt(numpadCurrentValStr, 10).toLocaleString();
+    }
+
+    function pressNum(val) {
+        sfx.init();
+        sfx.playCoin();
+        
+        if (numpadCurrentValStr === '0') {
+            if (val === '00' || val === 0) return;
+            numpadCurrentValStr = String(val);
+        } else {
+            numpadCurrentValStr += String(val);
+        }
+        
+        // 返済時のリアルタイム上限チェック
+        if (numpadMode === 'repay') {
+            const limit = Math.min(debt, bankroll);
+            const inputVal = parseInt(numpadCurrentValStr, 10);
+            if (inputVal > limit) {
+                numpadCurrentValStr = String(limit);
+            }
+        }
+        
+        updateNumpadDisplay();
+    }
+
+    function pressBackspace() {
+        sfx.init();
+        sfx.playCoin();
+        
+        if (numpadCurrentValStr.length > 1) {
+            numpadCurrentValStr = numpadCurrentValStr.slice(0, -1);
+        } else {
+            numpadCurrentValStr = '0';
+        }
+        updateNumpadDisplay();
+    }
+
+    function clearNum() {
+        sfx.init();
+        sfx.playCoin();
+        numpadCurrentValStr = '0';
+        updateNumpadDisplay();
+    }
+
+    function pressMax() {
+        sfx.init();
+        sfx.playCoin();
+        if (numpadMode === 'repay') {
+            const limit = Math.min(debt, bankroll);
+            numpadCurrentValStr = String(limit);
+            updateNumpadDisplay();
+        }
+    }
+
+    function closeNumpad() {
+        document.getElementById('numpad-overlay').style.display = 'none';
+    }
+
+    function confirmNumpad() {
+        const val = parseInt(numpadCurrentValStr, 10);
+        if (val <= 0) {
+            closeNumpad();
             return;
         }
-        sfx.playCoin();
-        bankroll -= repayAmount;
-        debt -= repayAmount;
-        logMessage(`借金を$${repayAmount}返済しました。`);
+        
+        if (numpadMode === 'borrow') {
+            debt += val;
+            bankroll += val;
+            logMessage(`$${val}を借金しました。`);
+        } else if (numpadMode === 'repay') {
+            const limit = Math.min(debt, bankroll);
+            const actualRepay = Math.min(val, limit);
+            if (actualRepay <= 0) {
+                closeNumpad();
+                return;
+            }
+            bankroll -= actualRepay;
+            debt -= actualRepay;
+            logMessage(`借金を$${actualRepay}返済しました。`);
+        }
+        
         saveGameData();
-        checkBankruptcy(); // 返済時の$0スタック条件をチェック
+        checkBankruptcy();
         updateUI();
+        closeNumpad();
     }
 
     /**
@@ -1709,14 +2009,13 @@
         borrowBtn.disabled = (gameState !== 'betting' || isProcessing);
         chipArea.appendChild(borrowBtn);
 
-        // 6. Repay（返済）ボタンの生成
+        // 6. Repay（返済）ボタンの生成 (仕様変更：テンキー用に上限を最小1ドル以上で制限)
         const repayBtn = document.createElement('button');
         repayBtn.className = 'action-btn repay-btn';
         repayBtn.id = 'btn-repay';
         repayBtn.textContent = 'Repay';
         repayBtn.onclick = repay;
-        const repayAmount = Math.min(1000, debt);
-        repayBtn.disabled = (gameState !== 'betting' || isProcessing || debt <= 0 || bankroll < repayAmount);
+        repayBtn.disabled = (gameState !== 'betting' || isProcessing || debt <= 0 || bankroll <= 0);
         chipArea.appendChild(repayBtn);
     }
 
