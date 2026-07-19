@@ -28,7 +28,7 @@ const BlackjackGame = {
         // テンキーをブラックジャックの SoundEffects と同期してバインド
         window.CasinoNumpad.init(this.sfx);
 
-        // ブラックジャック専用のUIテーブルをビューポートへ動的に生成
+        // UIテーブルをビューポートへレンダリング
         this.container.innerHTML = `
             <div class="blackjack-top-bar">
                 <button class="back-lobby-btn" id="btn-back-lobby">← LOBBY</button>
@@ -166,7 +166,6 @@ const BlackjackGame = {
             this.checkBankruptcy();
             this.updateUI();
         } else {
-            // 不足金額を算出し、補うための自動借金
             const deficit = needed - bankroll;
             const borrowCount = Math.ceil(deficit / 1000);
             const borrowAmount = borrowCount * 1000;
@@ -179,6 +178,7 @@ const BlackjackGame = {
                 this.sfx.playCoin();
                 this.checkBankruptcy();
                 this.updateUI();
+                this.syncCloudNetWorth(); // 借金発生時の純資産同期
             } else {
                 this.logMessage("ベットの追加がキャンセルされました。");
             }
@@ -207,7 +207,10 @@ const BlackjackGame = {
     borrow() {
         this.sfx.init();
         if (this.gameState !== 'betting' || this.isProcessing) return;
-        window.CasinoNumpad.open('borrow', () => this.updateUI());
+        window.CasinoNumpad.open('borrow', () => {
+            this.updateUI();
+            this.syncCloudNetWorth(); // 手動借金時のクラウド同期
+        });
     },
 
     repay() {
@@ -219,6 +222,7 @@ const BlackjackGame = {
         window.CasinoNumpad.open('repay', () => {
             this.checkBetValidity();
             this.updateUI();
+            this.syncCloudNetWorth(); // 手動返済時のクラウド同期
         });
     },
 
@@ -232,7 +236,6 @@ const BlackjackGame = {
         }
     },
 
-    // ゼロ未満防止引き去りガード
     ensureFunds(amount) {
         if (isNaN(amount) || amount < 0) return false;
         let bankroll = window.CasinoStorage.getBankroll();
@@ -248,6 +251,7 @@ const BlackjackGame = {
             window.CasinoStorage.setDebt(Math.max(0, debt + borrowAmount));
             window.CasinoStorage.setBankroll(Math.max(0, bankroll + borrowAmount));
             this.updateUI();
+            this.syncCloudNetWorth(); // 自動借金発生時の純資産同期
             return true;
         }
         return false;
@@ -546,6 +550,7 @@ const BlackjackGame = {
         let hasLose = false;
 
         let bankroll = window.CasinoStorage.getBankroll();
+        let maxSingleWinProfit = 0; // スコアイベント用：今回のラウンドで獲得した純利益の最大値
 
         this.playerHands.forEach((hand) => {
             const pScore = hand.score;
@@ -597,6 +602,12 @@ const BlackjackGame = {
                 payout = Math.max(0, hand.bet);
             }
             bankroll = Math.max(0, bankroll + payout);
+
+            // クラウド集計用：このハンドにおける純利益の計算（払戻金 - ベット額）
+            const profit = payout - hand.bet;
+            if (profit > maxSingleWinProfit) {
+                maxSingleWinProfit = profit;
+            }
         });
 
         window.CasinoStorage.setBankroll(bankroll);
@@ -616,6 +627,23 @@ const BlackjackGame = {
 
         this.isProcessing = false;
         this.updateUI();
+
+        // 🏆【オンラインランキング連携】
+        // 1. 純資産を即時にクラウドへ同期
+        this.syncCloudNetWorth();
+
+        // 2. 勝利ハンドが存在した場合は「ブラックジャック最大勝利部門」への登録試行
+        if (maxSingleWinProfit > 0) {
+            window.CasinoRanking.submitScore('blackjack_max_win', maxSingleWinProfit);
+        }
+    },
+
+    /**
+     * 現在の「手元残高 - 借金」で求めた純資産額をクラウドへ安全に同期する
+     */
+    syncCloudNetWorth() {
+        const netWorth = window.CasinoStorage.getBankroll() - window.CasinoStorage.getDebt();
+        window.CasinoRanking.submitScore('net_worth', netWorth);
     },
 
     createParticles(color) {
@@ -678,12 +706,14 @@ const BlackjackGame = {
         this.currentBet = Math.max(0, this.currentBet);
     },
 
-    // 救済ロジックの修正（テンキー借金の起動）
     checkBankruptcy() {
         const bankroll = window.CasinoStorage.getBankroll();
         if (bankroll === 0 && this.currentBet === 0) {
             this.logMessage("残高がなくなりました。借金額を入力してゲームを続行してください。");
-            window.CasinoNumpad.open('borrow', () => this.updateUI());
+            window.CasinoNumpad.open('borrow', () => {
+                this.updateUI();
+                this.syncCloudNetWorth(); // 破産時の借金補填後の資産同期
+            });
         }
     },
 
