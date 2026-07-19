@@ -1,4 +1,9 @@
 // js/games/blackjack.js
+// 汎用ウェイト用Promise（DEALやカード配布のタイミング制御用）
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 const CHIP_VALUES = [1, 5, 10, 50, 100, 500, 1000, 5000];
 const CHIP_CLASSES = {
     1: 'chip-1', 5: 'chip-5', 10: 'chip-10', 50: 'chip-50',
@@ -673,15 +678,12 @@ const BlackjackGame = {
         this.currentBet = Math.max(0, this.currentBet);
     },
 
+    // 救済ロジックの修正（テンキー借金の起動）
     checkBankruptcy() {
         const bankroll = window.CasinoStorage.getBankroll();
         if (bankroll === 0 && this.currentBet === 0) {
-            let debt = window.CasinoStorage.getDebt();
-            window.CasinoStorage.setDebt(Math.max(0, debt + 1000));
-            window.CasinoStorage.setBankroll(1000);
-            this.sfx.playCoin();
-            this.logMessage("残高がなくなりました。自動借金により$1000を調達し、救済されました。");
-            this.updateUI();
+            this.logMessage("残高がなくなりました。借金額を入力してゲームを続行してください。");
+            window.CasinoNumpad.open('borrow', () => this.updateUI());
         }
     },
 
