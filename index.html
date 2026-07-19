@@ -1035,7 +1035,7 @@
             await sleep(450);
         }
 
-        // バグ①：ディーラー追加時の内部スコア再計算・同期を確実に行う
+        // バグ①：ディーラー追加時の内部スコア再計算・同期を確実行う
         dealerHand.score = calculateScore(dealerHand.cards);
         dealerHand.visibleScore = calculateScore(dealerHand.cards.filter(c => c.isRevealed));
         updateUI();
@@ -1373,6 +1373,11 @@
             }
         });
 
+        // 破産・極小金額時の救済および無効ベットの調整
+        // 修正②：先にベット額の適正リセットを行い、その後残高$0/ベット$0検知をして自動借金を機能させる
+        checkBetValidity();
+        checkBankruptcy();
+
         // 勝利・敗北効果音とパーティクルのトリガー
         if (hasBJ) {
             sfx.playWin();
@@ -1383,10 +1388,6 @@
         } else if (hasLose) {
             sfx.playLose();
         }
-
-        // 破産・極小金額時の救済および無効ベットの調整
-        checkBankruptcy();
-        checkBetValidity();
 
         saveGameData(); // 精算結果を保存
 
@@ -1442,14 +1443,14 @@
     function nextRound() {
         if (gameState !== 'round-over') return;
 
+        // 修正②：ここでも一貫してベット調整から救済の順序を実行してスタックを防止する
         checkBetValidity();
+        checkBankruptcy(); 
 
         gameState = 'betting';
         dealerHand = { cards: [], score: 0, visibleScore: 0 };
         playerHands = [];
         activeHandIndex = 0;
-
-        checkBankruptcy(); // 新規ラウンド遷移時のスタックを自動チェック
 
         updateUI();
     }
@@ -1793,10 +1794,12 @@
             logMessage(`Hand ${playerHands.length > 1 ? (activeHandIndex + 1) : ""} のアクションを選択してください。`);
         } else {
             // ディーラーターン、ラウンド終了
-            btnDeal.disabled = (gameState !== 'round-over' || currentBet <= 0);
+            // 修正①：ラウンド終了時(round-over)は、ベット額に関わらずNEXT ROUNDを常に押せるようにする
             if (gameState === 'round-over') {
+                btnDeal.disabled = false;
                 btnDeal.textContent = 'NEXT ROUND';
             } else {
+                btnDeal.disabled = (currentBet <= 0);
                 btnDeal.textContent = 'DEAL';
             }
             btnHit.disabled = true;
