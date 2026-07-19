@@ -258,6 +258,11 @@
             transform: rotateY(180deg);
         }
 
+        /* すでに配り終えて公開されているカードはトランジションを無効化 */
+        .card-wrapper-3d.no-transition .card-inner {
+            transition: none !important;
+        }
+
         .card-front, .card-back {
             position: absolute;
             width: 100%;
@@ -865,6 +870,8 @@
         // ユニークなIDと初期状態を設定
         card.id = 'card-' + Math.random().toString(36).substr(2, 9);
         card.isRevealed = false;
+        card.hasAnimatedDeal = false;   // 配るアニメーション再生フラグ
+        card.hasAnimatedReveal = false; // めくるアニメーション再生フラグ
         return card;
     }
 
@@ -1467,8 +1474,21 @@
     function createCardHTML(card) {
         const colorClass = card.isRed ? 'red' : 'black';
         const revealedClass = card.isRevealed ? 'revealed' : '';
+        
+        // 配るアニメーションクラスの付与（一度アニメーションしたカードは空文字にする）
+        const animateClass = card.hasAnimatedDeal ? '' : 'deal-animate';
+
+        // すでに裏から表へめくられているカードはフリップ効果（トランジション）を無効化
+        const noTransitionClass = card.hasAnimatedReveal ? 'no-transition' : '';
+
+        // フラグを更新（初回HTML生成の評価が終わった後に切り替え）
+        card.hasAnimatedDeal = true;
+        if (card.isRevealed) {
+            card.hasAnimatedReveal = true;
+        }
+
         return `
-            <div class="card-wrapper-3d deal-animate ${revealedClass}" id="${card.id}">
+            <div class="card-wrapper-3d ${animateClass} ${revealedClass} ${noTransitionClass}" id="${card.id}">
                 <div class="card-inner">
                     <div class="card-front ${colorClass}">
                         <div class="card-corner-top">${card.name}<br>${card.suit}</div>
