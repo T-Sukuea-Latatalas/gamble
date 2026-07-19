@@ -87,7 +87,8 @@ const CasinoRanking = {
     },
 
     _isValidUrl() {
-        return this.GAS_URL && this.GAS_URL !== 'https://script.google.com/macros/s/AKfycbznfjuWiAfLUE1vkrDPgc14HX5BDl9iqtHjkclYcIGS4XBRfkjxmbNwmYdeCHe-N6zG3A/exec' && this.GAS_URL.startsWith('http');
+        // 条件を本来のプレースホルダー文字列との比較に戻しました
+        return this.GAS_URL && this.GAS_URL !== 'YOUR_GAS_WEB_APP_URL_HERE' && this.GAS_URL.startsWith('http');
     },
 
     /**
