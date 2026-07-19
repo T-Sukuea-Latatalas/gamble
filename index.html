@@ -14,16 +14,16 @@
     <div class="game-container">
         <div id="game-viewport"></div>
     </div>
+<!-- 共通JavaScriptライブラリ -->
+<script src="js/common/sound.js"></script>
+<script src="js/common/storage.js"></script>
+<script src="js/common/ranking.js"></script> <!-- 新規追加：通信処理を行うため、lobbyやblackjackより手前で読み込みます -->
+<script src="js/common/numpad.js"></script>
 
-    <!-- 共通JavaScriptライブラリ -->
-    <script src="js/common/sound.js"></script>
-    <script src="js/common/storage.js"></script>
-    <script src="js/common/numpad.js"></script>
-    
-    <!-- カジノゲームモジュール -->
-    <script src="js/games/blackjack.js"></script>
-    
-    <!-- ポータルロビー制御スクリプト -->
-    <script src="js/lobby.js"></script>
+<!-- カジノゲームモジュール -->
+<script src="js/games/blackjack.js"></script>
+
+<!-- ポータルロビー制御スクリプト -->
+<script src="js/lobby.js"></script>    
 </body>
 </html>
