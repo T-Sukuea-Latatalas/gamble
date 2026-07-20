@@ -1,0 +1,530 @@
+@charset "utf-8";
+
+/* ==========================================================================
+   css/slots.css
+   🎰 GOLDEN SLOTS GAME STYLE SHEET
+   ========================================================================== */
+
+/* 1. 基本ラッパーとカジノテーマ
+   ========================================================================== */
+.slots-game-wrapper {
+    background: radial-gradient(circle at center, #0e351d 0%, #04140b 100%);
+    color: #ffffff;
+    padding: 24px;
+    border-radius: 20px;
+    border: 3px solid #d4af37;
+    box-shadow: 0 15px 50px rgba(0, 0, 0, 0.9), 
+                inset 0 0 30px rgba(0, 0, 0, 0.8),
+                0 0 20px rgba(212, 175, 55, 0.2);
+    max-width: 640px;
+    margin: 0 auto;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+}
+
+/* ヘッダー */
+.slots-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    border-bottom: 2px solid rgba(212, 175, 55, 0.3);
+    padding-bottom: 12px;
+}
+
+.slots-title {
+    font-size: 1.8rem;
+    font-weight: 900;
+    color: #ffd700;
+    text-transform: uppercase;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.6), 0 2px 4px rgba(0, 0, 0, 0.5);
+    letter-spacing: 2px;
+    text-align: center;
+}
+
+/* ステータスバー（資金情報） */
+.slots-status-bar {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.status-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.status-label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #a0a0a0;
+    margin-bottom: 4px;
+    letter-spacing: 1.5px;
+}
+
+.status-value {
+    font-size: 1.15rem;
+    font-weight: 800;
+    font-family: 'Courier New', Courier, monospace;
+}
+
+
+/* 2. 重厚感のあるスロットマシン筐体のスタイリング
+   ========================================================================== */
+.slots-machine {
+    background: linear-gradient(135deg, #0b2413 0%, #05140b 100%);
+    border: 5px solid #d4af37;
+    border-top-color: #f3e5ab; /* 立体感を出すための光沢色のグラデーション */
+    border-bottom-color: #aa7c11;
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8),
+                inset 0 0 20px rgba(0, 0, 0, 0.9),
+                0 0 15px rgba(212, 175, 55, 0.15);
+    position: relative;
+}
+
+/* 筐体左右に配置するメカニカル装飾 */
+.slots-machine::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 20px;
+    right: 20px;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 2px;
+    pointer-events: none;
+}
+
+/* リールコンテナ */
+.slots-reels-container {
+    background: #000000;
+    border-radius: 10px;
+    padding: 8px;
+    border: 3px solid #aa7c11;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+}
+
+/* リール窓 (Reel Window) */
+.slots-reel-window {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    height: 270px;
+    overflow: hidden;
+    position: relative;
+    background: #020202;
+    border-radius: 6px;
+}
+
+/* 3Dガラスシールド演出（リール上下のフェードアウト用疑似要素） */
+.slots-reel-window::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50px;
+    background: linear-gradient(to bottom, rgba(2, 2, 2, 1) 0%, rgba(2, 2, 2, 0) 100%);
+    z-index: 3;
+    pointer-events: none;
+}
+
+.slots-reel-window::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 50px;
+    background: linear-gradient(to top, rgba(2, 2, 2, 1) 0%, rgba(2, 2, 2, 0) 100%);
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* ペイラインガイド表示（装飾用破線） */
+.slots-payline-indicator {
+    position: absolute;
+    left: 0;
+    right: 0;
+    border-top: 1.5px dashed rgba(212, 175, 55, 0.2);
+    pointer-events: none;
+    z-index: 2;
+}
+.line-top { top: 45px; }
+.line-mid { top: 135px; }
+.line-bot { top: 225px; }
+
+
+/* 3. 各リールとシンボル（絵柄）
+   ========================================================================== */
+.slots-reel {
+    width: 150px;
+    height: 270px;
+    overflow: hidden;
+    position: relative;
+    background: radial-gradient(circle, #1a1a1a 0%, #0d0d0d 100%);
+    border-left: 2px solid rgba(212, 175, 55, 0.15);
+    border-right: 2px solid rgba(212, 175, 55, 0.15);
+    box-sizing: border-box;
+}
+
+.slots-strip {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    /* バウンド（揺り戻し）イージングを効かせたスムーズな停止挙動 */
+    transition: transform 1.5s cubic-bezier(0.15, 0.85, 0.3, 1.15);
+}
+
+.slots-cell {
+    height: 90px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3.2rem;
+    line-height: 90px;
+    user-select: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    box-sizing: border-box;
+    background: radial-gradient(circle, #222222 0%, #0b0b0b 100%);
+    text-shadow: 2px 4px 6px rgba(0, 0, 0, 0.7);
+    transition: background 0.3s ease, filter 0.2s ease, transform 0.2s ease;
+}
+
+
+/* 4. スピン時と勝利時のアニメーション
+   ========================================================================== */
+
+/* 高速回転時のブラー（ブレ）効果（JS連動用） */
+.slots-strip.spinning .slots-cell {
+    filter: blur(4px) scaleY(1.15);
+    opacity: 0.75;
+}
+
+/* CSS単体、またはクラス切替による高速回転ループ用アニメーション */
+@keyframes slots-spin-loop {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-100%); }
+}
+
+.slots-strip.spin-active-loop {
+    animation: slots-spin-loop 0.12s linear infinite;
+}
+
+/* 勝利時のゴールドハイライト（ダイナミック点滅） */
+@keyframes win-blink {
+    0% {
+        background: radial-gradient(circle, rgba(212, 175, 55, 0.85) 0%, #151000 100%);
+        transform: scale(1);
+    }
+    100% {
+        background: radial-gradient(circle, rgba(255, 226, 112, 0.95) 0%, #352500 100%);
+        transform: scale(1.04);
+        box-shadow: inset 0 0 15px rgba(255, 215, 0, 0.8);
+    }
+}
+
+.win-highlight {
+    animation: win-blink 0.35s ease-in-out infinite alternate;
+    border: 2px solid #ffd700 !important;
+    z-index: 5;
+}
+
+
+/* 5. メッセージエリア
+   ========================================================================== */
+.slots-message-bar {
+    background: rgba(0, 0, 0, 0.65);
+    border: 1.5px solid rgba(212, 175, 55, 0.35);
+    border-radius: 8px;
+    padding: 12px 16px;
+    text-align: center;
+    font-size: 1.05rem;
+    min-height: 24px;
+    margin-bottom: 20px;
+    color: #ffd700;
+    font-weight: 800;
+    letter-spacing: 1px;
+    box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.8);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+
+/* 6. 操作パネルとスピン・ベット・チップボタン
+   ========================================================================== */
+.slots-controls {
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.bet-display-row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.2rem;
+    font-weight: 800;
+    margin-bottom: 14px;
+    letter-spacing: 1px;
+}
+
+/* 各種ベット用チップ */
+.chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.chip-btn {
+    background: radial-gradient(circle, #252525 0%, #0c0c0c 100%);
+    color: #ffffff;
+    border: 3px dashed #ffffff;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-weight: 900;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+    transition: all 0.15s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-sizing: border-box;
+}
+
+/* チップ額面によるカジノ標準カラーの反映 */
+.chip-btn[data-amount="1"] { border-color: #ffffff; color: #ffffff; }
+.chip-btn[data-amount="5"] { border-color: #2b6cb0; color: #4299e1; }
+.chip-btn[data-amount="10"] { border-color: #c53030; color: #f56565; }
+.chip-btn[data-amount="50"] { border-color: #2f855a; color: #48bb78; }
+.chip-btn[data-amount="100"] { border-color: #b7791f; color: #ecc94b; }
+.chip-btn[data-amount="500"] { border-color: #b83280; color: #f687b3; }
+
+.chip-btn:hover:not(:disabled) {
+    transform: scale(1.15) rotate(15deg);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+}
+
+.chip-btn:active:not(:disabled) {
+    transform: scale(0.95);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.chip-btn:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* ボタン各種共通 */
+.slots-btn {
+    background: linear-gradient(to bottom, #0d3a1d 0%, #06190e 100%);
+    color: #d4af37;
+    border: 1.5px solid #d4af37;
+    padding: 10px 18px;
+    font-size: 1rem;
+    font-weight: 700;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+    outline: none;
+    box-sizing: border-box;
+}
+
+.slots-btn:hover:not(:disabled) {
+    background: #d4af37;
+    color: #06190e;
+    box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+}
+
+.slots-btn:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.slots-btn:disabled {
+    background: #151515 !important;
+    color: #4f4f4f !important;
+    border-color: #333333 !important;
+    cursor: not-allowed;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+/* 小サイズボタン */
+.slots-btn-sm {
+    padding: 6px 14px !important;
+    font-size: 0.8rem !important;
+    border-radius: 20px !important;
+}
+
+/* 大アクション・スピンボタン（ファイヤーオレンジからレッドへのグラデーション） */
+.slots-btn-gold {
+    background: linear-gradient(135deg, #e52d27 0%, #b31217 100%);
+    color: #ffffff;
+    border: 2px solid #ffd700;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+.slots-btn-gold:hover:not(:disabled) {
+    background: linear-gradient(135deg, #ff4136 0%, #e52d27 100%);
+    color: #ffffff;
+    box-shadow: 0 0 18px rgba(255, 65, 54, 0.6), 0 0 5px rgba(255, 215, 0, 0.4);
+}
+
+.slots-btn-lg {
+    padding: 12px 36px;
+    font-size: 1.35rem;
+    font-weight: 900;
+    border-radius: 8px;
+    flex-grow: 1;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.5);
+}
+
+/* アクション行 */
+.action-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.banking-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+
+/* 7. スマートフォンレスポンシブ対応
+   ========================================================================== */
+
+/* テキストカラー追加定義 */
+.text-gold {
+    color: #ffd700;
+    text-shadow: 0 0 5px rgba(255, 215, 0, 0.4);
+}
+
+.text-red {
+    color: #ff4d4d;
+    text-shadow: 0 0 5px rgba(255, 77, 77, 0.4);
+}
+
+/* スマートフォンの縦・横幅、解像度に合わせて無段階で適切にスケールダウン */
+@media (max-width: 620px) {
+    .slots-game-wrapper {
+        padding: 16px;
+    }
+    .slots-machine {
+        transform: scale(0.9);
+        transform-origin: center top;
+        margin-bottom: -10px; /* スケール縮小によるデッドスペースの回収 */
+    }
+}
+
+@media (max-width: 530px) {
+    .slots-title {
+        font-size: 1.4rem;
+    }
+    .slots-machine {
+        transform: scale(0.8);
+        margin-bottom: -35px;
+    }
+    .slots-status-bar {
+        padding: 8px;
+        gap: 6px;
+    }
+    .status-value {
+        font-size: 1rem;
+    }
+    .chip-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 0.75rem;
+    }
+    .slots-btn-lg {
+        font-size: 1.15rem;
+        padding: 10px 24px;
+    }
+}
+
+@media (max-width: 450px) {
+    .slots-machine {
+        transform: scale(0.7);
+        margin-bottom: -60px;
+    }
+    .slots-status-bar {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    .status-item {
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 2px 8px;
+    }
+    .status-label {
+        margin-bottom: 0;
+    }
+    .chips-container {
+        gap: 6px;
+    }
+    .chip-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 0.7rem;
+    }
+    .slots-btn {
+        padding: 8px 14px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 380px) {
+    .slots-title {
+        font-size: 1.2rem;
+    }
+    .slots-machine {
+        transform: scale(0.58);
+        margin-bottom: -90px;
+    }
+    .action-row {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .banking-buttons {
+        width: 100%;
+        justify-content: space-between;
+    }
+    .banking-buttons .slots-btn {
+        flex-grow: 1;
+    }
+    .slots-btn-lg {
+        width: 100%;
+        text-align: center;
+    }
+}
