@@ -80,6 +80,19 @@ const CasinoStorage = {
         }
     },
 
+    /**
+     * 安全なエイリアス（別名）関数
+     * 他のゲームモジュール等から Balance の名前で呼ばれた場合でも
+     * 完全に同一の所持金データ（Bankroll）を同様に扱えるように仲介します。
+     */
+    getBalance() {
+        return this.getBankroll();
+    },
+
+    setBalance(value) {
+        this.setBankroll(value);
+    },
+
     getDebt() {
         return this._debt;
     },
