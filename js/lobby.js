@@ -10,7 +10,7 @@ const CasinoLobby = {
 
         const currentUsername = window.CasinoStorage.getUsername();
 
-        // 左右2カラムのレイアウト構造をレンダリング
+        // 左右2カラムのレイアウト構造をレンダリング（スロットを有効化）
         viewport.innerHTML = `
             <div class="lobby-container-two-column">
                 <!-- 左ペイン (ランキングエリア) -->
@@ -32,7 +32,7 @@ const CasinoLobby = {
                         <div class="ranking-tabs">
                             <button class="ranking-tab active" data-tab="net_worth">純資産部門</button>
                             <button class="ranking-tab" data-tab="blackjack_max_win">BJ最大勝利</button>
-                            <button class="ranking-tab" data-tab="slots_max_win">スロット(Coming Soon)</button>
+                            <button class="ranking-tab" data-tab="slots_max_win">スロット最大勝利</button>
                         </div>
 
                         <div id="ranking-content-area" style="flex: 1; min-height: 0;">
@@ -54,10 +54,10 @@ const CasinoLobby = {
                                 <h2 class="lobby-card-title">Blackjack Classic</h2>
                                 <p class="lobby-card-desc">王道の4デッキブラックジャック。ダブルダウン、スプリット搭載。</p>
                             </div>
-                            <div class="lobby-card disabled">
+                            <div class="lobby-card" id="btn-play-slots">
                                 <div class="lobby-card-icon">🎰</div>
-                                <h2 class="lobby-card-title">Slots</h2>
-                                <p class="lobby-card-desc">Coming Soon...</p>
+                                <h2 class="lobby-card-title">Golden Slots</h2>
+                                <p class="lobby-card-desc">ダークグリーンとゴールドの豪華スロット。5つのペイラインで狙う一攫千金！</p>
                             </div>
                         </div>
                     </div>
@@ -68,6 +68,11 @@ const CasinoLobby = {
         // Blackjack起動イベント登録
         document.getElementById('btn-play-blackjack').addEventListener('click', () => {
             this.launchGame('blackjack');
+        });
+
+        // Slots起動イベント登録
+        document.getElementById('btn-play-slots').addEventListener('click', () => {
+            this.launchGame('slots');
         });
 
         // ユーザー名更新処理の自動化
@@ -120,7 +125,6 @@ const CasinoLobby = {
         tabButtons.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const targetTab = e.target.getAttribute('data-tab');
-                if (targetTab === 'slots_max_win') return; // Coming Soonの制限
 
                 tabButtons.forEach(b => b.classList.remove('active'));
                 e.target.classList.add('active');
@@ -210,6 +214,8 @@ const CasinoLobby = {
 
         if (gameId === 'blackjack') {
             window.BlackjackGame.init(viewport);
+        } else if (gameId === 'slots') {
+            window.SlotsGame.init(viewport);
         }
     }
 };
