@@ -952,7 +952,7 @@ const BlackjackGame = {
         const numpadBetBtn = document.createElement('button');
         numpadBetBtn.className = 'action-btn numpad-bet-btn';
         numpadBetBtn.id = 'btn-numpad-bet';
-        numpadBetBtn.textContent = '⌨ BET';
+        numpadBetBtn.textContent = 'BET INPUT';
         numpadBetBtn.onclick = () => this.numpadBet();
         numpadBetBtn.disabled = (this.gameState !== 'betting' || this.isProcessing);
         chipArea.appendChild(numpadBetBtn);
@@ -1026,7 +1026,7 @@ const BlackjackGame = {
                               bankroll >= activeHand.bet;
             btnSplit.disabled = !canSplit;
 
-            this.logMessage(`Hand ${this.playerHands.length > 1 ? (this.activeHandIndex + 1) : ""} のアクションを選択してください。`);
+            this.logMessage("Hand のアクションを選択してください。");
         } else {
             if (this.gameState === 'round-over') {
                 btnDeal.disabled = false;
