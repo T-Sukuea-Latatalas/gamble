@@ -9,6 +9,9 @@ html, body {
     color: #ffffff;
     font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
     user-select: none;
+    -webkit-user-select: none;
+    /* モバイルの引っ張りリフレッシュを防止 */
+    overscroll-behavior: none;
 }
 
 body {
@@ -18,7 +21,8 @@ body {
     justify-content: center;
     height: 100dvh;
     box-sizing: border-box;
-    padding: 1vh;
+    padding: 8px;
+    -webkit-tap-highlight-color: transparent;
 }
 
 /* ポータルのメインラッパー */
@@ -44,7 +48,7 @@ body {
     width: 100%;
     height: 100%;
     min-height: 0; /* flexの子要素が突き抜けるのを防止 */
-    gap: 24px;
+    gap: 20px;
     box-sizing: border-box;
     padding: 10px;
 }
@@ -56,7 +60,7 @@ body {
     height: 100%;
     display: flex;
     flex-direction: column;
-    background: rgba(0, 0, 0, 0.3);
+    background: rgba(0, 0, 0, 0.35);
     border: 1px solid rgba(255, 215, 0, 0.15);
     border-radius: 12px;
     padding: 15px;
@@ -81,12 +85,12 @@ body {
     justify-content: center;
     width: 100%;
     height: 100%;
-    gap: 3vh;
+    gap: 2.5vh;
     text-align: center;
 }
 
 .lobby-title {
-    font-size: clamp(24px, 4.5vh, 36px);
+    font-size: clamp(22px, 4vh, 34px);
     color: #ffd700;
     text-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
     letter-spacing: 2px;
@@ -96,7 +100,7 @@ body {
 .lobby-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 20px;
+    gap: 16px;
     width: 100%;
     max-width: 800px;
 }
@@ -105,36 +109,46 @@ body {
     background: rgba(0, 0, 0, 0.6);
     border: 2px solid #ffd700;
     border-radius: 12px;
-    padding: 25px;
+    padding: 20px;
     cursor: pointer;
     transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 15px;
+    gap: 12px;
+    min-height: 44px; /* タップターゲット確保 */
 }
 
-.lobby-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 20px rgba(255, 215, 0, 0.3);
-    border-color: #ffffff;
+/* PC等ホバー対応デバイスのみにホバー演出を限定（モバイルでのホバー残り防止） */
+@media (hover: hover) {
+    .lobby-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(255, 215, 0, 0.3);
+        border-color: #ffffff;
+    }
+}
+
+.lobby-card:active {
+    transform: translateY(1px);
+    background: rgba(255, 215, 0, 0.05);
 }
 
 .lobby-card-icon {
-    font-size: 48px;
+    font-size: 44px;
 }
 
 .lobby-card-title {
-    font-size: clamp(16px, 2.5vh, 22px);
+    font-size: clamp(16px, 2.3vh, 20px);
     font-weight: bold;
     color: #ffffff;
     margin: 0;
 }
 
 .lobby-card-desc {
-    font-size: 12px;
+    font-size: 11px;
     color: #ccc;
     margin: 0;
+    line-height: 1.4;
 }
 
 .lobby-card.disabled {
@@ -170,7 +184,7 @@ body {
 }
 
 .ranking-title {
-    font-size: clamp(18px, 3vh, 24px);
+    font-size: clamp(16px, 2.5vh, 22px);
     color: #ffd700;
     margin: 0;
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
@@ -183,22 +197,22 @@ body {
     background-color: rgba(0, 0, 0, 0.5);
     border: 1px solid rgba(255, 215, 0, 0.3);
     border-radius: 8px;
-    padding: 10px 15px;
+    padding: 8px 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 8px;
 }
 
 .username-display-label {
-    font-size: 13px;
+    font-size: 12px;
     color: #ccc;
 }
 
 .username-display-label strong {
     color: #ffd700;
-    font-size: 15px;
+    font-size: 14px;
     margin-left: 5px;
 }
 
@@ -213,14 +227,16 @@ body {
     background-color: rgba(0, 0, 0, 0.8);
     border: 1px solid rgba(255, 215, 0, 0.4);
     color: #ffffff;
-    padding: 6px 14px;
-    border-radius: 20px; /* モダンな楕円形に */
+    padding: 8px 12px;
+    border-radius: 20px;
     font-size: 13px;
-    width: 140px;
+    width: 150px;
     outline: none;
     transition: all 0.2s ease;
     box-shadow: 0 0 5px rgba(255, 215, 0, 0.1);
     text-align: center;
+    /* モバイルでの不要な拡大ズームを防止するため16px以上にすることを考慮するが、13pxのまま最大表示を活かす場合はviewport metaに依存。安全策として16pxに設定 */
+    font-size: 16px; 
 }
 
 .username-input:focus {
@@ -231,17 +247,17 @@ body {
 
 /* 「Enterで確定」の視覚的補助テキスト */
 .username-input-group::after {
-    content: "Enterキーまたは枠外クリックで確定";
+    content: "確定時は枠外をタップまたはEnter";
     font-size: 9px;
     color: #888;
-    transform: scale(0.9);
+    transform: scale(0.85);
     transform-origin: right top;
 }
 
 /* ランキングタブ選択 */
 .ranking-tabs {
     display: flex;
-    gap: 5px;
+    gap: 4px;
     border-bottom: 2px solid rgba(255, 215, 0, 0.3);
     padding-bottom: 2px;
 }
@@ -250,17 +266,26 @@ body {
     background: transparent;
     border: none;
     color: #888;
-    padding: 8px 12px;
-    font-size: clamp(11px, 1.6vh, 14px);
+    padding: 10px 8px;
+    font-size: clamp(11px, 1.5vh, 13px);
     font-weight: bold;
     cursor: pointer;
     transition: all 0.2s;
     border-radius: 5px 5px 0 0;
+    flex: 1;
+    text-align: center;
+    min-height: 44px; /* タップ領域確保 */
 }
 
-.ranking-tab:hover {
-    color: #ccc;
-    background-color: rgba(255, 255, 255, 0.05);
+@media (hover: hover) {
+    .ranking-tab:hover {
+        color: #ccc;
+        background-color: rgba(255, 255, 255, 0.05);
+    }
+}
+
+.ranking-tab:active {
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 .ranking-tab.active {
@@ -274,6 +299,7 @@ body {
 .ranking-table-wrapper {
     flex: 1;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* iOSでの滑らかなスクロール */
     background-color: rgba(0, 0, 0, 0.4);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
@@ -284,26 +310,22 @@ body {
     width: 100%;
     border-collapse: collapse;
     text-align: left;
-    font-size: clamp(11px, 1.5vh, 14px);
+    font-size: clamp(11px, 1.4vh, 13px);
 }
 
 .ranking-table th,
 .ranking-table td {
-    padding: 10px;
+    padding: 10px 8px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .ranking-table th {
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(0, 0, 0, 0.7);
     color: #ffd700;
     font-weight: bold;
     position: sticky;
     top: 0;
     z-index: 1;
-}
-
-.ranking-table tbody tr:hover {
-    background-color: rgba(255, 255, 255, 0.02);
 }
 
 /* 自分のランクのハイライト表示 */
@@ -318,7 +340,7 @@ body {
 
 .rank-num {
     font-weight: bold;
-    width: 45px;
+    width: 40px;
 }
 
 .rank-1 { color: #ffd700; text-shadow: 0 0 5px rgba(255, 215, 0, 0.5); }
@@ -334,12 +356,12 @@ body {
     height: 100%;
     gap: 15px;
     color: #ccc;
-    font-size: 14px;
+    font-size: 13px;
 }
 
 .spinner {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     border: 3px solid rgba(255, 215, 0, 0.1);
     border-top: 3px solid #ffd700;
     border-radius: 50%;
@@ -352,15 +374,16 @@ body {
 }
 
 /* ==========================================================================
-   モバイルレスポンシブ対応
+   モバイルレスポンシブ対応 (768px未満は1カラムに縦並び)
    ========================================================================== */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
     .lobby-container-two-column {
         flex-direction: column;
         overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
         height: 100%;
-        padding: 5px;
-        gap: 15px;
+        padding: 4px;
+        gap: 16px;
     }
 
     .lobby-left-pane,
@@ -370,22 +393,22 @@ body {
         height: auto;
     }
 
+    .lobby-right-pane {
+        order: 1; /* ゲーム選択を上部へ */
+    }
+
     .lobby-left-pane {
-        order: 2; /* モバイルではゲーム選択を上に、ランキングを下に配置 */
+        order: 2; /* ランキングを下部へ */
         padding: 10px;
     }
 
-    .lobby-right-pane {
-        order: 1;
-    }
-
     .ranking-container {
-        height: 380px; /* モバイル時は固定高を確保して内側をスクロールさせる */
+        height: 320px; /* モバイル縦画面で潰れず確実に内部スクロール可能な高さを指定 */
     }
 
     .lobby-container {
-        gap: 2vh;
-        padding: 10px 0;
+        gap: 1.5vh;
+        padding: 5px 0;
     }
 }
 
@@ -398,7 +421,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.75);
+    background-color: rgba(0, 0, 0, 0.8);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -409,45 +432,45 @@ body {
     background: linear-gradient(135deg, #1e1e1e 0%, #121212 100%);
     border: 2px solid #ffd700;
     border-radius: 15px;
-    padding: 20px;
-    width: 90%;
+    padding: 16px;
+    width: 92%;
     max-width: 320px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 12px;
     box-sizing: border-box;
 }
 
 .numpad-header {
     text-align: center;
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
     color: #ffd700;
     letter-spacing: 1px;
 }
 
 .numpad-display-container {
-    background-color: rgba(0, 0, 0, 0.8);
+    background-color: rgba(0, 0, 0, 0.85);
     border: 1px solid rgba(255, 215, 0, 0.3);
     border-radius: 8px;
-    padding: 10px 15px;
+    padding: 8px 12px;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    height: 50px;
+    height: 48px;
     box-sizing: border-box;
 }
 
 .numpad-currency {
     color: #ffd700;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: bold;
 }
 
 .numpad-value {
     color: #ffffff;
-    font-size: 24px;
+    font-size: 22px;
     font-weight: bold;
     text-align: right;
     flex: 1;
@@ -459,16 +482,16 @@ body {
 .numpad-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    gap: 8px;
 }
 
 .numpad-btn {
     background: #2c2c2c;
     border: 1px solid rgba(255, 255, 255, 0.1);
     color: #ffffff;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: bold;
-    height: 52px;
+    height: 48px; /* モバイル端末で押しやすいサイズ */
     border-radius: 8px;
     cursor: pointer;
     display: flex;
@@ -503,8 +526,8 @@ body {
     grid-column: span 2;
     background: #ff9100;
     color: #ffffff;
-    font-size: 16px;
-    height: 52px;
+    font-size: 15px;
+    height: 48px;
 }
 .numpad-btn-max:active {
     background: #b36400;
@@ -512,14 +535,15 @@ body {
 
 .numpad-footer-btns {
     display: flex;
-    gap: 10px;
+    gap: 8px;
+    margin-top: 4px;
 }
 
 .numpad-footer-btn {
     flex: 1;
-    height: 44px;
+    height: 44px; /* タップ領域確保 */
     border-radius: 8px;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: bold;
     border: none;
     cursor: pointer;
