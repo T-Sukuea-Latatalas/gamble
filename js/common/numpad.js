@@ -10,7 +10,7 @@ const CasinoNumpad = {
         this._createDOM();
     },
 
-    // テンキーDOMが存在しない場合は、body直下へ動的にレンダリングする（ポータルでの共用化）
+    // テンキーDOMをbody直下へ動的にレンダリングする
     _createDOM() {
         if (document.getElementById('numpad-overlay')) return;
 
@@ -21,7 +21,7 @@ const CasinoNumpad = {
 
         overlay.innerHTML = `
             <div class="numpad-modal">
-                <div class="numpad-header" id="numpad-title">借金額を入力</div>
+                <div class="numpad-header" id="numpad-title">金額を入力</div>
                 <div class="numpad-display-container">
                     <span class="numpad-currency">$</span>
                     <div id="numpad-val" class="numpad-value">0</div>
@@ -81,7 +81,7 @@ const CasinoNumpad = {
             maxBtn.style.display = 'block';
         } else if (mode === 'bet') {
             titleEl.textContent = 'ベットする額を入力';
-            maxBtn.style.display = 'block'; // ベット時も所持金を最大値として入力できるようMAXを表示
+            maxBtn.style.display = 'block';
         } else {
             titleEl.textContent = '数値を入力';
             maxBtn.style.display = 'none';
@@ -136,7 +136,7 @@ const CasinoNumpad = {
             if (isNaN(inputVal) || inputVal < 0) {
                 this._currentValStr = '0';
             } else if (inputVal > limit) {
-                this._currentValStr = String(limit); // 所持金を超えて入力できないようにする
+                this._currentValStr = String(limit);
             }
         }
 
@@ -177,7 +177,7 @@ const CasinoNumpad = {
             this._updateDisplay();
         } else if (this._mode === 'bet') {
             const limit = window.CasinoStorage.getBankroll();
-            this._currentValStr = String(limit); // 所持金分をそのまま最大値として入力
+            this._currentValStr = String(limit);
             this._updateDisplay();
         }
     },
@@ -210,16 +210,12 @@ const CasinoNumpad = {
             window.CasinoStorage.setBankroll(bankroll);
             window.CasinoStorage.setDebt(debt);
         } else if (this._mode === 'bet') {
-            // ベット設定時は残高(bankroll)や借金をテンキー内で直接変更せず、
-            // ゲーム側（slots.jsやblackjack.js）でゲーム開始（SPINやDEAL）のタイミングで差し引くようにするため、
-            // ここでは所持金上限を超えないように値のクランプのみ行います
             const limit = bankroll;
             if (val > limit) {
                 val = limit;
             }
         }
 
-        // コールバック通知により各ゲームのUIを自動更新させる（疎結合設計）
         if (this._onConfirmCallback) {
             this._onConfirmCallback(val, this._mode);
         }
