@@ -1,6 +1,6 @@
 // js/common/numpad.js
 const CasinoNumpad = {
-    _mode: 'borrow', // 'borrow' | 'repay'
+    _mode: 'borrow', // 'borrow' | 'repay' | 'bet'
     _currentValStr: '0',
     _onConfirmCallback: null,
     _sfx: null,
@@ -76,9 +76,15 @@ const CasinoNumpad = {
         if (mode === 'borrow') {
             titleEl.textContent = '借金額を入力';
             maxBtn.style.display = 'none'; // 借金時は上限なしのためMAXボタンを排除
-        } else {
+        } else if (mode === 'repay') {
             titleEl.textContent = '返済額を入力';
             maxBtn.style.display = 'block';
+        } else if (mode === 'bet') {
+            titleEl.textContent = 'ベットする額を入力';
+            maxBtn.style.display = 'block'; // ベット時も所持金を最大値として入力できるようMAXを表示
+        } else {
+            titleEl.textContent = '数値を入力';
+            maxBtn.style.display = 'none';
         }
 
         this._updateDisplay();
@@ -115,7 +121,7 @@ const CasinoNumpad = {
             this._currentValStr += String(val);
         }
 
-        // 返済時はリアルタイムで上限を制限
+        // 入力時のリアルタイム上限制限
         if (this._mode === 'repay') {
             const limit = Math.min(window.CasinoStorage.getDebt(), window.CasinoStorage.getBankroll());
             const inputVal = parseInt(this._currentValStr, 10);
@@ -123,6 +129,14 @@ const CasinoNumpad = {
                 this._currentValStr = '0';
             } else if (inputVal > limit) {
                 this._currentValStr = String(limit);
+            }
+        } else if (this._mode === 'bet') {
+            const limit = window.CasinoStorage.getBankroll();
+            const inputVal = parseInt(this._currentValStr, 10);
+            if (isNaN(inputVal) || inputVal < 0) {
+                this._currentValStr = '0';
+            } else if (inputVal > limit) {
+                this._currentValStr = String(limit); // 所持金を超えて入力できないようにする
             }
         }
 
@@ -161,6 +175,10 @@ const CasinoNumpad = {
             const limit = Math.min(window.CasinoStorage.getDebt(), window.CasinoStorage.getBankroll());
             this._currentValStr = String(limit);
             this._updateDisplay();
+        } else if (this._mode === 'bet') {
+            const limit = window.CasinoStorage.getBankroll();
+            this._currentValStr = String(limit); // 所持金分をそのまま最大値として入力
+            this._updateDisplay();
         }
     },
 
@@ -191,6 +209,14 @@ const CasinoNumpad = {
             debt = Math.max(0, debt - actualRepay);
             window.CasinoStorage.setBankroll(bankroll);
             window.CasinoStorage.setDebt(debt);
+        } else if (this._mode === 'bet') {
+            // ベット設定時は残高(bankroll)や借金をテンキー内で直接変更せず、
+            // ゲーム側（slots.jsやblackjack.js）でゲーム開始（SPINやDEAL）のタイミングで差し引くようにするため、
+            // ここでは所持金上限を超えないように値のクランプのみ行います
+            const limit = bankroll;
+            if (val > limit) {
+                val = limit;
+            }
         }
 
         // コールバック通知により各ゲームのUIを自動更新させる（疎結合設計）
