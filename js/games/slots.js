@@ -186,6 +186,7 @@
                             <button class="chip-btn" data-amount="500">$500</button>
                             <button class="slots-btn slots-btn-sm" id="slots-btn-allin">ALL IN</button>
                             <button class="slots-btn slots-btn-sm" id="slots-btn-clear">CLEAR</button>
+                            <button class="slots-btn slots-btn-sm" id="slots-btn-numpad-bet">⌨ BET</button>
                         </div>
                         
                         <!-- バンキング・スピンアクション -->
@@ -258,6 +259,35 @@
                 this.updateUI();
                 if (window.SoundEffects && typeof window.SoundEffects.playCoin === 'function') {
                     window.SoundEffects.playCoin();
+                }
+            });
+
+            // テンキーまたはプロンプトによるベット額の直接入力
+            document.getElementById('slots-btn-numpad-bet').addEventListener('click', () => {
+                if (this.isSpinning) return;
+
+                const applyBet = (amount) => {
+                    const betAmount = parseInt(amount, 10);
+                    if (!isNaN(betAmount) && betAmount >= 1) {
+                        this.currentBet = betAmount;
+                        this.updateUI();
+                        if (window.SoundEffects && typeof window.SoundEffects.playCoin === 'function') {
+                            window.SoundEffects.playCoin();
+                        }
+                    } else {
+                        this.showMessage("Please enter a valid bet amount (1 or more).");
+                    }
+                };
+
+                if (window.CasinoNumpad && typeof window.CasinoNumpad.open === 'function') {
+                    window.CasinoNumpad.open('bet', (amount) => {
+                        applyBet(amount);
+                    });
+                } else {
+                    const promptVal = prompt("Enter Bet Amount (Min $1):", this.currentBet.toString());
+                    if (promptVal !== null) {
+                        applyBet(promptVal);
+                    }
                 }
             });
             
@@ -355,7 +385,8 @@
                 'slots-btn-allin',
                 'slots-btn-clear',
                 'slots-btn-borrow',
-                'slots-btn-repay'
+                'slots-btn-repay',
+                'slots-btn-numpad-bet'
             ];
             
             buttonsToDisable.forEach(id => {
