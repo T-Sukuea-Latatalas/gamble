@@ -10,35 +10,35 @@ const CasinoLobby = {
 
         const currentUsername = window.CasinoStorage.getUsername();
 
-        // 左右2カラムのレイアウト構造をレンダリング（スロットを有効化）
+        // 左右2カラムのレイアウト構造をレンダリング（モバイル対応済みの共通CSSに対応）
         viewport.innerHTML = `
             <div class="lobby-container-two-column">
                 <!-- 左ペイン (ランキングエリア) -->
                 <div class="lobby-left-pane">
                     <div class="ranking-container">
                         <div class="ranking-top-bar">
-                            <h1 class="ranking-title">🏆 Online Leaderboard</h1>
+                            <h1 class="ranking-title">🏆 Leaderboard</h1>
                         </div>
 
                         <div class="username-setting-area">
                             <div class="username-display-label">
-                                現在のユーザー名:<strong id="display-username-val">${currentUsername}</strong>
+                                ユーザー名:<strong id="display-username-val">${currentUsername}</strong>
                             </div>
                             <div class="username-input-group">
-                                <input type="text" class="username-input" id="input-new-username" placeholder="新しい名前を入力" maxlength="15" value="${currentUsername}">
+                                <input type="text" class="username-input" id="input-new-username" placeholder="変更して確定" maxlength="15" value="${currentUsername}">
                             </div>
                         </div>
 
                         <div class="ranking-tabs">
-                            <button class="ranking-tab active" data-tab="net_worth">純資産部門</button>
+                            <button class="ranking-tab active" data-tab="net_worth">純資産</button>
                             <button class="ranking-tab" data-tab="blackjack_max_win">BJ最大勝利</button>
-                            <button class="ranking-tab" data-tab="slots_max_win">スロット最大勝利</button>
+                            <button class="ranking-tab" data-tab="slots_max_win">スロット</button>
                         </div>
 
-                        <div id="ranking-content-area" style="flex: 1; min-height: 0;">
+                        <div id="ranking-content-area" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
                             <div class="ranking-loading">
                                 <div class="spinner"></div>
-                                <p>クラウドからランキング情報を取得中...</p>
+                                <p>ランキング情報を取得中...</p>
                             </div>
                         </div>
                     </div>
@@ -52,12 +52,12 @@ const CasinoLobby = {
                             <div class="lobby-card" id="btn-play-blackjack">
                                 <div class="lobby-card-icon">🃏</div>
                                 <h2 class="lobby-card-title">Blackjack Classic</h2>
-                                <p class="lobby-card-desc">王道の4デッキブラックジャック。ダブルダウン、スプリット搭載。</p>
+                                <p class="lobby-card-desc">ダブルダウン・スプリットを完全搭載した王道ルールブラックジャック。</p>
                             </div>
                             <div class="lobby-card" id="btn-play-slots">
                                 <div class="lobby-card-icon">🎰</div>
                                 <h2 class="lobby-card-title">Golden Slots</h2>
-                                <p class="lobby-card-desc">ダークグリーンとゴールドの豪華スロット。5つのペイラインで狙う一攫千金！</p>
+                                <p class="lobby-card-desc">5本のラインが織り成す高配当。ダークグリーンとゴールドの豪華スロット機。</p>
                             </div>
                         </div>
                     </div>
@@ -75,7 +75,7 @@ const CasinoLobby = {
             this.launchGame('slots');
         });
 
-        // ユーザー名更新処理の自動化
+        // ユーザー名更新処理
         const inputEl = document.getElementById('input-new-username');
         let currentStoredName = currentUsername;
 
@@ -87,7 +87,6 @@ const CasinoLobby = {
                 return;
             }
 
-            // 変更がない場合は送信処理をスキップ
             if (newName === currentStoredName) {
                 return;
             }
@@ -98,25 +97,24 @@ const CasinoLobby = {
             window.CasinoStorage.setUsername(newName);
             document.getElementById('display-username-val').textContent = newName;
 
-            // クラウドへ名前を同期
+            // クラウド同期
             await window.CasinoRanking.registerUser(newName);
-            // 同期された名前で最新資産スコアを併せて再送信
             const netWorth = window.CasinoStorage.getBankroll() - window.CasinoStorage.getDebt();
             await window.CasinoRanking.submitScore('net_worth', netWorth);
 
-            // 変更を即座に反映するためにランキング表示を更新
+            // 更新を即座に反映
             loadAndRenderTables();
         };
 
-        // フォーカスアウト時、およびEnterキー押下時の自動更新
+        // モバイルの仮想キーボード閉鎖時に発火
         inputEl.addEventListener('blur', updateUsernameProcess);
         inputEl.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                inputEl.blur(); // フォーカスを外すことでblurイベントをトリガー
+                inputEl.blur(); 
             }
         });
 
-        // ランキングの制御ロジック
+        // タブ切り替え制御
         let activeTab = 'net_worth';
         let leaderboardData = null;
         const myUUID = window.CasinoStorage.getUUID();
@@ -202,7 +200,6 @@ const CasinoLobby = {
             );
         };
 
-        // 初回データロード
         loadAndRenderTables();
     },
 
