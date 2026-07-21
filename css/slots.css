@@ -1,3 +1,5 @@
+/* css/slots.css */
+
 @charset "utf-8";
 
 /* ==========================================================================
@@ -10,7 +12,7 @@
 .slots-game-wrapper {
     background: radial-gradient(circle at center, #0e351d 0%, #04140b 100%);
     color: #ffffff;
-    padding: 24px;
+    padding: 16px;
     border-radius: 20px;
     border: 3px solid #d4af37;
     box-shadow: 0 15px 50px rgba(0, 0, 0, 0.9), 
@@ -22,6 +24,10 @@
     box-sizing: border-box;
     position: relative;
     overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
 }
 
 /* ヘッダー */
@@ -29,13 +35,14 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 18px;
+    margin-bottom: 8px;
     border-bottom: 2px solid rgba(212, 175, 55, 0.3);
-    padding-bottom: 12px;
+    padding-bottom: 6px;
+    flex-shrink: 0;
 }
 
 .slots-title {
-    font-size: 1.8rem;
+    font-size: clamp(1.2rem, 3.5vh, 1.7rem);
     font-weight: 900;
     color: #ffd700;
     text-transform: uppercase;
@@ -48,13 +55,14 @@
 .slots-status-bar {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 20px;
+    gap: 8px;
+    margin-bottom: 8px;
     background: rgba(0, 0, 0, 0.5);
-    padding: 12px;
+    padding: 8px;
     border-radius: 10px;
     border: 1px solid rgba(212, 175, 55, 0.25);
     box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
+    flex-shrink: 0;
 }
 
 .status-item {
@@ -65,15 +73,15 @@
 }
 
 .status-label {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 700;
     color: #a0a0a0;
-    margin-bottom: 4px;
-    letter-spacing: 1.5px;
+    margin-bottom: 2px;
+    letter-spacing: 1px;
 }
 
 .status-value {
-    font-size: 1.15rem;
+    font-size: clamp(0.9rem, 2vh, 1.1rem);
     font-weight: 800;
     font-family: 'Courier New', Courier, monospace;
 }
@@ -84,15 +92,20 @@
 .slots-machine {
     background: linear-gradient(135deg, #0b2413 0%, #05140b 100%);
     border: 5px solid #d4af37;
-    border-top-color: #f3e5ab; /* 立体感を出すための光沢色のグラデーション */
+    border-top-color: #f3e5ab;
     border-bottom-color: #aa7c11;
     border-radius: 16px;
-    padding: 18px;
-    margin-bottom: 20px;
+    padding: 12px;
+    margin-bottom: 8px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8),
                 inset 0 0 20px rgba(0, 0, 0, 0.9),
                 0 0 15px rgba(212, 175, 55, 0.15);
     position: relative;
+    /* モバイルブラウザの高さに合わせて確実に自動スケールダウンする仕組み */
+    max-height: 48dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 /* 筐体左右に配置するメカニカル装飾 */
@@ -112,31 +125,34 @@
 .slots-reels-container {
     background: #000000;
     border-radius: 10px;
-    padding: 8px;
+    padding: 6px;
     border: 3px solid #aa7c11;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.7);
+    height: 100%;
 }
 
-/* リール窓 (Reel Window) */
+/* リール窓 (Reel Window) - 動的なサイズに落とし込む */
 .slots-reel-window {
     display: flex;
     justify-content: center;
-    gap: 12px;
-    height: 270px;
+    gap: 8px;
+    height: 100%;
+    min-height: 180px;
+    max-height: 240px;
     overflow: hidden;
     position: relative;
     background: #020202;
     border-radius: 6px;
 }
 
-/* 3Dガラスシールド演出（リール上下のフェードアウト用疑似要素） */
+/* 3Dガラスシールド演出 */
 .slots-reel-window::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 50px;
+    height: 35px;
     background: linear-gradient(to bottom, rgba(2, 2, 2, 1) 0%, rgba(2, 2, 2, 0) 100%);
     z-index: 3;
     pointer-events: none;
@@ -148,31 +164,33 @@
     bottom: 0;
     left: 0;
     right: 0;
-    height: 50px;
+    height: 35px;
     background: linear-gradient(to top, rgba(2, 2, 2, 1) 0%, rgba(2, 2, 2, 0) 100%);
     z-index: 3;
     pointer-events: none;
 }
 
-/* ペイラインガイド表示（装飾用破線） */
+/* ペイラインガイド表示 */
 .slots-payline-indicator {
     position: absolute;
     left: 0;
     right: 0;
-    border-top: 1.5px dashed rgba(212, 175, 55, 0.2);
+    border-top: 1.5px dashed rgba(212, 175, 55, 0.25);
     pointer-events: none;
     z-index: 2;
 }
-.line-top { top: 45px; }
-.line-mid { top: 135px; }
-.line-bot { top: 225px; }
+/* 比率に基づきパーセントでのガイド表示を行い、高さ可変に追従 */
+.line-top { top: 16.6%; }
+.line-mid { top: 50%; }
+.line-bot { top: 83.3%; }
 
 
 /* 3. 各リールとシンボル（絵柄）
    ========================================================================== */
 .slots-reel {
-    width: 150px;
-    height: 270px;
+    flex: 1;
+    max-width: 150px;
+    height: 100%;
     overflow: hidden;
     position: relative;
     background: radial-gradient(circle, #1a1a1a 0%, #0d0d0d 100%);
@@ -188,17 +206,17 @@
     position: absolute;
     top: 0;
     left: 0;
-    /* バウンド（揺り戻し）イージングを効かせたスムーズな停止挙動 */
+    /* バウンド（揺り戻し）スムーズ停止挙動 */
     transition: transform 1.5s cubic-bezier(0.15, 0.85, 0.3, 1.15);
 }
 
 .slots-cell {
-    height: 90px;
+    /* パーセント指定等ではなく、JS側で1セルの高さを確実に制御可能にする構造 */
+    height: 80px; /* 初期高さ、JS実行時に動的に書き換わる設計 */
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 3.2rem;
-    line-height: 90px;
+    font-size: clamp(2rem, 4vh, 3.2rem);
     user-select: none;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     box-sizing: border-box;
@@ -211,23 +229,23 @@
 /* 4. スピン時と勝利時のアニメーション
    ========================================================================== */
 
-/* 高速回転時のブラー（ブレ）効果（JS連動用） */
+/* 高速回転時のブラー効果 */
 .slots-strip.spinning .slots-cell {
     filter: blur(4px) scaleY(1.15);
     opacity: 0.75;
 }
 
-/* CSS単体、またはクラス切替による高速回転ループ用アニメーション */
+/* 高速回転ループ用アニメーション */
 @keyframes slots-spin-loop {
     0% { transform: translateY(0); }
-    100% { transform: translateY(-100%); }
+    100% { transform: translateY(-50%); } /* ループ幅の最適化 */
 }
 
 .slots-strip.spin-active-loop {
-    animation: slots-spin-loop 0.12s linear infinite;
+    animation: slots-spin-loop 0.15s linear infinite;
 }
 
-/* 勝利時のゴールドハイライト（ダイナミック点滅） */
+/* 勝利時のゴールドハイライト */
 @keyframes win-blink {
     0% {
         background: radial-gradient(circle, rgba(212, 175, 55, 0.85) 0%, #151000 100%);
@@ -235,7 +253,7 @@
     }
     100% {
         background: radial-gradient(circle, rgba(255, 226, 112, 0.95) 0%, #352500 100%);
-        transform: scale(1.04);
+        transform: scale(1.02);
         box-shadow: inset 0 0 15px rgba(255, 215, 0, 0.8);
     }
 }
@@ -253,16 +271,17 @@
     background: rgba(0, 0, 0, 0.65);
     border: 1.5px solid rgba(212, 175, 55, 0.35);
     border-radius: 8px;
-    padding: 12px 16px;
+    padding: 8px 12px;
     text-align: center;
-    font-size: 1.05rem;
-    min-height: 24px;
-    margin-bottom: 20px;
+    font-size: clamp(0.9rem, 1.8vh, 1.05rem);
+    min-height: 20px;
+    margin-bottom: 8px;
     color: #ffd700;
     font-weight: 800;
     letter-spacing: 1px;
     box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.8);
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    flex-shrink: 0;
 }
 
 
@@ -271,9 +290,10 @@
 .slots-controls {
     background: rgba(0, 0, 0, 0.4);
     border-radius: 12px;
-    padding: 16px;
+    padding: 10px;
     border: 1px solid rgba(212, 175, 55, 0.2);
     box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
+    flex-shrink: 0;
 }
 
 .bet-display-row {
@@ -281,9 +301,9 @@
     justify-content: center;
     align-items: center;
     gap: 12px;
-    font-size: 1.2rem;
+    font-size: clamp(1rem, 2.2vh, 1.2rem);
     font-weight: 800;
-    margin-bottom: 14px;
+    margin-bottom: 8px;
     letter-spacing: 1px;
 }
 
@@ -292,29 +312,29 @@
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 8px;
-    margin-bottom: 20px;
+    gap: 6px;
+    margin-bottom: 10px;
 }
 
 .chip-btn {
     background: radial-gradient(circle, #252525 0%, #0c0c0c 100%);
     color: #ffffff;
-    border: 3px dashed #ffffff;
-    width: 48px;
-    height: 48px;
+    border: 2px dashed #ffffff;
+    width: 44px; /* タップ操作領域 */
+    height: 44px;
     border-radius: 50%;
     cursor: pointer;
     font-weight: 900;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
-    transition: all 0.15s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition: transform 0.1s, box-shadow 0.15s;
     box-sizing: border-box;
 }
 
-/* チップ額面によるカジノ標準カラーの反映 */
+/* チップ額面カラーの反映 */
 .chip-btn[data-amount="1"] { border-color: #ffffff; color: #ffffff; }
 .chip-btn[data-amount="5"] { border-color: #2b6cb0; color: #4299e1; }
 .chip-btn[data-amount="10"] { border-color: #c53030; color: #f56565; }
@@ -322,13 +342,15 @@
 .chip-btn[data-amount="100"] { border-color: #b7791f; color: #ecc94b; }
 .chip-btn[data-amount="500"] { border-color: #b83280; color: #f687b3; }
 
-.chip-btn:hover:not(:disabled) {
-    transform: scale(1.15) rotate(15deg);
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.35);
+@media (hover: hover) {
+    .chip-btn:hover:not(:disabled) {
+        transform: scale(1.1) rotate(10deg);
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.35);
+    }
 }
 
 .chip-btn:active:not(:disabled) {
-    transform: scale(0.95);
+    transform: scale(0.92);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
 }
 
@@ -344,21 +366,24 @@
     background: linear-gradient(to bottom, #0d3a1d 0%, #06190e 100%);
     color: #d4af37;
     border: 1.5px solid #d4af37;
-    padding: 10px 18px;
-    font-size: 1rem;
+    padding: 10px 14px;
+    font-size: 0.95rem;
     font-weight: 700;
     border-radius: 6px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
     outline: none;
     box-sizing: border-box;
+    min-height: 44px; /* 最低タップターゲット */
 }
 
-.slots-btn:hover:not(:disabled) {
-    background: #d4af37;
-    color: #06190e;
-    box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+@media (hover: hover) {
+    .slots-btn:hover:not(:disabled) {
+        background: #d4af37;
+        color: #06190e;
+        box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+    }
 }
 
 .slots-btn:active:not(:disabled) {
@@ -377,12 +402,12 @@
 
 /* 小サイズボタン */
 .slots-btn-sm {
-    padding: 6px 14px !important;
-    font-size: 0.8rem !important;
+    padding: 6px 12px !important;
+    font-size: 0.75rem !important;
     border-radius: 20px !important;
 }
 
-/* 大アクション・スピンボタン（ファイヤーオレンジからレッドへのグラデーション） */
+/* スピンボタン（レッド＆イエローグラデーション） */
 .slots-btn-gold {
     background: linear-gradient(135deg, #e52d27 0%, #b31217 100%);
     color: #ffffff;
@@ -390,19 +415,21 @@
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
-.slots-btn-gold:hover:not(:disabled) {
-    background: linear-gradient(135deg, #ff4136 0%, #e52d27 100%);
-    color: #ffffff;
-    box-shadow: 0 0 18px rgba(255, 65, 54, 0.6), 0 0 5px rgba(255, 215, 0, 0.4);
+@media (hover: hover) {
+    .slots-btn-gold:hover:not(:disabled) {
+        background: linear-gradient(135deg, #ff4136 0%, #e52d27 100%);
+        color: #ffffff;
+        box-shadow: 0 0 18px rgba(255, 65, 54, 0.6), 0 0 5px rgba(255, 215, 0, 0.4);
+    }
 }
 
 .slots-btn-lg {
-    padding: 12px 36px;
-    font-size: 1.35rem;
+    padding: 12px 24px;
+    font-size: 1.2rem;
     font-weight: 900;
     border-radius: 8px;
     flex-grow: 1;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     box-shadow: 0 6px 15px rgba(0, 0, 0, 0.5);
 }
@@ -412,19 +439,18 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
 }
 
 .banking-buttons {
     display: flex;
-    gap: 8px;
+    gap: 6px;
 }
 
 
 /* 7. スマートフォンレスポンシブ対応
    ========================================================================== */
 
-/* テキストカラー追加定義 */
 .text-gold {
     color: #ffd700;
     text-shadow: 0 0 5px rgba(255, 215, 0, 0.4);
@@ -435,86 +461,76 @@
     text-shadow: 0 0 5px rgba(255, 77, 77, 0.4);
 }
 
-/* スマートフォンの縦・横幅、解像度に合わせて無段階で適切にスケールダウン */
+/* モバイルデバイスに合わせたスケーリングとビューポート維持 */
 @media (max-width: 620px) {
     .slots-game-wrapper {
-        padding: 16px;
+        padding: 10px;
     }
     .slots-machine {
-        transform: scale(0.9);
-        transform-origin: center top;
-        margin-bottom: -10px; /* スケール縮小によるデッドスペースの回収 */
+        max-height: 42dvh;
+        padding: 8px;
+    }
+    .slots-reel-window {
+        min-height: 140px;
     }
 }
 
 @media (max-width: 530px) {
     .slots-title {
-        font-size: 1.4rem;
-    }
-    .slots-machine {
-        transform: scale(0.8);
-        margin-bottom: -35px;
+        font-size: 1.25rem;
     }
     .slots-status-bar {
-        padding: 8px;
-        gap: 6px;
+        padding: 6px;
+        gap: 4px;
     }
     .status-value {
-        font-size: 1rem;
+        font-size: 0.95rem;
     }
     .chip-btn {
-        width: 44px;
-        height: 44px;
+        width: 38px;
+        height: 38px;
         font-size: 0.75rem;
     }
     .slots-btn-lg {
-        font-size: 1.15rem;
-        padding: 10px 24px;
+        font-size: 1.05rem;
+        padding: 10px 16px;
     }
 }
 
 @media (max-width: 450px) {
-    .slots-machine {
-        transform: scale(0.7);
-        margin-bottom: -60px;
-    }
     .slots-status-bar {
         grid-template-columns: 1fr;
-        gap: 8px;
+        gap: 4px;
     }
     .status-item {
         flex-direction: row;
         justify-content: space-between;
-        padding: 2px 8px;
+        padding: 2px 4px;
     }
     .status-label {
         margin-bottom: 0;
     }
     .chips-container {
-        gap: 6px;
+        gap: 4px;
     }
     .chip-btn {
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
         font-size: 0.7rem;
     }
     .slots-btn {
-        padding: 8px 14px;
-        font-size: 0.9rem;
+        padding: 8px 12px;
+        font-size: 0.85rem;
     }
 }
 
 @media (max-width: 380px) {
     .slots-title {
-        font-size: 1.2rem;
-    }
-    .slots-machine {
-        transform: scale(0.58);
-        margin-bottom: -90px;
+        font-size: 1.1rem;
     }
     .action-row {
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
     }
     .banking-buttons {
         width: 100%;
