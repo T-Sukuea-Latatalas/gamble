@@ -226,6 +226,35 @@ const BlackjackGame = {
         });
     },
 
+    numpadBet() {
+        this.sfx.init();
+        if (this.gameState !== 'betting' || this.isProcessing) return;
+
+        const applyBet = (amount) => {
+            const betAmount = parseInt(amount, 10);
+            if (isNaN(betAmount) || betAmount < 1) {
+                this.logMessage("1以上の有効な数値を入力してください。");
+                return;
+            }
+            this.currentBet = betAmount;
+            this.checkBetValidity();
+            this.sfx.playCoin();
+            this.checkBankruptcy();
+            this.updateUI();
+        };
+
+        if (window.CasinoNumpad && typeof window.CasinoNumpad.open === 'function') {
+            window.CasinoNumpad.open('bet', (amount) => {
+                applyBet(amount);
+            });
+        } else {
+            const promptVal = prompt("ベット額を入力してください (最小 $1):", this.currentBet.toString());
+            if (promptVal !== null) {
+                applyBet(promptVal);
+            }
+        }
+    },
+
     handleDealBtn() {
         this.sfx.init();
         if (this.isProcessing) return;
@@ -300,7 +329,7 @@ const BlackjackGame = {
         }
 
         this.dealerHand.score = this.calculateScore(this.dealerHand.cards);
-        this.dealerHand.visibleScore = this.calculateScore(this.dealerHand.cards.filter(c => c.isRevealed));
+        this.dealerHand.visibleScore = this.dealerHand.cards.filter(c => c.isRevealed).length > 0 ? this.calculateScore(this.dealerHand.cards.filter(c => c.isRevealed)) : 0;
         this.updateUI();
     },
 
@@ -919,6 +948,14 @@ const BlackjackGame = {
         repayBtn.onclick = () => this.repay();
         repayBtn.disabled = (this.gameState !== 'betting' || this.isProcessing || debt <= 0 || bankroll <= 0);
         chipArea.appendChild(repayBtn);
+
+        const numpadBetBtn = document.createElement('button');
+        numpadBetBtn.className = 'action-btn numpad-bet-btn';
+        numpadBetBtn.id = 'btn-numpad-bet';
+        numpadBetBtn.textContent = '⌨ BET';
+        numpadBetBtn.onclick = () => this.numpadBet();
+        numpadBetBtn.disabled = (this.gameState !== 'betting' || this.isProcessing);
+        chipArea.appendChild(numpadBetBtn);
     },
 
     updateUI() {
