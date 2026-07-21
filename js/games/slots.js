@@ -139,7 +139,8 @@ window.SlotsGame = {
         this._reels.forEach((strip, idx) => {
             const config = this._reelConfigs[idx];
             let html = '';
-            const expandedConfig = [...config, ...config, ...config];
+            // 慣性減速で長い距離をスクロールするため、5周分の配列を展開
+            const expandedConfig = [...config, ...config, ...config, ...config, ...config];
             expandedConfig.forEach(symIdx => {
                 html += `<div class="slots-cell">${this._symbols[symIdx]}</div>`;
             });
@@ -236,57 +237,110 @@ window.SlotsGame = {
 
         const windowEl = document.querySelector('.slots-reel-window');
         const cellHeight = windowEl ? Math.floor(windowEl.clientHeight / 3) : 80;
+        const configLength = this._reelConfigs[0].length; // 21
+
+        // 【巻き戻しフェーズ】
+        // リール可動限界を防ぐため、開始時に1周目の等価位置へ「気づかれずに」瞬時ワープさせる
+        this._reels.forEach((strip, reelIdx) => {
+            const currentPos = this._currentPositions[reelIdx];
+            const equivalentPos = currentPos % configLength;
+            
+            strip.style.transition = 'none';
+            strip.style.transform = `translateY(-${equivalentPos * cellHeight}px)`;
+            this._currentPositions[reelIdx] = equivalentPos;
+        });
+
+        // 強制リフローを発生させて巻き戻しを同期反映
+        this._reels.forEach(strip => {
+            void strip.offsetHeight;
+        });
 
         // 【回転開始: 予備動作（一瞬上に跳ね上がる）】
         this._reels.forEach((strip, reelIdx) => {
             const currentPos = this._currentPositions[reelIdx];
             strip.style.transition = 'transform 0.15s cubic-bezier(0.36, 0.07, 0.19, 0.97)';
-            // 通常の位置より上に20px引っ張り、その後に加速回転へ
             strip.style.transform = `translateY(-${currentPos * cellHeight - 20}px)`;
         });
 
-        // 予備動作完了後、高速巡航スピンへと移行
+        // 予備動作完了後、高速スピン（加速フェーズ）へ移行
         setTimeout(() => {
-            this._reels.forEach((strip) => {
-                strip.style.transition = 'none'; // アニメーション中は transition を干渉させない
+            this._reels.forEach((strip, reelIdx) => {
+                // 加速イージングで3周分先の仮位置に向けて一気にぶん回す
+                strip.style.transition = 'transform 2.0s cubic-bezier(0.5, 0, 0.7, 0.2)';
+                const cruisePos = this._currentPositions[reelIdx] + configLength * 3.5;
+                strip.style.transform = `translateY(-${cruisePos * cellHeight}px)`;
+                
+                // 巡航状態を示すブラー（CSSで記述されている blur 効果が反映されます）
                 strip.classList.add('spinning');
-                strip.classList.add('spin-active-loop');
             });
         }, 150);
 
+        // 各リールの最終停止ターゲット位置（0〜20）をランダム決定
         const targetPositions = [
             Math.floor(Math.random() * this._reelConfigs[0].length),
             Math.floor(Math.random() * this._reelConfigs[1].length),
             Math.floor(Math.random() * this._reelConfigs[2].length)
         ];
 
-        // 各リールを時間差で滑らかにバウンス停止させる
+        // 各リールを段階的に（左→中→右）時間差で減速開始
+        const startDelay = [600, 1100, 1600]; // 加速開始から停止移行までのディレイ
+        const decelerationDurations = [1.8, 2.4, 3.0]; // リールごとの自然な慣性減速時間
+
         this._reels.forEach((strip, reelIdx) => {
             setTimeout(() => {
-                strip.classList.remove('spin-active-loop');
-                strip.classList.remove('spinning');
+                // その瞬間の実描画位置をリアルタイムに取得
+                const style = window.getComputedStyle(strip);
+                const transform = style.transform || style.webkitTransform;
+                let currentY = 0;
+                if (transform && transform !== 'none') {
+                    const matrix = window.DOMMatrix ? new DOMMatrix(transform) : new WebKitCSSMatrix(transform);
+                    currentY = matrix.m42;
+                }
 
-                // 【オーバーシュート（バウンス）を表現するカスタムイージング】
-                strip.style.transition = 'transform 0.6s cubic-bezier(0.15, 0.85, 0.3, 1.25)';
+                // transitionを一旦切り、その場でピタッとシームレス固定（ワープなし）
+                strip.style.transition = 'none';
+                strip.style.transform = `translateY(${currentY}px)`;
+                strip.classList.remove('spinning'); // 減速に合わせてブラー解除
 
+                // 描画更新を強制
+                void strip.offsetHeight;
+
+                const currentCellPos = Math.abs(currentY) / cellHeight;
                 const targetPos = targetPositions[reelIdx];
-                const configLength = this._reelConfigs[reelIdx].length;
-                const finalPos = targetPos + configLength; // 中段のコピーエリアに着地
+                
+                // 自然な減速距離を稼ぐため、最低1.5周分は先へ進むようにターゲットを再計算
+                const minDistance = configLength * 1.5;
+                let finalPos = Math.ceil((currentCellPos + minDistance) / configLength) * configLength + targetPos;
 
+                // 5周分の配列限界（最大 105）を超えないように安全制御
+                const maxSafePos = configLength * 5 - 3;
+                if (finalPos > maxSafePos) {
+                    finalPos = Math.floor(maxSafePos / configLength) * configLength + targetPos;
+                    if (finalPos > maxSafePos) finalPos -= configLength;
+                }
+
+                const duration = decelerationDurations[reelIdx];
+
+                // 【実機ライクな慣性減速 ＆ コトッと弾むバウンス】
+                // 最初は急、終点で一気にスロー、最後にターゲットをわずかに超えて弾む高精度イージング
+                strip.style.transition = `transform ${duration}s cubic-bezier(0.15, 0.85, 0.3, 1.12)`;
                 strip.style.transform = `translateY(-${finalPos * cellHeight}px)`;
                 this._currentPositions[reelIdx] = finalPos;
 
-                // 【時間差：停止時の画面揺れ（Screen Shake）】
-                this.triggerStopShake();
+                // 物理的な動きに同期して、リールが完全に停止しきったタイミングで衝撃・サウンドを鳴らす
+                setTimeout(() => {
+                    this.triggerStopShake();
+                    if (this._sfx) this._sfx.playCoin();
 
-                if (this._sfx) this._sfx.playCoin();
+                    // 右リール（3本目）の完全停止で結果判定へ
+                    if (reelIdx === 2) {
+                        setTimeout(() => {
+                            this.evaluateResult(targetPositions);
+                        }, 350);
+                    }
+                }, duration * 1000);
 
-                if (reelIdx === 2) {
-                    setTimeout(() => {
-                        this.evaluateResult(targetPositions);
-                    }, 650);
-                }
-            }, 800 + reelIdx * 500 + 150); // 予備動作時間(150ms)分オフセット
+            }, 150 + startDelay[reelIdx]); // 予備動作時間(150ms)分オフセット
         });
     },
 
