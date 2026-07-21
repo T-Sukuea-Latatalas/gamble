@@ -544,3 +544,181 @@
         text-align: center;
     }
 }
+/* ==========================================================================
+   🎰 ADVANCED SLOTS ANIMATIONS & EFFECTS
+   ========================================================================== */
+
+/* --- 1. 高速回転時の動的ブラー最適化 --- */
+.slots-strip.spinning .slots-cell {
+    filter: blur(6px) scaleY(1.2); /* 既存の4pxから強化し、縦の引き伸ばしを追加 */
+    opacity: 0.8;
+    will-change: transform, filter;
+}
+
+/* 予備動作およびバウンスを処理するための基本transition（JSで動的にオーバーライドされます） */
+.slots-strip {
+    will-change: transform;
+}
+
+/* --- 2. 画面揺れ（Screen Shake）エフェクト --- */
+@keyframes shake-light-anim {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(-2px, 1px); }
+    50% { transform: translate(1px, -1px); }
+    75% { transform: translate(-1px, 1.5px); }
+}
+
+@keyframes shake-heavy-anim {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-4px, 3px) rotate(-0.5deg); }
+    30% { transform: translate(3.5px, -2.5px) rotate(0.5deg); }
+    50% { transform: translate(-3px, 4px) rotate(-1deg); }
+    70% { transform: translate(4px, -3px) rotate(0.5deg); }
+    90% { transform: translate(-1.5px, 1.5px) rotate(-0.5deg); }
+}
+
+@keyframes shake-mega-anim {
+    0%, 100% { transform: translate(0, 0); }
+    10% { transform: translate(-6px, 5px) rotate(-1deg); }
+    30% { transform: translate(5px, -5px) rotate(1deg); }
+    50% { transform: translate(-7px, 6px) rotate(-1.5deg); }
+    70% { transform: translate(6px, -4px) rotate(1.5deg); }
+    90% { transform: translate(-4px, 4px) rotate(-0.5deg); }
+}
+
+.shake-light {
+    animation: shake-light-anim 0.15s ease-in-out;
+}
+
+.shake-heavy {
+    animation: shake-heavy-anim 0.2s ease-in-out;
+}
+
+/* ジャックポット時にゲーム全体を揺らすクラス */
+.shake-mega {
+    animation: shake-mega-anim 0.4s ease-in-out infinite;
+}
+
+/* --- 3. 豪華な配当演出 (Tiered Win Highlights) --- */
+
+/* 【Tier 1: 通常当選 (x2〜x5)】白い光の点滅と小スケールアップ */
+@keyframes tier1-glow {
+    0% {
+        transform: scale(1);
+        box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.4);
+        background: radial-gradient(circle, #333333 0%, #0d0d0d 100%);
+    }
+    100% {
+        transform: scale(1.04);
+        box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.9), 0 0 8px rgba(255, 255, 255, 0.4);
+        background: radial-gradient(circle, #ffffff 0%, #151515 100%);
+    }
+}
+.win-highlight-tier1 {
+    animation: tier1-glow 0.4s ease-in-out infinite alternate;
+    border: 2px solid #ffffff !important;
+    z-index: 10;
+}
+
+/* 【Tier 2: 高額当選 (x10〜x15)】金色の激しい点滅と脈動 */
+@keyframes tier2-flash {
+    0% {
+        transform: scale(1);
+        background: radial-gradient(circle, #d4af37 0%, #151000 100%);
+        box-shadow: inset 0 0 15px rgba(255, 215, 0, 0.6);
+    }
+    100% {
+        transform: scale(1.08);
+        background: radial-gradient(circle, #ffe066 0%, #664d00 100%);
+        box-shadow: inset 0 0 30px rgba(255, 215, 0, 1), 0 0 12px rgba(255, 215, 0, 0.5);
+    }
+}
+.win-highlight-tier2 {
+    animation: tier2-flash 0.2s ease-in-out infinite alternate;
+    border: 2.5px solid #ffd700 !important;
+    z-index: 10;
+}
+
+/* 【Tier 3: ジャックポット (x25〜)】3D傾斜回転、脈動、ネオン風レインボーシャドウ */
+@keyframes tier3-jackpot {
+    0% {
+        transform: scale(1) rotateX(0deg) rotateY(0deg);
+        box-shadow: 0 0 15px #ff007f, inset 0 0 15px #ff007f;
+    }
+    33% {
+        transform: scale(1.12) rotateX(12deg) rotateY(8deg);
+        box-shadow: 0 0 25px #00e5ff, inset 0 0 20px #00e5ff;
+    }
+    66% {
+        transform: scale(1.12) rotateX(-12deg) rotateY(-8deg);
+        box-shadow: 0 0 25px #39ff14, inset 0 0 20px #39ff14;
+    }
+    100% {
+        transform: scale(1) rotateX(0deg) rotateY(0deg);
+        box-shadow: 0 0 15px #ffd700, inset 0 0 15px #ffd700;
+    }
+}
+.win-highlight-tier3 {
+    animation: tier3-jackpot 1s cubic-bezier(0.25, 0.8, 0.25, 1) infinite;
+    border: 3.5px solid #ffd700 !important;
+    background: radial-gradient(circle, #2a083c 0%, #050114 100%) !important;
+    z-index: 12;
+}
+
+/* メッセージバーの黄金発光アニメーション */
+@keyframes gold-glow-anim {
+    0% {
+        box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.8), 0 0 4px rgba(212, 175, 55, 0.3);
+        border-color: rgba(212, 175, 55, 0.35);
+        background: rgba(0, 0, 0, 0.65);
+    }
+    100% {
+        box-shadow: inset 0 1px 5px rgba(0, 0, 0, 0.8), 0 0 15px rgba(255, 215, 0, 0.7);
+        border-color: #ffd700;
+        background: linear-gradient(to right, #1d1502, #473703, #1d1502);
+    }
+}
+.msg-gold-glow {
+    animation: gold-glow-anim 0.6s ease-in-out infinite alternate;
+}
+
+/* --- 4. パーティクル（火花・メガ紙吹雪） --- */
+.sparkle-particle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 25;
+    transform: translate(-50%, -50%);
+    animation: sparkle-shoot 0.8s cubic-bezier(0.1, 0.8, 0.25, 1) forwards;
+}
+
+@keyframes sparkle-shoot {
+    0% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0);
+        opacity: 0;
+    }
+}
+
+/* ジャックポット用のスケールアップ紙吹雪 */
+.particle.mega {
+    position: absolute;
+    pointer-events: none;
+    z-index: 20;
+    opacity: 0.95;
+    animation: mega-fall 2s cubic-bezier(0.1, 0.6, 0.2, 1) forwards;
+}
+
+@keyframes mega-fall {
+    0% {
+        transform: translate(0, 0) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(var(--tx), var(--ty)) rotate(540deg);
+        opacity: 0;
+    }
+}
