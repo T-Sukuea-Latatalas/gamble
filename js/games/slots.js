@@ -227,8 +227,7 @@
                 chip.addEventListener('click', (e) => {
                     if (this.isSpinning) return;
                     const amount = parseInt(e.target.getAttribute('data-amount'), 10);
-                    this.currentBet += amount;
-                    if (this.currentBet > 10000) this.currentBet = 10000; // 上限
+                    this.currentBet += amount; // 上限10000の判定を削除
                     this.updateUI();
                     
                     if (window.SoundEffects && typeof window.SoundEffects.playCoin === 'function') {
@@ -242,8 +241,7 @@
                 if (this.isSpinning) return;
                 const bal = getBalance();
                 if (bal > 0) {
-                    this.currentBet = bal;
-                    if (this.currentBet > 10000) this.currentBet = 10000;
+                    this.currentBet = bal; // 上限10000の判定を削除
                     this.updateUI();
                     if (window.SoundEffects && typeof window.SoundEffects.playCoin === 'function') {
                         window.SoundEffects.playCoin();
