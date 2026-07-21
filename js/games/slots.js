@@ -6,8 +6,8 @@ window.SlotsGame = {
     _spinning: false,
     _currentBet: 10,
     _sfx: null,
-    _symbols: ['🍒', '🍋', '🍊', '🍇', '🔔', '💎', '7️⃣','™️'],
-    _payouts: { '™️': 100, '7️⃣': 50, '💎': 25, '🔔': 15, '🍇': 10, '🍊': 5, '🍋': 3, '🍒': 2 },
+    _symbols: ['☭', '🛢️', '🎱', '🥑', '🛰️', '💎', '🗿','📎'],
+    _payouts: { '📎': 100, '🗿': 50, '💎': 25, '🛰️': 15, '🥑': 10, '🎱': 5, '🛢️': 3, '☭': 2 },
     
     _reelConfigs: [
         [7, 6, 0, 1, 2, 3, 4, 5, 0, 3, 2, 4, 1, 5, 6, 0, 2, 4, 3, 1, 5],
@@ -386,7 +386,7 @@ window.SlotsGame = {
 
             if (sym0 === sym1 && sym1 === sym2) {
                 const symVal = sym0;
-                if (symVal === '™️') {
+                if (symVal === '📎') {
                     hasJackpotSymbol = true;
                 }
                 const payoutMultiplier = this._payouts[symVal] || 1;
