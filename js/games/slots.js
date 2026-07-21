@@ -27,6 +27,7 @@
         }
     }
 
+    // 借金取得
     function getDebt() {
         if (window.CasinoStorage && typeof window.CasinoStorage.getDebt === 'function') {
             return window.CasinoStorage.getDebt();
@@ -37,6 +38,7 @@
         return window._temp_debt;
     }
 
+    // 借金設定
     function setDebt(val) {
         if (window.CasinoStorage && typeof window.CasinoStorage.setDebt === 'function') {
             window.CasinoStorage.setDebt(val);
@@ -176,17 +178,21 @@
                             <span class="bet-value text-gold" id="slots-bet-val">$10</span>
                         </div>
                         
-                        <!-- ベット用チップ選択 -->
+                        <!-- ベット用チップ＆コントロール（明確に2行へ分離） -->
                         <div class="chips-container">
-                            <button class="chip-btn" data-amount="1">$1</button>
-                            <button class="chip-btn" data-amount="5">$5</button>
-                            <button class="chip-btn" data-amount="10">$10</button>
-                            <button class="chip-btn" data-amount="50">$50</button>
-                            <button class="chip-btn" data-amount="100">$100</button>
-                            <button class="chip-btn" data-amount="500">$500</button>
-                            <button class="slots-btn slots-btn-sm" id="slots-btn-allin">ALL IN</button>
-                            <button class="slots-btn slots-btn-sm" id="slots-btn-clear">CLEAR</button>
-                            <button class="slots-btn slots-btn-sm" id="slots-btn-numpad-bet">⌨ BET</button>
+                            <div class="chip-row">
+                                <button class="chip-btn" data-amount="1">$1</button>
+                                <button class="chip-btn" data-amount="5">$5</button>
+                                <button class="chip-btn" data-amount="10">$10</button>
+                                <button class="chip-btn" data-amount="50">$50</button>
+                                <button class="chip-btn" data-amount="100">$100</button>
+                                <button class="chip-btn" data-amount="500">$500</button>
+                            </div>
+                            <div class="chip-action-row">
+                                <button class="slots-btn slots-btn-sm" id="slots-btn-allin">ALL IN</button>
+                                <button class="slots-btn slots-btn-sm" id="slots-btn-clear">CLEAR</button>
+                                <button class="slots-btn slots-btn-sm" id="slots-btn-numpad-bet">BET INPUT</button>
+                            </div>
                         </div>
                         
                         <!-- バンキング・スピンアクション -->
@@ -207,20 +213,26 @@
         // イベントの紐付け
         bindEvents() {
             // ロビーに戻る
-            document.getElementById('slots-lobby-btn').addEventListener('click', () => {
-                if (this.isSpinning) return;
-                if (window.CasinoLobby && typeof window.CasinoLobby.renderLobby === 'function') {
-                    window.CasinoLobby.renderLobby();
-                } else {
-                    console.log('Lobby object is not found. Fallback: Reloading.');
-                    location.reload();
-                }
-            });
+            const lobbyBtn = document.getElementById('slots-lobby-btn');
+            if (lobbyBtn) {
+                lobbyBtn.addEventListener('click', () => {
+                    if (this.isSpinning) return;
+                    if (window.CasinoLobby && typeof window.CasinoLobby.renderLobby === 'function') {
+                        window.CasinoLobby.renderLobby();
+                    } else {
+                        console.log('Lobby object is not found. Fallback: Reloading.');
+                        location.reload();
+                    }
+                });
+            }
             
             // スピン実行
-            document.getElementById('slots-btn-spin').addEventListener('click', () => {
-                this.spin();
-            });
+            const spinBtn = document.getElementById('slots-btn-spin');
+            if (spinBtn) {
+                spinBtn.addEventListener('click', () => {
+                    this.spin();
+                });
+            }
             
             // 各種チップボタン
             const chips = this.container.querySelectorAll('.chip-btn');
@@ -228,7 +240,7 @@
                 chip.addEventListener('click', (e) => {
                     if (this.isSpinning) return;
                     const amount = parseInt(e.target.getAttribute('data-amount'), 10);
-                    this.currentBet += amount; // 上限10000の判定を削除
+                    this.currentBet += amount;
                     this.updateUI();
                     
                     if (window.SoundEffects && typeof window.SoundEffects.playCoin === 'function') {
@@ -238,123 +250,136 @@
             });
             
             // ALL IN
-            document.getElementById('slots-btn-allin').addEventListener('click', () => {
-                if (this.isSpinning) return;
-                const bal = getBalance();
-                if (bal > 0) {
-                    this.currentBet = bal; // 上限10000の判定を削除
-                    this.updateUI();
-                    if (window.SoundEffects && typeof window.SoundEffects.playCoin === 'function') {
-                        window.SoundEffects.playCoin();
-                    }
-                } else {
-                    this.showMessage("No balance to All In. Try to 'Borrow' money first!");
-                }
-            });
-            
-            // CLEAR
-            document.getElementById('slots-btn-clear').addEventListener('click', () => {
-                if (this.isSpinning) return;
-                this.currentBet = 0;
-                this.updateUI();
-                if (window.SoundEffects && typeof window.SoundEffects.playCoin === 'function') {
-                    window.SoundEffects.playCoin();
-                }
-            });
-
-            // テンキーまたはプロンプトによるベット額の直接入力
-            document.getElementById('slots-btn-numpad-bet').addEventListener('click', () => {
-                if (this.isSpinning) return;
-
-                const applyBet = (amount) => {
-                    const betAmount = parseInt(amount, 10);
-                    if (!isNaN(betAmount) && betAmount >= 1) {
-                        this.currentBet = betAmount;
+            const allinBtn = document.getElementById('slots-btn-allin');
+            if (allinBtn) {
+                allinBtn.addEventListener('click', () => {
+                    if (this.isSpinning) return;
+                    const bal = getBalance();
+                    if (bal > 0) {
+                        this.currentBet = bal;
                         this.updateUI();
                         if (window.SoundEffects && typeof window.SoundEffects.playCoin === 'function') {
                             window.SoundEffects.playCoin();
                         }
                     } else {
-                        this.showMessage("Please enter a valid bet amount (1 or more).");
+                        this.showMessage("No balance to All In. Try to 'Borrow' money first!");
                     }
-                };
+                });
+            }
+            
+            // CLEAR
+            const clearBtn = document.getElementById('slots-btn-clear');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', () => {
+                    if (this.isSpinning) return;
+                    this.currentBet = 0;
+                    this.updateUI();
+                    if (window.SoundEffects && typeof window.SoundEffects.playCoin === 'function') {
+                        window.SoundEffects.playCoin();
+                    }
+                });
+            }
 
-                if (window.CasinoNumpad && typeof window.CasinoNumpad.open === 'function') {
-                    window.CasinoNumpad.open('bet', (amount) => {
-                        applyBet(amount);
-                    });
-                } else {
-                    const promptVal = prompt("Enter Bet Amount (Min $1):", this.currentBet.toString());
-                    if (promptVal !== null) {
-                        applyBet(promptVal);
-                    }
-                }
-            });
-            
-            // 手動借金 (Borrow) - テンキー連携 (二重反映バグを防ぎUI/ランキングを単に更新)
-            document.getElementById('slots-btn-borrow').addEventListener('click', () => {
-                if (this.isSpinning) return;
-                if (window.CasinoNumpad && typeof window.CasinoNumpad.open === 'function') {
-                    window.CasinoNumpad.open('borrow', () => {
-                        this.updateUI();
-                        this.syncCloudNetWorth();
-                        this.showMessage("Borrowed successfully via keypad.");
-                    });
-                } else {
-                    // テンキーが未定義の場合のフォールバック
-                    const amount = parseInt(prompt("Borrow Amount (Max $10,000):", "1000"), 10);
-                    if (!isNaN(amount) && amount > 0) {
-                        const balance = getBalance();
-                        const debt = getDebt();
-                        setBalance(balance + amount);
-                        setDebt(debt + amount);
-                        saveStorage();
-                        this.updateUI();
-                        this.syncCloudNetWorth();
-                        this.showMessage(`Borrowed $${amount.toLocaleString()}`);
-                    }
-                }
-            });
-            
-            // 手動返済 (Repay) - テンキー連携 (二重反映バグを防ぎUI/ランキングを単に更新)
-            document.getElementById('slots-btn-repay').addEventListener('click', () => {
-                if (this.isSpinning) return;
-                const currentDebt = getDebt();
-                const currentBalance = getBalance();
-                const maxRepay = Math.min(currentDebt, currentBalance);
-                
-                if (maxRepay <= 0) {
-                    this.showMessage("No debt to repay or insufficient balance.");
-                    return;
-                }
-                
-                if (window.CasinoNumpad && typeof window.CasinoNumpad.open === 'function') {
-                    window.CasinoNumpad.open('repay', () => {
-                        this.updateUI();
-                        this.syncCloudNetWorth();
-                        this.showMessage("Repaid successfully via keypad.");
-                    });
-                } else {
-                    // テンキーが未定義の場合のフォールバック
-                    const amount = parseInt(prompt(`Repay Amount (Max: $${maxRepay.toLocaleString()}):`, maxRepay.toString()), 10);
-                    if (!isNaN(amount) && amount > 0) {
-                        const balance = getBalance();
-                        const debt = getDebt();
-                        if (amount > balance) {
-                            this.showMessage("Insufficient balance to repay this amount.");
-                            return;
+            // テンキーまたはプロンプトによるベット額の直接入力
+            const numpadBetBtn = document.getElementById('slots-btn-numpad-bet');
+            if (numpadBetBtn) {
+                numpadBetBtn.addEventListener('click', () => {
+                    if (this.isSpinning) return;
+
+                    const applyBet = (amount) => {
+                        const betAmount = parseInt(amount, 10);
+                        if (!isNaN(betAmount) && betAmount >= 1) {
+                            this.currentBet = betAmount;
+                            this.updateUI();
+                            if (window.SoundEffects && typeof window.SoundEffects.playCoin === 'function') {
+                                window.SoundEffects.playCoin();
+                            }
+                        } else {
+                            this.showMessage("Please enter a valid bet amount (1 or more).");
                         }
-                        
-                        const actualRepay = amount > debt ? debt : amount;
-                        setBalance(balance - actualRepay);
-                        setDebt(debt - actualRepay);
-                        saveStorage();
-                        this.updateUI();
-                        this.syncCloudNetWorth();
-                        this.showMessage(`Repaid $${actualRepay.toLocaleString()}`);
+                    };
+
+                    if (window.CasinoNumpad && typeof window.CasinoNumpad.open === 'function') {
+                        window.CasinoNumpad.open('bet', (amount) => {
+                            applyBet(amount);
+                        });
+                    } else {
+                        const promptVal = prompt("Enter Bet Amount (Min $1):", this.currentBet.toString());
+                        if (promptVal !== null) {
+                            applyBet(promptVal);
+                        }
                     }
-                }
-            });
+                });
+            }
+            
+            // 手動借金 (Borrow)
+            const borrowBtn = document.getElementById('slots-btn-borrow');
+            if (borrowBtn) {
+                borrowBtn.addEventListener('click', () => {
+                    if (this.isSpinning) return;
+                    if (window.CasinoNumpad && typeof window.CasinoNumpad.open === 'function') {
+                        window.CasinoNumpad.open('borrow', () => {
+                            this.updateUI();
+                            this.syncCloudNetWorth();
+                            this.showMessage("Borrowed successfully via keypad.");
+                        });
+                    } else {
+                        const amount = parseInt(prompt("Borrow Amount:", "1000"), 10);
+                        if (!isNaN(amount) && amount > 0) {
+                            const balance = getBalance();
+                            const debt = getDebt();
+                            setBalance(balance + amount);
+                            setDebt(debt + amount);
+                            saveStorage();
+                            this.updateUI();
+                            this.syncCloudNetWorth();
+                            this.showMessage(`Borrowed $${amount.toLocaleString()}`);
+                        }
+                    }
+                });
+            }
+            
+            // 手動返済 (Repay)
+            const repayBtn = document.getElementById('slots-btn-repay');
+            if (repayBtn) {
+                repayBtn.addEventListener('click', () => {
+                    if (this.isSpinning) return;
+                    const currentDebt = getDebt();
+                    const currentBalance = getBalance();
+                    const maxRepay = Math.min(currentDebt, currentBalance);
+                    
+                    if (maxRepay <= 0) {
+                        this.showMessage("No debt to repay or insufficient balance.");
+                        return;
+                    }
+                    
+                    if (window.CasinoNumpad && typeof window.CasinoNumpad.open === 'function') {
+                        window.CasinoNumpad.open('repay', () => {
+                            this.updateUI();
+                            this.syncCloudNetWorth();
+                            this.showMessage("Repaid successfully via keypad.");
+                        });
+                    } else {
+                        const amount = parseInt(prompt(`Repay Amount (Max: $${maxRepay.toLocaleString()}):`, maxRepay.toString()), 10);
+                        if (!isNaN(amount) && amount > 0) {
+                            const balance = getBalance();
+                            const debt = getDebt();
+                            if (amount > balance) {
+                                this.showMessage("Insufficient balance to repay this amount.");
+                                return;
+                            }
+                            
+                            const actualRepay = amount > debt ? debt : amount;
+                            setBalance(balance - actualRepay);
+                            setDebt(debt - actualRepay);
+                            saveStorage();
+                            this.updateUI();
+                            this.syncCloudNetWorth();
+                            this.showMessage(`Repaid $${actualRepay.toLocaleString()}`);
+                        }
+                    }
+                });
+            }
         },
 
         // 状態表示更新
@@ -363,20 +388,26 @@
             const debt = getDebt();
             const netWorth = balance - debt;
             
-            document.getElementById('slots-balance-val').textContent = `$${balance.toLocaleString()}`;
-            document.getElementById('slots-debt-val').textContent = `$${debt.toLocaleString()}`;
-            
+            const balEl = document.getElementById('slots-balance-val');
+            const debtEl = document.getElementById('slots-debt-val');
             const nwEl = document.getElementById('slots-networth-val');
-            nwEl.textContent = `$${netWorth.toLocaleString()}`;
-            if (netWorth < 0) {
-                nwEl.classList.remove('text-gold');
-                nwEl.classList.add('text-red');
-            } else {
-                nwEl.classList.remove('text-red');
-                nwEl.classList.add('text-gold');
+            const betEl = document.getElementById('slots-bet-val');
+
+            if (balEl) balEl.textContent = `$${balance.toLocaleString()}`;
+            if (debtEl) debtEl.textContent = `$${debt.toLocaleString()}`;
+            
+            if (nwEl) {
+                nwEl.textContent = `$${netWorth.toLocaleString()}`;
+                if (netWorth < 0) {
+                    nwEl.classList.remove('text-gold');
+                    nwEl.classList.add('text-red');
+                } else {
+                    nwEl.classList.remove('text-red');
+                    nwEl.classList.add('text-gold');
+                }
             }
             
-            document.getElementById('slots-bet-val').textContent = `$${this.currentBet.toLocaleString()}`;
+            if (betEl) betEl.textContent = `$${this.currentBet.toLocaleString()}`;
             
             // スピン中のUI制御
             const buttonsToDisable = [
@@ -435,7 +466,7 @@
                 const confirmed = confirm(`残高が不足しています。自動で$${borrowAmount.toLocaleString()}を借金してスピンしますか？`);
                 if (!confirmed) {
                     this.showMessage("Spin canceled. Insufficient balance.");
-                    return; // 早期リターン
+                    return;
                 }
                 
                 const debt = getDebt();
@@ -488,9 +519,6 @@
                 stripEl.style.transform = 'translateY(0)';
                 
                 // 表示するためのダミー＆実出目のストリップ要素を生成
-                // 0, 1, 2番目 -> 前回表示されていた出目をセット（滑らかに回り出すため）
-                // 中間位置(3~26) -> ランダムな絵柄
-                // 27, 28, 29番目(最後尾) -> 今回の抽選出目
                 for (let i = 0; i < totalCells; i++) {
                     const cell = document.createElement('div');
                     cell.className = 'slots-cell';
@@ -510,11 +538,11 @@
                 // リフロー（CSS変更の確定）
                 stripEl.offsetHeight;
                 
-                // 停止タイミングを左から右へとずらす（1.5s, 2.0s, 2.5s）
+                // 停止タイミングを左から右へとずらす
                 const duration = 1.5 + col * 0.5;
                 stripEl.style.transition = `transform ${duration}s cubic-bezier(0.15, 0.85, 0.3, 1)`;
                 
-                const translateVal = -cellHeight * (totalCells - 3); // translateY(-2430px)
+                const translateVal = -cellHeight * (totalCells - 3);
                 stripEl.style.transform = `translateY(${translateVal}px)`;
                 
                 // 各リールが停止したタイミングでの効果音
@@ -533,13 +561,13 @@
 
         // 配当判定・結果処理
         evaluateResult(nextGrid) {
-            this.prevGrid = nextGrid; // 次回用に保存
+            this.prevGrid = nextGrid;
             
             const bet = this.currentBet;
             let totalPayout = 0;
             const winningLines = [];
             
-            // 5本のペイライン座標（[リール位置, 行位置]）
+            // 5本のペイライン座標
             const PAYLINES = [
                 { name: 'Top Row', coords: [[0,0], [1,0], [2,0]] },
                 { name: 'Middle Row', coords: [[0,1], [1,1], [2,1]] },
@@ -548,7 +576,6 @@
                 { name: 'Diagonal Up', coords: [[0,2], [1,1], [2,0]] }
             ];
             
-            // ペイラインごとに揃っているかチェック（トータルベット基準の配当に修正）
             for (const line of PAYLINES) {
                 const c0 = nextGrid[line.coords[0][0]][line.coords[0][1]];
                 const c1 = nextGrid[line.coords[1][0]][line.coords[1][1]];
@@ -569,7 +596,6 @@
             let hasSeven = false;
             
             if (totalPayout > 0) {
-                // 配当を口座に加算
                 const balance = getBalance();
                 setBalance(balance + totalPayout);
                 saveStorage();
@@ -578,7 +604,6 @@
                     window.SoundEffects.playWin();
                 }
                 
-                // 揃ったセルのハイライト表示
                 for (const wl of winningLines) {
                     if (wl.symbol.name === 'Seven') {
                         hasSeven = true;
@@ -588,7 +613,6 @@
                         const row = coord[1];
                         const stripEl = document.getElementById(`slots-strip-${col}`);
                         if (stripEl) {
-                            // 画面に表示されているセルのインデックスは27〜29
                             const cellIndex = 27 + row;
                             const cellEl = stripEl.children[cellIndex];
                             if (cellEl) {
@@ -598,7 +622,6 @@
                     }
                 }
                 
-                // 7️⃣揃い、または5倍以上の勝利時にゴールド紙吹雪
                 if (hasSeven || totalPayout >= bet * 5) {
                     if (typeof createParticles === 'function') {
                         createParticles('gold');
@@ -610,7 +633,6 @@
                 const lineDetails = winningLines.map(wl => `${wl.line.name} (${wl.symbol.char} x${wl.symbol.multiplier})`).join(', ');
                 this.showMessage(`🎉 WIN! Payout: $${totalPayout.toLocaleString()} [${lineDetails}]`);
             } else {
-                // 敗北
                 if (window.SoundEffects && typeof window.SoundEffects.playLose === 'function') {
                     window.SoundEffects.playLose();
                 }
@@ -822,10 +844,24 @@
                 
                 .chips-container {
                     display: flex;
-                    flex-wrap: wrap;
+                    flex-direction: column;
+                    align-items: center;
+                    gap: 10px;
+                    margin-bottom: 18px;
+                }
+                
+                .chip-row {
+                    display: flex;
                     justify-content: center;
                     gap: 8px;
-                    margin-bottom: 18px;
+                    width: 100%;
+                }
+                
+                .chip-action-row {
+                    display: flex;
+                    justify-content: center;
+                    gap: 8px;
+                    width: 100%;
                 }
                 
                 .chip-btn {
