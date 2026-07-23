@@ -6,13 +6,13 @@ window.SlotsGame = {
     _spinning: false,
     _currentBet: 10,
     _sfx: null,
-    _symbols: ['🪵', '🛢️', '🎱', '🗿','📎'],
-    _payouts: { '📎': 25, '🗿': 10, '🎱': 5, '🛢️': 3, '🪵': 2 },
+    _symbols: ['🍒', '🛢️', '🎱', '🥑', '🛰️', '☭', '🗿','📎'],
+    _payouts: { '📎': 100, '🗿': 50, '☭': 25, '🛰️': 15, '🥑': 10, '🎱': 5, '🛢️': 3, '🍒': 2 },
     
     _reelConfigs: [
-        [0, 1, 2, 3, 4, 3, 2, 1, 0, 1, 0, 1, 4, 4, 4, 2, 3, 3, 2, 0, 4, 0, 0, 1, 2, 3],
-        [0, 1, 2, 3, 4, 3, 2, 1, 0, 1, 0, 1, 4, 4, 4, 2, 3, 3, 2, 0, 4, 0, 0, 1, 2, 3],
-        [0, 1, 2, 3, 4, 3, 2, 1, 0, 1, 0, 1, 4, 4, 4, 2, 3, 3, 2, 0, 4, 0, 0, 1, 2, 3]
+        [7, 6, 0, 1, 2, 3, 4, 5, 0, 3, 2, 4, 1, 5, 6, 0, 2, 4, 3, 1, 5],
+        [7, 5, 1, 2, 0, 4, 3, 6, 1, 4, 0, 3, 2, 5, 6, 1, 3, 0, 4, 2, 5],
+        [7, 4, 2, 3, 1, 0, 5, 6, 2, 5, 1, 0, 3, 4, 6, 2, 0, 1, 5, 3, 4]
     ],
     _currentPositions: [0, 0, 0],
 
@@ -175,6 +175,10 @@ window.SlotsGame = {
         });
 
         document.getElementById('slots-btn-borrow').addEventListener('click', () => {
+            if (window.CasinoStorage.getRemainingBorrowLimit() <= 0) {
+                alert(`借金上限（$${window.CasinoStorage.getMaxDebt().toLocaleString()}）に達しているため、これ以上借入できません。`);
+                return;
+            }
             window.CasinoNumpad.open('borrow', () => {
                 this.updateUI();
             });
@@ -190,6 +194,7 @@ window.SlotsGame = {
     updateUI() {
         const bankroll = window.CasinoStorage.getBankroll();
         const debt = window.CasinoStorage.getDebt();
+        const remainingBorrow = window.CasinoStorage.getRemainingBorrowLimit();
 
         document.getElementById('slots-val-balance').textContent = `$${bankroll.toLocaleString()}`;
         document.getElementById('slots-val-debt').textContent = `$${debt.toLocaleString()}`;
@@ -202,7 +207,7 @@ window.SlotsGame = {
         });
 
         document.getElementById('slots-btn-spin').disabled = (this._currentBet > bankroll || this._currentBet <= 0 || this._spinning);
-        document.getElementById('slots-btn-borrow').disabled = this._spinning;
+        document.getElementById('slots-btn-borrow').disabled = (this._spinning || remainingBorrow <= 0);
         document.getElementById('slots-btn-repay').disabled = (debt <= 0 || bankroll <= 0 || this._spinning);
         document.getElementById('slots-btn-custom-bet').disabled = this._spinning;
     },
@@ -211,7 +216,14 @@ window.SlotsGame = {
         if (this._spinning) return;
 
         const bankroll = window.CasinoStorage.getBankroll();
+
+        // 残高不足時の破産および借入枠判定
         if (this._currentBet > bankroll) {
+            if (window.CasinoStorage.checkAndHandleBankruptcy()) {
+                this._currentBet = 10;
+                this.updateUI();
+                return;
+            }
             alert("残高が不足しています。");
             return;
         }
@@ -420,6 +432,9 @@ window.SlotsGame = {
         } else {
             document.getElementById('slots-msg').textContent = "残念！もう一度挑戦しよう。";
             this._spinning = false;
+
+            // 敗北後の破産チェック
+            window.CasinoStorage.checkAndHandleBankruptcy();
             this.updateUI();
         }
 
