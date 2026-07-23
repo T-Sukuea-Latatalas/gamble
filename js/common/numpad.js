@@ -74,8 +74,9 @@ const CasinoNumpad = {
         const maxBtn = document.getElementById('numpad-max-btn');
 
         if (mode === 'borrow') {
-            titleEl.textContent = '借金額を入力';
-            maxBtn.style.display = 'none'; // 借金時は上限なしのためMAXボタンを排除
+            const limit = window.CasinoStorage.getRemainingBorrowLimit();
+            titleEl.textContent = `借金額を入力 (上限: $${limit.toLocaleString()})`;
+            maxBtn.style.display = 'block'; // 借入時にもMAXボタンで与信限界まで入力可能に
         } else if (mode === 'repay') {
             titleEl.textContent = '返済額を入力';
             maxBtn.style.display = 'block';
@@ -122,7 +123,15 @@ const CasinoNumpad = {
         }
 
         // 入力時のリアルタイム上限制限
-        if (this._mode === 'repay') {
+        if (this._mode === 'borrow') {
+            const limit = window.CasinoStorage.getRemainingBorrowLimit();
+            const inputVal = parseInt(this._currentValStr, 10);
+            if (isNaN(inputVal) || inputVal < 0) {
+                this._currentValStr = '0';
+            } else if (inputVal > limit) {
+                this._currentValStr = String(limit);
+            }
+        } else if (this._mode === 'repay') {
             const limit = Math.min(window.CasinoStorage.getDebt(), window.CasinoStorage.getBankroll());
             const inputVal = parseInt(this._currentValStr, 10);
             if (isNaN(inputVal) || inputVal < 0) {
@@ -171,7 +180,11 @@ const CasinoNumpad = {
             this._sfx.init();
             this._sfx.playCoin();
         }
-        if (this._mode === 'repay') {
+        if (this._mode === 'borrow') {
+            const limit = window.CasinoStorage.getRemainingBorrowLimit();
+            this._currentValStr = String(limit);
+            this._updateDisplay();
+        } else if (this._mode === 'repay') {
             const limit = Math.min(window.CasinoStorage.getDebt(), window.CasinoStorage.getBankroll());
             this._currentValStr = String(limit);
             this._updateDisplay();
@@ -194,10 +207,18 @@ const CasinoNumpad = {
         let debt = window.CasinoStorage.getDebt();
 
         if (this._mode === 'borrow') {
-            debt = Math.max(0, debt + val);
-            bankroll = Math.max(0, bankroll + val);
+            const remaining = window.CasinoStorage.getRemainingBorrowLimit();
+            if (remaining <= 0) {
+                alert(`借金上限（$${window.CasinoStorage.getMaxDebt().toLocaleString()}）に達しているため、これ以上借入できません。`);
+                this.close();
+                return;
+            }
+            const actualBorrow = Math.min(val, remaining);
+            debt = Math.max(0, debt + actualBorrow);
+            bankroll = Math.max(0, bankroll + actualBorrow);
             window.CasinoStorage.setDebt(debt);
             window.CasinoStorage.setBankroll(bankroll);
+            val = actualBorrow;
         } else if (this._mode === 'repay') {
             const limit = Math.min(debt, bankroll);
             const actualRepay = Math.min(val, limit);
