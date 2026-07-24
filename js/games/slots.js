@@ -173,7 +173,7 @@ window.SlotsGame = {
             }
             .banking-buttons {
                 display: grid;
-                grid-template-columns: repeat(2, 1fr); /* モバイルは誤タップしにくい2x2構成 */
+                grid-template-columns: repeat(2, 1fr); /* BORROW と REPAY のスッキリした構成 */
                 gap: 8px;
                 width: 100%;
             }
@@ -240,7 +240,7 @@ window.SlotsGame = {
                 }
                 .banking-buttons {
                     flex: 1;
-                    grid-template-columns: repeat(4, 1fr); /* 4ボタンを横1行に整列 */
+                    grid-template-columns: repeat(2, 1fr); /* 2ボタンを横に配置 */
                 }
                 #slots-btn-spin {
                     flex: 0 0 160px; /* デスクトップでは右側に適度な幅で配置 */
@@ -304,13 +304,13 @@ window.SlotsGame = {
 
         this._viewport.innerHTML = `
             <div class="slots-game-wrapper">
-                <div class="slots-header">
+                <div class="slots-header" style="display: flex; justify-content: space-between; align-items: center;">
                     <button class="slots-btn slots-btn-sm" id="slots-btn-lobby">LOBBY</button>
-                    <div class="slots-title">
+                    <div class="slots-title" style="margin: 0 auto;">
                         🎰 Golden Slots
                         <span id="slots-fever-badge" class="fever-badge" style="display: none;">FEVER</span>
                     </div>
-                    <div style="width: 60px;"></div>
+                    <button class="slots-btn slots-btn-sm" id="slots-btn-atm-trigger" style="background: linear-gradient(135deg, #ffd700, #ffa500); color: #000; font-weight: bold;">ATM</button>
                 </div>
 
                 <div class="slots-status-bar">
@@ -431,8 +431,6 @@ window.SlotsGame = {
                                 <div class="banking-buttons">
                                     <button class="slots-btn" id="slots-btn-borrow">BORROW</button>
                                     <button class="slots-btn" id="slots-btn-repay">REPAY</button>
-                                    <button class="slots-btn" id="slots-btn-atm-dep">ATM DEP</button>
-                                    <button class="slots-btn" id="slots-btn-atm-wdl">ATM WDL</button>
                                 </div>
                                 <button class="slots-btn slots-btn-gold slots-btn-lg" id="slots-btn-spin">SPIN</button>
                             </div>
@@ -506,18 +504,21 @@ window.SlotsGame = {
             });
         });
 
-        document.getElementById('slots-btn-atm-dep').addEventListener('click', () => {
-            window.CasinoNumpad.open('atm_deposit', () => {
-                this.updateUI();
-                this.syncNetWorthToCloud();
-            });
-        });
-
-        document.getElementById('slots-btn-atm-wdl').addEventListener('click', () => {
-            window.CasinoNumpad.open('atm_withdraw', () => {
-                this.updateUI();
-                this.syncNetWorthToCloud();
-            });
+        // 独立したATM総合ボタンのイベントリスナー
+        document.getElementById('slots-btn-atm-trigger').addEventListener('click', () => {
+            if (this._spinning) return;
+            const choice = prompt("ATMメニュー:\n預金するには「1」、引き出すには「2」を入力してください。\n(キャンセルする場合はそのまま閉じてください)");
+            if (choice === "1") {
+                window.CasinoNumpad.open('atm_deposit', () => {
+                    this.updateUI();
+                    this.syncNetWorthToCloud();
+                });
+            } else if (choice === "2") {
+                window.CasinoNumpad.open('atm_withdraw', () => {
+                    this.updateUI();
+                    this.syncNetWorthToCloud();
+                });
+            }
         });
     },
 
@@ -573,9 +574,13 @@ window.SlotsGame = {
         document.getElementById('slots-btn-spin').disabled = (this._currentBet > bankroll || this._currentBet <= 0 || this._spinning);
         document.getElementById('slots-btn-borrow').disabled = this._spinning;
         document.getElementById('slots-btn-repay').disabled = (debt <= 0 || bankroll <= 0 || this._spinning);
-        document.getElementById('slots-btn-atm-dep').disabled = (bankroll < 1000 || this._spinning);
-        document.getElementById('slots-btn-atm-wdl').disabled = (atm <= 0 || this._spinning);
         document.getElementById('slots-btn-custom-bet').disabled = this._spinning;
+
+        // 独立したATMトリガーボタンの制御
+        const atmTrigger = document.getElementById('slots-btn-atm-trigger');
+        if (atmTrigger) {
+            atmTrigger.disabled = this._spinning;
+        }
     },
 
     spin() {
