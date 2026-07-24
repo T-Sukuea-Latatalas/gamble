@@ -1,5 +1,4 @@
 // js/games/blackjack.js
-// 汎用ウェイト用Promise（DEALやカード配布のタイミング制御用）
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -25,10 +24,9 @@ const BlackjackGame = {
         this.container = containerElement;
         this.sfx = new SoundEffects();
         
-        // テンキーをブラックジャックの SoundEffects と同期してバインド
         window.CasinoNumpad.init(this.sfx);
 
-        // UIテーブルをビューポートへレンダリング
+        // UIテーブルをビューポートへレンダリング (ATM表示を追加)
         this.container.innerHTML = `
             <div class="blackjack-top-bar">
                 <button class="back-lobby-btn" id="btn-back-lobby">← LOBBY</button>
@@ -37,6 +35,7 @@ const BlackjackGame = {
                 <h1>♠ Blackjack Classic ♦</h1>
                 <div class="balance-container">
                     <div class="info-box">残高: <span id="bankroll-val">$0</span></div>
+                    <div class="info-box">ATM: <span id="atm-val">$0</span></div>
                     <div class="info-box">ベット: <span id="bet-val">$0</span></div>
                     <div class="info-box">借金: <span id="debt-val">$0</span></div>
                 </div>
@@ -166,23 +165,8 @@ const BlackjackGame = {
             this.checkBankruptcy();
             this.updateUI();
         } else {
-            const deficit = needed - bankroll;
-            const borrowCount = Math.ceil(deficit / 1000);
-            const borrowAmount = borrowCount * 1000;
-
-            const proceed = confirm(`残高が不足しています。自動で$${borrowAmount.toLocaleString()}を借金してベットを追加しますか？`);
-            if (proceed) {
-                const debt = window.CasinoStorage.getDebt();
-                window.CasinoStorage.setDebt(Math.max(0, debt + borrowAmount));
-                window.CasinoStorage.setBankroll(Math.max(0, bankroll + borrowAmount));
-                this.currentBet = Math.max(0, this.currentBet + amount);
-                this.sfx.playCoin();
-                this.checkBankruptcy();
-                this.updateUI();
-                this.syncCloudNetWorth(); // 借金発生時の純資産同期
-            } else {
-                this.logMessage("ベットの追加がキャンセルされました。");
-            }
+            // 自動借入を排除したシンプルな残高不足警告
+            alert("残高が不足しています。BORROWから借金するか、ATMから引き出してください。");
         }
     },
 
@@ -210,7 +194,7 @@ const BlackjackGame = {
         if (this.gameState !== 'betting' || this.isProcessing) return;
         window.CasinoNumpad.open('borrow', () => {
             this.updateUI();
-            this.syncCloudNetWorth(); // 手動借金時のクラウド同期
+            this.syncCloudNetWorth();
         });
     },
 
@@ -223,7 +207,27 @@ const BlackjackGame = {
         window.CasinoNumpad.open('repay', () => {
             this.checkBetValidity();
             this.updateUI();
-            this.syncCloudNetWorth(); // 手動返済時のクラウド同期
+            this.syncCloudNetWorth();
+        });
+    },
+
+    atmDeposit() {
+        this.sfx.init();
+        if (this.gameState !== 'betting' || this.isProcessing) return;
+        window.CasinoNumpad.open('atm_deposit', () => {
+            this.checkBetValidity();
+            this.updateUI();
+            this.syncCloudNetWorth();
+        });
+    },
+
+    atmWithdraw() {
+        this.sfx.init();
+        if (this.gameState !== 'betting' || this.isProcessing) return;
+        window.CasinoNumpad.open('atm_withdraw', () => {
+            this.checkBetValidity();
+            this.updateUI();
+            this.syncCloudNetWorth();
         });
     },
 
@@ -271,19 +275,8 @@ const BlackjackGame = {
         let bankroll = window.CasinoStorage.getBankroll();
         if (bankroll >= amount) return true;
 
-        const deficit = amount - bankroll;
-        const borrowCount = Math.ceil(deficit / 1000);
-        const borrowAmount = borrowCount * 1000;
-
-        const proceed = confirm(`アクション実行に残高が$${deficit.toLocaleString()}不足しています。自動で$${borrowAmount.toLocaleString()}を借金して処理を続行しますか？`);
-        if (proceed) {
-            let debt = window.CasinoStorage.getDebt();
-            window.CasinoStorage.setDebt(Math.max(0, debt + borrowAmount));
-            window.CasinoStorage.setBankroll(Math.max(0, bankroll + borrowAmount));
-            this.updateUI();
-            this.syncCloudNetWorth(); // 自動借金発生時の純資産同期
-            return true;
-        }
+        // シンプルな残高不足警告
+        alert("残高が不足しています。BORROWから借金するか、ATMから引き出してください。");
         return false;
     },
 
@@ -366,8 +359,8 @@ const BlackjackGame = {
         let bankroll = window.CasinoStorage.getBankroll();
         window.CasinoStorage.setBankroll(Math.max(0, bankroll - this.currentBet));
 
-        // ★ 自動利息徴収の実行 ★
-        const interestResult = window.CasinoStorage.applyInterest(0.01);
+        // ★ 自動利息徴収の実行 (遅延利息システム適用) ★
+        const interestResult = window.CasinoStorage.applyInterest();
 
         this.gameState = 'dealing';
         this.dealerHand = { cards: [], score: 0, visibleScore: 0 };
@@ -389,7 +382,7 @@ const BlackjackGame = {
                 msg += `（残高不足分 $${interestResult.addedToDebt.toLocaleString()} は自動融資として借金に上乗せされました）`;
             }
             this.logMessage(msg);
-            await sleep(2000); // 演出用ウェイト
+            await sleep(2000);
         }
 
         await this.dealCardToPlayer(0);
@@ -594,7 +587,7 @@ const BlackjackGame = {
         let hasLose = false;
 
         let bankroll = window.CasinoStorage.getBankroll();
-        let maxSingleWinProfit = 0; // スコアイベント用：今回のラウンドで獲得した純利益の最大値
+        let maxSingleWinProfit = 0;
 
         this.playerHands.forEach((hand) => {
             const pScore = hand.score;
@@ -647,7 +640,6 @@ const BlackjackGame = {
             }
             bankroll = Math.max(0, bankroll + payout);
 
-            // クラウド集計用：このハンドにおける純利益の計算（払戻金 - ベット額）
             const profit = payout - hand.bet;
             if (profit > maxSingleWinProfit) {
                 maxSingleWinProfit = profit;
@@ -672,21 +664,19 @@ const BlackjackGame = {
         this.isProcessing = false;
         this.updateUI();
 
-        // 🏆【オンラインランキング連携】
-        // 1. 純資産を即時にクラウドへ同期
+        // 🏆 オンラインランキング連携 (純資産 = 手元 + ATM - 借金)
         this.syncCloudNetWorth();
 
-        // 2. 勝利ハンドが存在した場合は「ブラックジャック最大勝利部門」への登録試行
         if (maxSingleWinProfit > 0) {
             window.CasinoRanking.submitScore('blackjack_max_win', maxSingleWinProfit);
         }
     },
 
     /**
-     * 現在の「手元残高 - 借金」で求めた純資産額をクラウドへ安全に同期する
+     * 現在の「手元残高 + ATM預金 - 借金」で求めた純資産額をクラウドへ安全に同期する
      */
     syncCloudNetWorth() {
-        const netWorth = window.CasinoStorage.getBankroll() - window.CasinoStorage.getDebt();
+        const netWorth = window.CasinoStorage.getBankroll() + window.CasinoStorage.getAtm() - window.CasinoStorage.getDebt();
         window.CasinoRanking.submitScore('net_worth', netWorth);
     },
 
@@ -751,10 +741,9 @@ const BlackjackGame = {
     },
 
     checkBankruptcy() {
-        // 自動ダイアログ付き破産処理を呼び出しません
         const bankroll = window.CasinoStorage.getBankroll();
         if (bankroll <= 0 && this.currentBet === 0) {
-            this.logMessage("残高がなくなりました。借金するか、BANKRUPT（破産）ボタンを押してリセットしてください。");
+            this.logMessage("残高がなくなりました。借金するか、ATMから引き出してください。");
         }
     },
 
@@ -913,6 +902,7 @@ const BlackjackGame = {
 
         const bankroll = window.CasinoStorage.getBankroll();
         const debt = window.CasinoStorage.getDebt();
+        const atm = window.CasinoStorage.getAtm();
 
         CHIP_VALUES.forEach(val => {
             if (val <= bankroll) {
@@ -950,7 +940,7 @@ const BlackjackGame = {
         borrowBtn.id = 'btn-borrow';
         borrowBtn.textContent = 'Borrow';
         borrowBtn.onclick = () => this.borrow();
-        borrowBtn.disabled = (this.gameState !== 'betting' || this.isProcessing); // 常に借入可能
+        borrowBtn.disabled = (this.gameState !== 'betting' || this.isProcessing);
         chipArea.appendChild(borrowBtn);
 
         const repayBtn = document.createElement('button');
@@ -961,6 +951,23 @@ const BlackjackGame = {
         repayBtn.disabled = (this.gameState !== 'betting' || this.isProcessing || debt <= 0 || bankroll <= 0);
         chipArea.appendChild(repayBtn);
 
+        // ATM 預金 / 引き出しボタンを追加
+        const atmDepBtn = document.createElement('button');
+        atmDepBtn.className = 'action-btn atm-dep-btn';
+        atmDepBtn.id = 'btn-atm-dep';
+        atmDepBtn.textContent = 'ATM DEP';
+        atmDepBtn.onclick = () => this.atmDeposit();
+        atmDepBtn.disabled = (this.gameState !== 'betting' || this.isProcessing || bankroll < 1000);
+        chipArea.appendChild(atmDepBtn);
+
+        const atmWdlBtn = document.createElement('button');
+        atmWdlBtn.className = 'action-btn atm-wdl-btn';
+        atmWdlBtn.id = 'btn-atm-wdl';
+        atmWdlBtn.textContent = 'ATM WDL';
+        atmWdlBtn.onclick = () => this.atmWithdraw();
+        atmWdlBtn.disabled = (this.gameState !== 'betting' || this.isProcessing || atm <= 0);
+        chipArea.appendChild(atmWdlBtn);
+
         const numpadBetBtn = document.createElement('button');
         numpadBetBtn.className = 'action-btn numpad-bet-btn';
         numpadBetBtn.id = 'btn-numpad-bet';
@@ -968,36 +975,20 @@ const BlackjackGame = {
         numpadBetBtn.onclick = () => this.numpadBet();
         numpadBetBtn.disabled = (this.gameState !== 'betting' || this.isProcessing);
         chipArea.appendChild(numpadBetBtn);
-
-        // ★ 所持金（残高）が0以下のとき、赤色の破産申請ボタンをチップ操作部に追加 ★
-        if (bankroll <= 0) {
-            const bankruptBtn = document.createElement('button');
-            bankruptBtn.className = 'action-btn';
-            bankruptBtn.style.backgroundColor = '#d32f2f'; // 警告を促す赤
-            bankruptBtn.style.color = '#fff';
-            bankruptBtn.style.fontWeight = 'bold';
-            bankruptBtn.id = 'btn-bankrupt';
-            bankruptBtn.textContent = 'BANKRUPT';
-            bankruptBtn.onclick = () => {
-                if (confirm("本当に破産（手動リセット）しますか？\n残高が$1,000、借金が$0に再セットされます。")) {
-                    window.CasinoStorage.triggerBankruptcy();
-                    this.currentBet = 0;
-                    this.updateUI();
-                }
-            };
-            chipArea.appendChild(bankruptBtn);
-        }
     },
 
     updateUI() {
         const bankroll = window.CasinoStorage.getBankroll();
         const debt = window.CasinoStorage.getDebt();
+        const atm = window.CasinoStorage.getAtm();
 
         const bankrollVal = document.getElementById('bankroll-val');
+        const atmVal = document.getElementById('atm-val');
         const betVal = document.getElementById('bet-val');
         const debtVal = document.getElementById('debt-val');
 
         if (bankrollVal) bankrollVal.textContent = `$${bankroll.toLocaleString()}`;
+        if (atmVal) atmVal.textContent = `$${atm.toLocaleString()}`;
         if (betVal) betVal.textContent = `$${this.currentBet.toLocaleString()}`;
         if (debtVal) debtVal.textContent = `$${debt.toLocaleString()}`;
 
