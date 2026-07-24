@@ -1,6 +1,6 @@
 // js/common/numpad.js
 const CasinoNumpad = {
-    _mode: 'borrow', // 'borrow' | 'repay' | 'bet'
+    _mode: 'borrow', // 'borrow' | 'repay' | 'bet' | 'atm_deposit' | 'atm_withdraw'
     _currentValStr: '0',
     _onConfirmCallback: null,
     _sfx: null,
@@ -10,7 +10,6 @@ const CasinoNumpad = {
         this._createDOM();
     },
 
-    // テンキーDOMをbody直下へ動的にレンダリングする
     _createDOM() {
         if (document.getElementById('numpad-overlay')) return;
 
@@ -36,7 +35,7 @@ const CasinoNumpad = {
                     <button class="numpad-btn" data-val="7">7</button>
                     <button class="numpad-btn" data-val="8">8</button>
                     <button class="numpad-btn" data-val="9">9</button>
-                    <button class="numpad-btn numpad-btn-c" data-action="clear">C</button>
+                    <button class="numpad-btn" data-val="C" data-action="clear">C</button>
                     <button class="numpad-btn" data-val="0">0</button>
                     <button class="numpad-btn" data-val="00">00</button>
                     <button class="numpad-btn numpad-btn-back" data-action="back">←</button>
@@ -51,9 +50,11 @@ const CasinoNumpad = {
 
         document.body.appendChild(overlay);
 
-        // イベントバインド
         overlay.querySelectorAll('.numpad-grid button[data-val]').forEach(btn => {
-            btn.addEventListener('click', (e) => this._pressNum(e.target.getAttribute('data-val')));
+            const val = btn.getAttribute('data-val');
+            if (val !== 'C') {
+                btn.addEventListener('click', () => this._pressNum(val));
+            }
         });
 
         overlay.querySelector('button[data-action="clear"]').addEventListener('click', () => this._clearNum());
@@ -65,7 +66,7 @@ const CasinoNumpad = {
     },
 
     open(mode, onConfirmCallback) {
-        this._createDOM(); // 安全対策
+        this._createDOM();
         this._mode = mode;
         this._currentValStr = '0';
         this._onConfirmCallback = onConfirmCallback || null;
@@ -75,12 +76,18 @@ const CasinoNumpad = {
 
         if (mode === 'borrow') {
             titleEl.textContent = `借金額を入力 (上限なし)`;
-            maxBtn.style.display = 'block'; // 借入制限を完全排除
+            maxBtn.style.display = 'block';
         } else if (mode === 'repay') {
             titleEl.textContent = '返済額を入力';
             maxBtn.style.display = 'block';
         } else if (mode === 'bet') {
             titleEl.textContent = 'ベットする額を入力';
+            maxBtn.style.display = 'block';
+        } else if (mode === 'atm_deposit') {
+            titleEl.textContent = 'ATM預金額を入力 ($1,000単位)';
+            maxBtn.style.display = 'block';
+        } else if (mode === 'atm_withdraw') {
+            titleEl.textContent = 'ATM引出額を入力 ($1,000単位)';
             maxBtn.style.display = 'block';
         } else {
             titleEl.textContent = '数値を入力';
@@ -121,17 +128,16 @@ const CasinoNumpad = {
             this._currentValStr += String(val);
         }
 
-        // 入力時のリアルタイム上限制限の緩和
+        const inputVal = parseInt(this._currentValStr, 10);
+
         if (this._mode === 'borrow') {
-            const inputVal = parseInt(this._currentValStr, 10);
             if (isNaN(inputVal) || inputVal < 0) {
                 this._currentValStr = '0';
             } else if (inputVal > 999999999) {
-                this._currentValStr = '999999999'; // 実質的な上限を大きな値で保護
+                this._currentValStr = '999999999';
             }
         } else if (this._mode === 'repay') {
             const limit = Math.min(window.CasinoStorage.getDebt(), window.CasinoStorage.getBankroll());
-            const inputVal = parseInt(this._currentValStr, 10);
             if (isNaN(inputVal) || inputVal < 0) {
                 this._currentValStr = '0';
             } else if (inputVal > limit) {
@@ -139,7 +145,20 @@ const CasinoNumpad = {
             }
         } else if (this._mode === 'bet') {
             const limit = window.CasinoStorage.getBankroll();
-            const inputVal = parseInt(this._currentValStr, 10);
+            if (isNaN(inputVal) || inputVal < 0) {
+                this._currentValStr = '0';
+            } else if (inputVal > limit) {
+                this._currentValStr = String(limit);
+            }
+        } else if (this._mode === 'atm_deposit') {
+            const limit = Math.floor(window.CasinoStorage.getBankroll() / 1000) * 1000;
+            if (isNaN(inputVal) || inputVal < 0) {
+                this._currentValStr = '0';
+            } else if (inputVal > limit) {
+                this._currentValStr = String(limit);
+            }
+        } else if (this._mode === 'atm_withdraw') {
+            const limit = window.CasinoStorage.getAtm();
             if (isNaN(inputVal) || inputVal < 0) {
                 this._currentValStr = '0';
             } else if (inputVal > limit) {
@@ -179,7 +198,7 @@ const CasinoNumpad = {
             this._sfx.playCoin();
         }
         if (this._mode === 'borrow') {
-            this._currentValStr = '999999999'; // 最大可能枠まで自動設定
+            this._currentValStr = '999999999';
             this._updateDisplay();
         } else if (this._mode === 'repay') {
             const limit = Math.min(window.CasinoStorage.getDebt(), window.CasinoStorage.getBankroll());
@@ -187,6 +206,14 @@ const CasinoNumpad = {
             this._updateDisplay();
         } else if (this._mode === 'bet') {
             const limit = window.CasinoStorage.getBankroll();
+            this._currentValStr = String(limit);
+            this._updateDisplay();
+        } else if (this._mode === 'atm_deposit') {
+            const limit = Math.floor(window.CasinoStorage.getBankroll() / 1000) * 1000;
+            this._currentValStr = String(limit);
+            this._updateDisplay();
+        } else if (this._mode === 'atm_withdraw') {
+            const limit = window.CasinoStorage.getAtm();
             this._currentValStr = String(limit);
             this._updateDisplay();
         }
@@ -204,7 +231,6 @@ const CasinoNumpad = {
         let debt = window.CasinoStorage.getDebt();
 
         if (this._mode === 'borrow') {
-            // 借金上限のバリデーションを完全に撤廃
             debt = Math.max(0, debt + val);
             bankroll = Math.max(0, bankroll + val);
             window.CasinoStorage.setDebt(debt);
@@ -224,6 +250,18 @@ const CasinoNumpad = {
             const limit = bankroll;
             if (val > limit) {
                 val = limit;
+            }
+        } else if (this._mode === 'atm_deposit') {
+            // 1,000ドル単位に切り捨てて預金
+            val = Math.floor(val / 1000) * 1000;
+            if (val > 0) {
+                window.CasinoStorage.depositAtm(val);
+            }
+        } else if (this._mode === 'atm_withdraw') {
+            // 1,000ドル単位に切り捨てて引き出し
+            val = Math.floor(val / 1000) * 1000;
+            if (val > 0) {
+                window.CasinoStorage.withdrawAtm(val);
             }
         }
 
