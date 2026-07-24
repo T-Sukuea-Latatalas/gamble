@@ -394,10 +394,6 @@ window.SlotsGame = {
         });
 
         document.getElementById('slots-btn-borrow').addEventListener('click', () => {
-            if (window.CasinoStorage.getRemainingBorrowLimit() <= 0) {
-                alert(`借金上限（$${window.CasinoStorage.getMaxDebt().toLocaleString()}）に達しているため、これ以上借入できません。`);
-                return;
-            }
             window.CasinoNumpad.open('borrow', () => {
                 this.updateUI();
             });
@@ -413,7 +409,6 @@ window.SlotsGame = {
     updateUI() {
         const bankroll = window.CasinoStorage.getBankroll();
         const debt = window.CasinoStorage.getDebt();
-        const remainingBorrow = window.CasinoStorage.getRemainingBorrowLimit();
 
         document.getElementById('slots-val-balance').textContent = `$${bankroll.toLocaleString()}`;
         document.getElementById('slots-val-debt').textContent = `$${debt.toLocaleString()}`;
@@ -459,7 +454,7 @@ window.SlotsGame = {
         });
 
         document.getElementById('slots-btn-spin').disabled = (this._currentBet > bankroll || this._currentBet <= 0 || this._spinning);
-        document.getElementById('slots-btn-borrow').disabled = (this._spinning || remainingBorrow <= 0);
+        document.getElementById('slots-btn-borrow').disabled = this._spinning; // 借入上限判定を撤廃
         document.getElementById('slots-btn-repay').disabled = (debt <= 0 || bankroll <= 0 || this._spinning);
         document.getElementById('slots-btn-custom-bet').disabled = this._spinning;
     },
@@ -469,7 +464,7 @@ window.SlotsGame = {
 
         const bankroll = window.CasinoStorage.getBankroll();
 
-        // 残高不足時の破産および借入枠判定
+        // 残高不足時の破産判定（借金上限のバリデーションは排除されています）
         if (this._currentBet > bankroll) {
             if (window.CasinoStorage.checkAndHandleBankruptcy()) {
                 this._currentBet = 10;
@@ -481,6 +476,10 @@ window.SlotsGame = {
         }
 
         window.CasinoStorage.setBankroll(bankroll - this._currentBet);
+
+        // ★ 自動利息徴収の実行 ★
+        const interestResult = window.CasinoStorage.applyInterest(0.01);
+
         this._spinning = true;
 
         // 確変（FEVER）スピン判定と減算処理
@@ -501,7 +500,16 @@ window.SlotsGame = {
         });
         const msgEl = document.getElementById('slots-msg');
         msgEl.className = 'slots-message-bar';
-        if (isFeverSpin) {
+
+        // 自動利息徴収の発生に応じた文面と確変中の処理
+        if (interestResult.collected > 0 || interestResult.addedToDebt > 0) {
+            let msg = `【利息徴収】金利として $${interestResult.collected.toLocaleString()} が徴収されました！`;
+            if (interestResult.addedToDebt > 0) {
+                msg += `（不足分 $${interestResult.addedToDebt.toLocaleString()} 借金上乗せ）`;
+            }
+            msgEl.textContent = msg;
+            msgEl.classList.add('text-fever');
+        } else if (isFeverSpin) {
             msgEl.textContent = `🔥 確変スピン！残り ${this._feverSpinsLeft} 回 🔥`;
             msgEl.classList.add('text-fever');
         } else {
