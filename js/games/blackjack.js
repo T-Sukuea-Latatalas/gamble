@@ -751,20 +751,10 @@ const BlackjackGame = {
     },
 
     checkBankruptcy() {
-        // 破産判定の発火
-        if (window.CasinoStorage.checkAndHandleBankruptcy()) {
-            this.currentBet = 0;
-            this.updateUI();
-            return;
-        }
-
+        // 自動ダイアログ付き破産処理を呼び出しません
         const bankroll = window.CasinoStorage.getBankroll();
-        if (bankroll === 0 && this.currentBet === 0) {
-            this.logMessage("残高がなくなりました。借金額を入力してゲームを続行してください。");
-            window.CasinoNumpad.open('borrow', () => {
-                this.updateUI();
-                this.syncCloudNetWorth(); // 破産時の借金補填後の資産同期
-            });
+        if (bankroll <= 0 && this.currentBet === 0) {
+            this.logMessage("残高がなくなりました。借金するか、BANKRUPT（破産）ボタンを押してリセットしてください。");
         }
     },
 
@@ -978,6 +968,25 @@ const BlackjackGame = {
         numpadBetBtn.onclick = () => this.numpadBet();
         numpadBetBtn.disabled = (this.gameState !== 'betting' || this.isProcessing);
         chipArea.appendChild(numpadBetBtn);
+
+        // ★ 所持金（残高）が0以下のとき、赤色の破産申請ボタンをチップ操作部に追加 ★
+        if (bankroll <= 0) {
+            const bankruptBtn = document.createElement('button');
+            bankruptBtn.className = 'action-btn';
+            bankruptBtn.style.backgroundColor = '#d32f2f'; // 警告を促す赤
+            bankruptBtn.style.color = '#fff';
+            bankruptBtn.style.fontWeight = 'bold';
+            bankruptBtn.id = 'btn-bankrupt';
+            bankruptBtn.textContent = 'BANKRUPT';
+            bankruptBtn.onclick = () => {
+                if (confirm("本当に破産（手動リセット）しますか？\n残高が$1,000、借金が$0に再セットされます。")) {
+                    window.CasinoStorage.triggerBankruptcy();
+                    this.currentBet = 0;
+                    this.updateUI();
+                }
+            };
+            chipArea.appendChild(bankruptBtn);
+        }
     },
 
     updateUI() {
