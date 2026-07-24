@@ -504,20 +504,16 @@ window.SlotsGame = {
             });
         });
 
-        // 独立したATM総合ボタンのイベントリスナー
+        // 独立したATM総合ボタンのイベントリスナー（CasinoAtmモジュール起動にリファクタリング）
         document.getElementById('slots-btn-atm-trigger').addEventListener('click', () => {
             if (this._spinning) return;
-            const choice = prompt("ATMメニュー:\n預金するには「1」、引き出すには「2」を入力してください。\n(キャンセルする場合はそのまま閉じてください)");
-            if (choice === "1") {
-                window.CasinoNumpad.open('atm_deposit', () => {
+            
+            if (window.CasinoAtm) {
+                window.CasinoAtm.open(() => {
                     this.updateUI();
-                    this.syncNetWorthToCloud();
                 });
-            } else if (choice === "2") {
-                window.CasinoNumpad.open('atm_withdraw', () => {
-                    this.updateUI();
-                    this.syncNetWorthToCloud();
-                });
+            } else {
+                console.warn("CasinoAtm module is not loaded.");
             }
         });
     },
@@ -637,7 +633,7 @@ window.SlotsGame = {
         }
 
         const wrapper = document.querySelector('.slots-game-wrapper');
-        if (wrapper) wrapper.classList.remove('jackpot-shake');
+        if (wrapper) wrapper.classList.add('jackpot-shake');
 
         if (this._sfx) {
             this._sfx.playChips();
