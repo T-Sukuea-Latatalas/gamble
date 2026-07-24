@@ -5,6 +5,8 @@ const CasinoStorage = {
     _maxDebt: 999999999, // 借金上限を事実上撤廃
     _uuid: '',
     _username: '',
+    _atm: 0, // ATM預金高 (圧縮単位: 1,000ドル = 1)
+    _interestRate: 0.01, // 初期金利 1%
 
     init() {
         this.load();
@@ -14,6 +16,8 @@ const CasinoStorage = {
     load() {
         const savedBankroll = localStorage.getItem('bj_classic_bankroll');
         const savedDebt = localStorage.getItem('bj_classic_debt');
+        const savedAtm = localStorage.getItem('bj_classic_atm');
+        const savedRate = localStorage.getItem('bj_classic_interest_rate');
         
         let loadedBankroll = 1000;
         if (savedBankroll !== null) {
@@ -32,6 +36,24 @@ const CasinoStorage = {
             }
         }
         this._debt = loadedDebt;
+
+        let loadedAtm = 0;
+        if (savedAtm !== null) {
+            const parsed = parseInt(savedAtm, 10);
+            if (!isNaN(parsed)) {
+                loadedAtm = Math.max(0, parsed);
+            }
+        }
+        this._atm = loadedAtm;
+
+        let loadedRate = 0.01;
+        if (savedRate !== null) {
+            const parsed = parseFloat(savedRate);
+            if (!isNaN(parsed)) {
+                loadedRate = Math.max(0.01, parsed);
+            }
+        }
+        this._interestRate = loadedRate;
     },
 
     // ユーザー識別情報（UUIDとユーザー名）の初期化
@@ -67,6 +89,8 @@ const CasinoStorage = {
     save() {
         localStorage.setItem('bj_classic_bankroll', this._bankroll);
         localStorage.setItem('bj_classic_debt', this._debt);
+        localStorage.setItem('bj_classic_atm', this._atm);
+        localStorage.setItem('bj_classic_interest_rate', this._interestRate);
     },
 
     getBankroll() {
@@ -97,67 +121,87 @@ const CasinoStorage = {
         const parsed = parseInt(value, 10);
         if (!isNaN(parsed)) {
             this._debt = Math.max(0, parsed);
+            if (this._debt === 0) {
+                this._interestRate = 0.01; // 完済時に金利リセット
+            }
             this.save();
         }
     },
 
     /**
-     * 借金上限額の取得（上限を事実上撤廃したため、大きな値を返します）
+     * 借金上限額の取得
      */
     getMaxDebt() {
         return this._maxDebt;
     },
 
     /**
-     * 追加で借入可能な残り枠を取得（常に十分な上限のない値を返します）
+     * 追加で借入可能な残り枠を取得
      */
     getRemainingBorrowLimit() {
         return 999999999;
     },
 
     /**
-     * 指定額の借入が可能か判定（常に制限なしで借入可能とします）
+     * 指定額の借入が可能か判定
      */
     canBorrow(amount) {
         return true;
     },
 
     /**
-     * 破産チェック（自動リセットは廃止したため、常にfalseを返します。互換性のためにメソッドのみ維持）
-     * @returns {boolean}
+     * ATM関連メソッド (1,000ドル単位で圧縮して永続化)
      */
-    checkAndHandleBankruptcy() {
-        return false;
+    getAtm() {
+        return this._atm * 1000;
     },
 
-    /**
-     * 手動破産処理の実行
-     * プレイヤーが能動的にリセットを選択した際に呼び出されます。
-     */
-    triggerBankruptcy() {
-        this._bankroll = 1000;
-        this._debt = 0;
-        this.save();
-
-        // クラウドランキングへ純資産$1,000を即座に送信
-        if (window.CasinoRanking && typeof window.CasinoRanking.submitScore === 'function') {
-            window.CasinoRanking.submitScore('net_worth', 1000);
+    setAtm(value) {
+        const parsed = parseInt(value, 10);
+        if (!isNaN(parsed)) {
+            this._atm = Math.max(0, Math.floor(parsed / 1000));
+            this.save();
         }
-        return true;
+    },
+
+    depositAtm(amount) {
+        const rounded = Math.floor(amount / 1000) * 1000;
+        if (rounded > 0 && this._bankroll >= rounded) {
+            this._bankroll -= rounded;
+            this._atm += (rounded / 1000);
+            this.save();
+            return rounded;
+        }
+        return 0;
+    },
+
+    withdrawAtm(amount) {
+        const rounded = Math.floor(amount / 1000) * 1000;
+        const available = this.getAtm();
+        if (rounded > 0 && available >= rounded) {
+            this._bankroll += rounded;
+            this._atm -= (rounded / 1000);
+            this.save();
+            return rounded;
+        }
+        return 0;
     },
 
     /**
-     * 自動利息取り立てメソッド
-     * 借金の指定パーセンテージを残高（bankroll）から徴収します。
-     * 残高が足りない場合は、引ききれなかった未払額が現在の借金（debt）に自動加算されます。
-     * @param {number} interestRate 金利（デフォルトは1% = 0.01）
+     * 遅延利息システムを組み込んだ自動利息取り立てメソッド
+     * 借金が残っている間、ゲームプレイごとに金利が上昇し続けます。
      * @returns {{collected: number, addedToDebt: number}} 実際に徴収した金額と借金に上乗せされた金額
      */
-    applyInterest(interestRate = 0.01) {
-        if (this._debt <= 0) return { collected: 0, addedToDebt: 0 };
+    applyInterest() {
+        if (this._debt <= 0) {
+            this._interestRate = 0.01; // 借金ゼロなら金利リセット
+            this.save();
+            return { collected: 0, addedToDebt: 0 };
+        }
 
+        const rate = this._interestRate;
         // 利息計算（端数は切り上げ）
-        const rawInterest = Math.ceil(this._debt * interestRate);
+        const rawInterest = Math.ceil(this._debt * rate);
         if (rawInterest <= 0) return { collected: 0, addedToDebt: 0 };
 
         let collected = 0;
@@ -175,6 +219,8 @@ const CasinoStorage = {
             addedToDebt = unpaid;
         }
 
+        // 次回から金利を +0.1% (+0.001) 上昇
+        this._interestRate = parseFloat((rate + 0.001).toFixed(4));
         this.save();
         return { collected, addedToDebt };
     },
