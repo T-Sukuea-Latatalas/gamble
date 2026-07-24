@@ -8,6 +8,7 @@ window.SlotsGame = {
     _sfx: null,
     _feverSpinsLeft: 0, // 確変（確率変動）モードの残り回数
     _activeSpinConfigs: null, // 現在のスピンで使用したリール配列
+    _isCurrentFeverSpin: false, // 今回のスピンが確変スピンかどうか
     
     // 図柄（シンボル）を 8種類から 5種類に削減し、当たりやすさを大幅に向上
     _symbols: ['🍒', '🥑', '🛰️', '🗿', '📎'],
@@ -157,17 +158,6 @@ window.SlotsGame = {
                 vertical-align: middle;
             }
 
-            /* 手動破産申請用赤ボタン */
-            .slots-btn-red {
-                background: linear-gradient(135deg, #d32f2f, #f44336) !important;
-                color: #fff !important;
-                border: 1px solid #b71c1c !important;
-                box-shadow: 0 0 10px rgba(211, 47, 47, 0.4) !important;
-            }
-            .slots-btn-red:hover {
-                background: #b71c1c !important;
-            }
-
             @media (max-width: 768px) {
                 .slots-main-container {
                     flex-direction: column;
@@ -219,6 +209,7 @@ window.SlotsGame = {
     render() {
         const bankroll = window.CasinoStorage.getBankroll();
         const debt = window.CasinoStorage.getDebt();
+        const atm = window.CasinoStorage.getAtm();
 
         this._viewport.innerHTML = `
             <div class="slots-game-wrapper">
@@ -236,6 +227,10 @@ window.SlotsGame = {
                         <span class="status-label">BALANCE</span>
                         <span class="status-value text-gold" id="slots-val-balance">$${bankroll.toLocaleString()}</span>
                     </div>
+                    <div class="status-item">
+                        <span class="status-label">ATM</span>
+                        <span class="status-value text-gold" id="slots-val-atm">$${atm.toLocaleString()}</span>
+                    </div>
                     <div class="status-item" id="slots-status-fever" style="display: none;">
                         <span class="status-label text-red">FEVER LEFT</span>
                         <span class="status-value text-fever" id="slots-val-fever">0</span>
@@ -246,7 +241,7 @@ window.SlotsGame = {
                     </div>
                     <div class="status-item">
                         <span class="status-label">NET WORTH</span>
-                        <span class="status-value" id="slots-val-net">$${(bankroll - debt).toLocaleString()}</span>
+                        <span class="status-value" id="slots-val-net">$${(bankroll + atm - debt).toLocaleString()}</span>
                     </div>
                 </div>
 
@@ -345,7 +340,8 @@ window.SlotsGame = {
                                 <div class="banking-buttons">
                                     <button class="slots-btn" id="slots-btn-borrow">BORROW</button>
                                     <button class="slots-btn" id="slots-btn-repay">REPAY</button>
-                                    <button class="slots-btn slots-btn-red" id="slots-btn-bankrupt" style="display: none;">BANKRUPT</button>
+                                    <button class="slots-btn" id="slots-btn-atm-dep">ATM DEP</button>
+                                    <button class="slots-btn" id="slots-btn-atm-wdl">ATM WDL</button>
                                 </div>
                                 <button class="slots-btn slots-btn-gold slots-btn-lg" id="slots-btn-spin">SPIN</button>
                             </div>
@@ -408,32 +404,41 @@ window.SlotsGame = {
         document.getElementById('slots-btn-borrow').addEventListener('click', () => {
             window.CasinoNumpad.open('borrow', () => {
                 this.updateUI();
+                this.syncNetWorthToCloud();
             });
         });
 
         document.getElementById('slots-btn-repay').addEventListener('click', () => {
             window.CasinoNumpad.open('repay', () => {
                 this.updateUI();
+                this.syncNetWorthToCloud();
             });
         });
 
-        // ★ 手動破産申請用のイベントリスナー設定 ★
-        document.getElementById('slots-btn-bankrupt').addEventListener('click', () => {
-            if (confirm("本当に破産（手動リセット）しますか？\n残高が$1,000、借金が$0に再セットされます。")) {
-                window.CasinoStorage.triggerBankruptcy();
-                this._currentBet = 10;
+        document.getElementById('slots-btn-atm-dep').addEventListener('click', () => {
+            window.CasinoNumpad.open('atm_deposit', () => {
                 this.updateUI();
-            }
+                this.syncNetWorthToCloud();
+            });
+        });
+
+        document.getElementById('slots-btn-atm-wdl').addEventListener('click', () => {
+            window.CasinoNumpad.open('atm_withdraw', () => {
+                this.updateUI();
+                this.syncNetWorthToCloud();
+            });
         });
     },
 
     updateUI() {
         const bankroll = window.CasinoStorage.getBankroll();
         const debt = window.CasinoStorage.getDebt();
+        const atm = window.CasinoStorage.getAtm();
 
         document.getElementById('slots-val-balance').textContent = `$${bankroll.toLocaleString()}`;
+        document.getElementById('slots-val-atm').textContent = `$${atm.toLocaleString()}`;
         document.getElementById('slots-val-debt').textContent = `$${debt.toLocaleString()}`;
-        document.getElementById('slots-val-net').textContent = `$${(bankroll - debt).toLocaleString()}`;
+        document.getElementById('slots-val-net').textContent = `$${(bankroll + atm - debt).toLocaleString()}`;
         document.getElementById('slots-val-bet').textContent = `$${this._currentBet.toLocaleString()}`;
 
         // 確変（FEVER）状態のUI制御
@@ -474,19 +479,11 @@ window.SlotsGame = {
             btn.disabled = (amt > bankroll || this._spinning);
         });
 
-        // ★ 残高が0以下かつ回転停止中なら、手動破産ボタンを露出させる ★
-        const bankruptBtn = document.getElementById('slots-btn-bankrupt');
-        if (bankruptBtn) {
-            if (bankroll <= 0 && !this._spinning) {
-                bankruptBtn.style.display = 'inline-block';
-            } else {
-                bankruptBtn.style.display = 'none';
-            }
-        }
-
         document.getElementById('slots-btn-spin').disabled = (this._currentBet > bankroll || this._currentBet <= 0 || this._spinning);
-        document.getElementById('slots-btn-borrow').disabled = this._spinning; // 借入上限判定を撤廃
+        document.getElementById('slots-btn-borrow').disabled = this._spinning;
         document.getElementById('slots-btn-repay').disabled = (debt <= 0 || bankroll <= 0 || this._spinning);
+        document.getElementById('slots-btn-atm-dep').disabled = (bankroll < 1000 || this._spinning);
+        document.getElementById('slots-btn-atm-wdl').disabled = (atm <= 0 || this._spinning);
         document.getElementById('slots-btn-custom-bet').disabled = this._spinning;
     },
 
@@ -495,21 +492,22 @@ window.SlotsGame = {
 
         const bankroll = window.CasinoStorage.getBankroll();
 
-        // 残高不足時の判定（自動破産はせず、借入または手動リセットの案内を表示します）
+        // 残高不足時の判定（シンプルな警告）
         if (this._currentBet > bankroll) {
-            alert("残高が不足しています。BORROWから借金をするか、BANKRUPT（破産）ボタンを押してリセットしてください。");
+            alert("残高が不足しています。BORROWから借金するか、ATMから引き出してください。");
             return;
         }
 
         window.CasinoStorage.setBankroll(bankroll - this._currentBet);
 
-        // ★ 自動利息徴収の実行 ★
-        const interestResult = window.CasinoStorage.applyInterest(0.01);
+        // ★ 遅延利息システムによる自動利息徴収の実行 ★
+        const interestResult = window.CasinoStorage.applyInterest();
 
         this._spinning = true;
 
         // 確変（FEVER）スピン判定と減算処理
         const isFeverSpin = this._feverSpinsLeft > 0;
+        this._isCurrentFeverSpin = isFeverSpin;
         this._activeSpinConfigs = isFeverSpin ? this._feverReelConfigs : this._reelConfigs;
         if (isFeverSpin) {
             this._feverSpinsLeft--;
@@ -551,7 +549,7 @@ window.SlotsGame = {
 
         const windowEl = document.querySelector('.slots-reel-window');
         const cellHeight = windowEl ? Math.floor(windowEl.clientHeight / 3) : 80;
-        const configLength = this._activeSpinConfigs[0].length; // 21
+        const configLength = this._activeSpinConfigs[0].length;
 
         // 【巻き戻しフェーズ】
         this._reels.forEach((strip, reelIdx) => {
@@ -568,14 +566,14 @@ window.SlotsGame = {
             void strip.offsetHeight;
         });
 
-        // 【回転開始: 予備動作（一瞬上に跳ね上がる）】
+        // 【回転開始: 予備動作】
         this._reels.forEach((strip, reelIdx) => {
             const currentPos = this._currentPositions[reelIdx];
             strip.style.transition = 'transform 0.15s cubic-bezier(0.36, 0.07, 0.19, 0.97)';
             strip.style.transform = `translateY(-${currentPos * cellHeight - 20}px)`;
         });
 
-        // 予備動作完了後、高速スピン（加速フェーズ）へ移行
+        // 予備動作完了後、高速スピンへ移行
         setTimeout(() => {
             this._reels.forEach((strip, reelIdx) => {
                 strip.style.transition = 'transform 2.0s cubic-bezier(0.5, 0, 0.7, 0.2)';
@@ -689,11 +687,13 @@ window.SlotsGame = {
             if (sym0 === sym1 && sym1 === sym2) {
                 const symVal = sym0;
                 
-                // 特定図柄（📎 または 🗿）が揃った場合に確変回数を上乗せ
-                if (symVal === '📎') {
-                    feverSpinsWon += 10;
-                } else if (symVal === '🗿') {
-                    feverSpinsWon += 5;
+                // 確変中の確変回数上乗せ禁止判定
+                if (!this._isCurrentFeverSpin) {
+                    if (symVal === '📎') {
+                        feverSpinsWon += 10;
+                    } else if (symVal === '🗿') {
+                        feverSpinsWon += 5;
+                    }
                 }
 
                 const payoutMultiplier = this._payouts[symVal] || 1;
@@ -721,31 +721,31 @@ window.SlotsGame = {
             // 当選倍率によるTier判定
             let tier = 1;
             if (multiplier >= 25 || feverTriggered) {
-                tier = 3; // 確変獲得または高倍率はジャックポット級
+                tier = 3;
             } else if (multiplier >= 10) {
-                tier = 2; // 高額当選
+                tier = 2;
             }
 
-            // 特殊配当演出の発火
             this.triggerWinEffects(tier, totalWin, winLines, feverTriggered, feverSpinsWon);
 
             if (this._sfx) this._sfx.playWin();
         } else {
             document.getElementById('slots-msg').textContent = "残念！もう一度挑戦しよう。";
             this._spinning = false;
-
-            // 自動破産チェックは行いません
             this.updateUI();
         }
 
-        const currentNetWorth = window.CasinoStorage.getBankroll() - window.CasinoStorage.getDebt();
+        this.syncNetWorthToCloud();
+    },
+
+    syncNetWorthToCloud() {
+        const currentNetWorth = window.CasinoStorage.getBankroll() + window.CasinoStorage.getAtm() - window.CasinoStorage.getDebt();
         window.CasinoRanking.submitScore('net_worth', currentNetWorth);
     },
 
     triggerWinEffects(tier, totalWin, winLines, feverTriggered = false, feverSpinsWon = 0) {
         const msgEl = document.getElementById('slots-msg');
         
-        // 各当選に応じたメッセージ表現
         if (feverTriggered) {
             msgEl.textContent = `🔥 FEVER MODE 突入！確変 +${feverSpinsWon}回 (+$${totalWin.toLocaleString()}) 🔥`;
             msgEl.className = 'slots-message-bar text-fever';
@@ -878,6 +878,7 @@ window.SlotsGame = {
         const balanceValEl = document.getElementById('slots-val-balance');
         const netValEl = document.getElementById('slots-val-net');
         const debt = window.CasinoStorage.getDebt();
+        const atm = window.CasinoStorage.getAtm();
 
         const update = (now) => {
             const elapsed = now - startTime;
@@ -891,7 +892,7 @@ window.SlotsGame = {
                 balanceValEl.classList.add('pulse-text');
             }
             if (netValEl) {
-                netValEl.textContent = `$${(currentAmount - debt).toLocaleString()}`;
+                netValEl.textContent = `$${(currentAmount + atm - debt).toLocaleString()}`;
             }
 
             if (progress < 1) {
