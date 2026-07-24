@@ -17,6 +17,7 @@ const CasinoNumpad = {
         overlay.id = 'numpad-overlay';
         overlay.className = 'numpad-overlay';
         overlay.style.display = 'none';
+        overlay.style.zIndex = '9999'; // 他のモーダルより前面に表示するためのz-index設定
 
         overlay.innerHTML = `
             <div class="numpad-modal">
@@ -61,7 +62,7 @@ const CasinoNumpad = {
         overlay.querySelector('button[data-action="back"]').addEventListener('click', () => this._pressBackspace());
         overlay.querySelector('button[data-action="max"]').addEventListener('click', () => this._pressMax());
 
-        document.getElementById('numpad-cancel-btn').addEventListener('click', () => this.close());
+        document.getElementById('numpad-cancel-btn').addEventListener('click', () => this._cancel());
         document.getElementById('numpad-confirm-btn').addEventListener('click', () => this._confirm());
     },
 
@@ -103,6 +104,13 @@ const CasinoNumpad = {
         if (overlay) {
             overlay.style.display = 'none';
         }
+    },
+
+    _cancel() {
+        if (this._onConfirmCallback) {
+            this._onConfirmCallback(null, this._mode);
+        }
+        this.close();
     },
 
     _updateDisplay() {
@@ -222,6 +230,9 @@ const CasinoNumpad = {
     _confirm() {
         let val = parseInt(this._currentValStr, 10);
         if (isNaN(val) || val <= 0) {
+            if (this._onConfirmCallback) {
+                this._onConfirmCallback(null, this._mode);
+            }
             this.close();
             return;
         }
@@ -239,6 +250,9 @@ const CasinoNumpad = {
             const limit = Math.min(debt, bankroll);
             const actualRepay = Math.min(val, limit);
             if (actualRepay <= 0 || isNaN(actualRepay)) {
+                if (this._onConfirmCallback) {
+                    this._onConfirmCallback(null, this._mode);
+                }
                 this.close();
                 return;
             }
@@ -256,12 +270,24 @@ const CasinoNumpad = {
             val = Math.floor(val / 1000) * 1000;
             if (val > 0) {
                 window.CasinoStorage.depositAtm(val);
+            } else {
+                if (this._onConfirmCallback) {
+                    this._onConfirmCallback(null, this._mode);
+                }
+                this.close();
+                return;
             }
         } else if (this._mode === 'atm_withdraw') {
             // 1,000ドル単位に切り捨てて引き出し
             val = Math.floor(val / 1000) * 1000;
             if (val > 0) {
                 window.CasinoStorage.withdrawAtm(val);
+            } else {
+                if (this._onConfirmCallback) {
+                    this._onConfirmCallback(null, this._mode);
+                }
+                this.close();
+                return;
             }
         }
 
