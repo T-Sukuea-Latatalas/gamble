@@ -157,6 +157,17 @@ window.SlotsGame = {
                 vertical-align: middle;
             }
 
+            /* 手動破産申請用赤ボタン */
+            .slots-btn-red {
+                background: linear-gradient(135deg, #d32f2f, #f44336) !important;
+                color: #fff !important;
+                border: 1px solid #b71c1c !important;
+                box-shadow: 0 0 10px rgba(211, 47, 47, 0.4) !important;
+            }
+            .slots-btn-red:hover {
+                background: #b71c1c !important;
+            }
+
             @media (max-width: 768px) {
                 .slots-main-container {
                     flex-direction: column;
@@ -334,6 +345,7 @@ window.SlotsGame = {
                                 <div class="banking-buttons">
                                     <button class="slots-btn" id="slots-btn-borrow">BORROW</button>
                                     <button class="slots-btn" id="slots-btn-repay">REPAY</button>
+                                    <button class="slots-btn slots-btn-red" id="slots-btn-bankrupt" style="display: none;">BANKRUPT</button>
                                 </div>
                                 <button class="slots-btn slots-btn-gold slots-btn-lg" id="slots-btn-spin">SPIN</button>
                             </div>
@@ -404,6 +416,15 @@ window.SlotsGame = {
                 this.updateUI();
             });
         });
+
+        // ★ 手動破産申請用のイベントリスナー設定 ★
+        document.getElementById('slots-btn-bankrupt').addEventListener('click', () => {
+            if (confirm("本当に破産（手動リセット）しますか？\n残高が$1,000、借金が$0に再セットされます。")) {
+                window.CasinoStorage.triggerBankruptcy();
+                this._currentBet = 10;
+                this.updateUI();
+            }
+        });
     },
 
     updateUI() {
@@ -453,6 +474,16 @@ window.SlotsGame = {
             btn.disabled = (amt > bankroll || this._spinning);
         });
 
+        // ★ 残高が0以下かつ回転停止中なら、手動破産ボタンを露出させる ★
+        const bankruptBtn = document.getElementById('slots-btn-bankrupt');
+        if (bankruptBtn) {
+            if (bankroll <= 0 && !this._spinning) {
+                bankruptBtn.style.display = 'inline-block';
+            } else {
+                bankruptBtn.style.display = 'none';
+            }
+        }
+
         document.getElementById('slots-btn-spin').disabled = (this._currentBet > bankroll || this._currentBet <= 0 || this._spinning);
         document.getElementById('slots-btn-borrow').disabled = this._spinning; // 借入上限判定を撤廃
         document.getElementById('slots-btn-repay').disabled = (debt <= 0 || bankroll <= 0 || this._spinning);
@@ -464,14 +495,9 @@ window.SlotsGame = {
 
         const bankroll = window.CasinoStorage.getBankroll();
 
-        // 残高不足時の破産判定（借金上限のバリデーションは排除されています）
+        // 残高不足時の判定（自動破産はせず、借入または手動リセットの案内を表示します）
         if (this._currentBet > bankroll) {
-            if (window.CasinoStorage.checkAndHandleBankruptcy()) {
-                this._currentBet = 10;
-                this.updateUI();
-                return;
-            }
-            alert("残高が不足しています。");
+            alert("残高が不足しています。BORROWから借金をするか、BANKRUPT（破産）ボタンを押してリセットしてください。");
             return;
         }
 
@@ -708,8 +734,7 @@ window.SlotsGame = {
             document.getElementById('slots-msg').textContent = "残念！もう一度挑戦しよう。";
             this._spinning = false;
 
-            // 敗北後の破産チェック
-            window.CasinoStorage.checkAndHandleBankruptcy();
+            // 自動破産チェックは行いません
             this.updateUI();
         }
 
