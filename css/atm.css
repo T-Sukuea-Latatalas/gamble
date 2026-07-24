@@ -67,7 +67,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999;
+  z-index: 1500; /* テンキー（z-index: 2000）より下、かつ通常ゲーム画面より上に配置 */
   font-family: var(--font-family-base);
   box-sizing: border-box;
   padding: 16px;
@@ -222,7 +222,7 @@
 }
 
 /* ホバー/アクティブ時のベース変化 */
-.atm-btn:hover {
+.atm-btn:not(:disabled):not(.disabled):hover {
   background-color: var(--color-gold);
   border-color: var(--color-gold);
   color: #050a07;
@@ -230,7 +230,7 @@
   transform: translateY(-1px);
 }
 
-.atm-btn:active {
+.atm-btn:not(:disabled):not(.disabled):active {
   transform: translateY(1px);
 }
 
@@ -252,13 +252,13 @@
 .btn-exit::before { content: "♠"; }
 
 /* ホバー時にインジケータを表示し、テキストを少し右に寄せてバランスを取る */
-.atm-btn:hover::before {
+.atm-btn:not(:disabled):not(.disabled):hover::before {
   opacity: 1;
   transform: scale(1) translateX(0);
 }
 
 /* ホバー時にマークの色がボタン背景に埋もれないよう、黒に統一 */
-.atm-btn:hover::before {
+.atm-btn:not(:disabled):not(.disabled):hover::before {
   color: #050a07 !important;
 }
 
@@ -269,15 +269,34 @@
   margin-top: 0.5rem; /* 終了ボタンを一歩離して配置 */
 }
 
-.atm-btn.btn-exit:hover {
+.atm-btn.btn-exit:not(:disabled):not(.disabled):hover {
   background-color: var(--color-neon-red);
   border-color: var(--color-neon-red);
   color: #ffffff;
   box-shadow: 0 0 15px var(--color-neon-red-glow);
 }
 
-.atm-btn.btn-exit:hover::before {
+.atm-btn.btn-exit:not(:disabled):not(.disabled):hover::before {
   color: #ffffff !important;
+}
+
+/* --- あつ森準拠：無効（disabled）状態のスタイル --- */
+.atm-btn:disabled,
+.atm-btn.disabled {
+  opacity: 0.35;
+  background-color: #0d120f;
+  border-color: #2a302c;
+  color: #555555;
+  cursor: not-allowed;
+  pointer-events: none; /* すべてのインタラクション（ホバー・クリック）を無効化 */
+  box-shadow: none;
+  transform: none;
+}
+
+/* 無効時のトランプマーク表示を完全に遮断 */
+.atm-btn:disabled::before,
+.atm-btn.disabled::before {
+  display: none !important;
 }
 
 /* --- レスポンシブ対応 (モバイル縦画面：幅480px以下) --- */
