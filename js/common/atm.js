@@ -1,3 +1,5 @@
+// js/common/atm.js
+
 /**
  * CasinoAtm - あつ森風ATM画面と各種システムを仲介するモジュール
  * 
@@ -83,7 +85,7 @@
       document.body.appendChild(overlay);
       activeModal = overlay;
 
-      // 画面表示を最新の状態に更新
+      // 画面表示を最新の状態に更新（ボタンのdisabled状態もここで初期判定します）
       this.updateDisplay();
 
       // イベントリスナーの設定
@@ -111,6 +113,7 @@
 
     /**
      * 最新の資金データを取得し、画面に反映する
+     * あつ森準拠のボタン活性・非活性の制御も含みます
      */
     updateDisplay() {
       if (!activeModal) return;
@@ -127,6 +130,44 @@
       if (cashElem) cashElem.textContent = `$${bankroll.toLocaleString()}`;
       if (debtElem) debtElem.textContent = `$${debt.toLocaleString()}`;
       if (savingsElem) savingsElem.textContent = `$${atm.toLocaleString()}`;
+
+      // 各種メニューボタンの取得
+      const btnDeposit = activeModal.querySelector('.btn-deposit');
+      const btnWithdraw = activeModal.querySelector('.btn-withdraw');
+      const btnRepay = activeModal.querySelector('.btn-repay');
+
+      // 【預け入れ】手元資金が1,000ドル未満の場合は無効化
+      if (btnDeposit) {
+        if (bankroll < 1000) {
+          btnDeposit.disabled = true;
+          btnDeposit.classList.add('disabled');
+        } else {
+          btnDeposit.disabled = false;
+          btnDeposit.classList.remove('disabled');
+        }
+      }
+
+      // 【引き出し】ATM預金残高が1,000ドル未満の場合は無効化
+      if (btnWithdraw) {
+        if (atm < 1000) {
+          btnWithdraw.disabled = true;
+          btnWithdraw.classList.add('disabled');
+        } else {
+          btnWithdraw.disabled = false;
+          btnWithdraw.classList.remove('disabled');
+        }
+      }
+
+      // 【ローン返済】借金残高が0、または手元資金が0の場合は無効化
+      if (btnRepay) {
+        if (debt === 0 || bankroll === 0) {
+          btnRepay.disabled = true;
+          btnRepay.classList.add('disabled');
+        } else {
+          btnRepay.disabled = false;
+          btnRepay.classList.remove('disabled');
+        }
+      }
     },
 
     /**
@@ -149,6 +190,11 @@
         button.addEventListener('click', (e) => {
           e.stopPropagation(); // バブリング防止
           if (isProcessing) return; // 重複操作を防止
+          
+          // disabled状態のボタンは処理を実行しない
+          if (button.disabled || button.classList.contains('disabled')) {
+            return;
+          }
 
           const action = button.getAttribute('data-action');
           if (action === 'exit') {
@@ -182,13 +228,13 @@
       // 入力開始段階で操作をロックする
       isProcessing = true;
 
-      // 既存のCasinoNumpadシステムを呼び出す
-      window.CasinoNumpad.open(mode, (success) => {
-        // 取引、あるいはNumpad画面が終了した時点でガードを解除
+      // 既存のCasinoNumpadシステムを呼び出す（コールバック引数 val, returnedMode）
+      window.CasinoNumpad.open(mode, (val, returnedMode) => {
+        // 取引終了、またはNumpad画面が閉じられた（キャンセル含む）時点で必ずガードを解除
         isProcessing = false;
 
-        // 取引が成功した（明示的なfalseではない）場合に、画面とクラウド同期を実行
-        if (success !== false) {
+        // 取引が成功した場合（valが有効な数値である場合）に、表示更新とクラウド同期を実行
+        if (val !== null && typeof val === 'number' && !isNaN(val) && val > 0) {
           this.updateDisplay();
           this.syncRanking();
         }
