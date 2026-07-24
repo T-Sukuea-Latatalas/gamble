@@ -1,13 +1,20 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fever Casino Feber</title>
+    <title>Fever Casino Fever</title>
     <!-- スタイルシートの読み込み -->
     <link rel="stylesheet" href="css/common.css">
     <link rel="stylesheet" href="css/blackjack.css">
-    <link rel="stylesheet" href="css/slots.css"> <!-- 新規追加：スロット用スタイルシート -->
+    <link rel="stylesheet" href="css/slots.css">
+    
+    <!-- ★ 新規追加：ATM専用スタイルシート ★ -->
+    <link rel="stylesheet" href="css/atm.css">
+
+    <!-- ★ 新規追加：ビデオポーカー専用スタイルシート ★ -->
+    <link rel="stylesheet" href="css/poker.css">
 </head>
 <body>
 
@@ -15,15 +22,22 @@
     <div class="game-container">
         <div id="game-viewport"></div>
     </div>
+    
 <!-- 共通JavaScriptライブラリ -->
 <script src="js/common/sound.js"></script>
 <script src="js/common/storage.js"></script>
-<script src="js/common/ranking.js"></script> <!-- 新規追加：通信処理を行うため、lobbyやblackjackより手前で読み込みます -->
+<script src="js/common/ranking.js"></script>
 <script src="js/common/numpad.js"></script>
+
+<!-- ★ 新規追加：ATM制御JavaScript ★ -->
+<script src="js/common/atm.js"></script>
 
 <!-- カジノゲームモジュール -->
 <script src="js/games/blackjack.js"></script>
-<script src="js/games/slots.js"></script> <!-- 新規追加：スロット用モジュール -->
+<script src="js/games/slots.js"></script>
+
+<!-- ★ 新規追加：ビデオポーカーゲームモジュール ★ -->
+<script src="js/games/poker.js"></script>
 
 <!-- ポータルロビー制御スクリプト -->
 <script src="js/lobby.js"></script>    
