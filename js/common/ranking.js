@@ -35,7 +35,7 @@ const CasinoRanking = {
 
     /**
      * 指定したゲーム部門へスコアを送信
-     * @param {string} gameId - 'net_worth' | 'blackjack_max_win' | 'slots_max_win' など
+     * @param {string} gameId - 'net_worth' | 'blackjack_max_win' | 'slots_max_win' | 'poker_max_win' など
      * @param {number} score 
      */
     async submitScore(gameId, score) {
@@ -93,6 +93,7 @@ const CasinoRanking = {
 
     /**
      * GASと通信できない場合に表示するフォールバックデータ
+     * 新規ゲーム「poker_max_win」の初期データを追加しました。
      */
     getDummyData() {
         return {
@@ -107,7 +108,12 @@ const CasinoRanking = {
                 { username: 'ゴールデン・ハイローラー', score: 5000, uuid: 'dummy1' },
                 { username: 'ラッキー・セブン', score: 2500, uuid: 'dummy2' }
             ],
-            slots_max_win: []
+            slots_max_win: [],
+            poker_max_win: [
+                { username: 'ゴールデン・ハイローラー', score: 25000, uuid: 'dummy1' },
+                { username: 'カード・カウンタ', score: 7500, uuid: 'dummy3' },
+                { username: 'ラッキー・セブン', score: 1000, uuid: 'dummy2' }
+            ]
         };
     }
 };

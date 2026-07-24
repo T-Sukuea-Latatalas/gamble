@@ -229,37 +229,37 @@ const CasinoNumpad = {
 
     _confirm() {
         let val = parseInt(this._currentValStr, 10);
-        if (isNaN(val) || val <= 0) {
+        // 入力値が数値でない場合のみキャンセル扱い（null）として終了
+        if (isNaN(val)) {
             if (this._onConfirmCallback) {
                 this._onConfirmCallback(null, this._mode);
             }
             this.close();
             return;
         }
+
         val = Math.max(0, val);
 
         let bankroll = window.CasinoStorage.getBankroll();
         let debt = window.CasinoStorage.getDebt();
 
         if (this._mode === 'borrow') {
-            debt = Math.max(0, debt + val);
-            bankroll = Math.max(0, bankroll + val);
-            window.CasinoStorage.setDebt(debt);
-            window.CasinoStorage.setBankroll(bankroll);
+            if (val > 0) {
+                debt = Math.max(0, debt + val);
+                bankroll = Math.max(0, bankroll + val);
+                window.CasinoStorage.setDebt(debt);
+                window.CasinoStorage.setBankroll(bankroll);
+            }
         } else if (this._mode === 'repay') {
             const limit = Math.min(debt, bankroll);
             const actualRepay = Math.min(val, limit);
-            if (actualRepay <= 0 || isNaN(actualRepay)) {
-                if (this._onConfirmCallback) {
-                    this._onConfirmCallback(null, this._mode);
-                }
-                this.close();
-                return;
+            if (actualRepay > 0) {
+                bankroll = Math.max(0, bankroll - actualRepay);
+                debt = Math.max(0, debt - actualRepay);
+                window.CasinoStorage.setBankroll(bankroll);
+                window.CasinoStorage.setDebt(debt);
             }
-            bankroll = Math.max(0, bankroll - actualRepay);
-            debt = Math.max(0, debt - actualRepay);
-            window.CasinoStorage.setBankroll(bankroll);
-            window.CasinoStorage.setDebt(debt);
+            val = actualRepay; // 実際の返済完了額を結果として返却
         } else if (this._mode === 'bet') {
             const limit = bankroll;
             if (val > limit) {
@@ -270,24 +270,12 @@ const CasinoNumpad = {
             val = Math.floor(val / 1000) * 1000;
             if (val > 0) {
                 window.CasinoStorage.depositAtm(val);
-            } else {
-                if (this._onConfirmCallback) {
-                    this._onConfirmCallback(null, this._mode);
-                }
-                this.close();
-                return;
             }
         } else if (this._mode === 'atm_withdraw') {
             // 1,000ドル単位に切り捨てて引き出し
             val = Math.floor(val / 1000) * 1000;
             if (val > 0) {
                 window.CasinoStorage.withdrawAtm(val);
-            } else {
-                if (this._onConfirmCallback) {
-                    this._onConfirmCallback(null, this._mode);
-                }
-                this.close();
-                return;
             }
         }
 

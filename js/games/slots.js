@@ -1,4 +1,4 @@
-// js/slots.js
+// js/games/slots.js
 window.SlotsGame = {
     _viewport: null,
     _reels: [],
@@ -14,7 +14,7 @@ window.SlotsGame = {
     _symbols: ['🍒', '🥑', '🛰️', '🗿', '📎'],
     _payouts: { '📎': 100, '🗿': 30, '🛰️': 15, '🥑': 5, '🍒': 2 },
     
-    // 通常時のリール配列：全体的に図柄種が減ったことで、通常スピンでも非常に当たりやすくなっています
+    // 通常時のリール配列
     _reelConfigs: [
         [4, 3, 0, 1, 2, 0, 1, 2, 3, 0, 4, 4, 4, 1, 2, 0, 3, 1, 2, 0, 4, 3, 1, 2],
         [4, 2, 1, 0, 3, 1, 0, 2, 3, 1, 4, 4, 4, 0, 2, 1, 3, 0, 2, 1, 4, 3, 0, 2],
@@ -33,7 +33,7 @@ window.SlotsGame = {
     init(viewport) {
         this._viewport = viewport;
         this._sfx = window.CasinoSfx || null;
-        this.injectStyles(); // 配当表と確変演出用のCSSスタイルを動的適用
+        this.injectStyles(); // 外部 css/slots.css との干渉を排除
         this.render();
         this.setupEventListeners();
         this.resizeReelCells();
@@ -41,246 +41,24 @@ window.SlotsGame = {
         window.addEventListener('resize', () => this.resizeReelCells());
     },
 
-    // UIを崩さず、レスポンシブに対応させるための独自スタイルの注入
+    /**
+     * スタイル定義の一元管理化
+     * css/slots.css のdvh対応レスポンシブ定義と干渉しないよう動的注入を防止
+     */
     injectStyles() {
-        if (document.getElementById('slots-extended-styles')) return;
-        const style = document.createElement('style');
-        style.id = 'slots-extended-styles';
-        style.textContent = `
-            .slots-main-container {
-                display: flex;
-                flex-direction: row;
-                gap: 15px;
-                margin-top: 15px;
-                align-items: stretch;
-                width: 100%;
-            }
-            .slots-paytable {
-                flex: 0 0 160px;
-                background: rgba(15, 15, 25, 0.9);
-                border: 2px solid #ffd700;
-                border-radius: 12px;
-                padding: 12px;
-                display: flex;
-                flex-direction: column;
-                justify-content: flex-start;
-                box-shadow: 0 0 15px rgba(255, 215, 0, 0.2);
-                color: #fff;
-            }
-            .paytable-title {
-                color: #ffd700;
-                text-align: center;
-                font-weight: bold;
-                font-size: 0.95rem;
-                border-bottom: 2px solid #ffd700;
-                padding-bottom: 6px;
-                margin-bottom: 12px;
-                letter-spacing: 1px;
-            }
-            .paytable-list {
-                display: flex;
-                flex-direction: column;
-                gap: 8px;
-            }
-            .paytable-item {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                font-size: 0.85rem;
-                padding: 4px 0;
-                border-bottom: 1px dashed rgba(255,255,255,0.1);
-            }
-            .paytable-item:last-child {
-                border-bottom: none;
-            }
-            .pay-sym-wrapper {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-            }
-            .pay-sym {
-                font-size: 1.3rem;
-                filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));
-            }
-            .pay-mul {
-                color: #ffd700;
-                font-weight: bold;
-                font-family: monospace;
-                text-align: right;
-            }
-            .pay-desc {
-                font-size: 0.65rem;
-                color: #ff4500;
-                font-weight: bold;
-                text-align: right;
-                display: block;
-            }
-            .slots-machine-area {
-                flex: 1;
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
-                min-width: 0;
-            }
-            
-            /* コントロール・ボタン操作エリアのレスポンシブレイアウト */
-            .slots-controls {
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
-                padding: 15px;
-                background: rgba(20, 20, 30, 0.9);
-                border: 1px solid rgba(255, 215, 0, 0.15);
-                border-radius: 12px;
-                width: 100%;
-                box-sizing: border-box;
-            }
-            .bet-display-row {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                font-weight: bold;
-                font-size: 1.1rem;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-                padding-bottom: 6px;
-            }
-            .chips-container {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 6px;
-                justify-content: center;
-                width: 100%;
-            }
-            .chip-btn {
-                flex: 1 1 calc(33.3% - 6px); /* モバイル縦画面では横3〜4列 */
-                min-width: 55px;
-                padding: 8px 4px;
-                font-size: 0.85rem;
-                box-sizing: border-box;
-            }
-            #slots-btn-custom-bet {
-                flex: 1 1 calc(33.3% - 6px);
-                min-width: 55px;
-                padding: 8px 4px;
-                font-size: 0.85rem;
-                box-sizing: border-box;
-            }
-            .action-row {
-                display: flex;
-                flex-direction: column;
-                gap: 12px;
-                width: 100%;
-            }
-            .banking-buttons {
-                display: grid;
-                grid-template-columns: repeat(2, 1fr); /* BORROW と REPAY の構成 */
-                gap: 8px;
-                width: 100%;
-            }
-            .banking-buttons .slots-btn {
-                width: 100%;
-                box-sizing: border-box;
-                padding: 10px 4px;
-                font-size: 0.85rem;
-            }
-            #slots-btn-spin {
-                width: 100%;
-                padding: 14px;
-                font-size: 1.3rem;
-                font-weight: bold;
-                box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2);
-            }
-            
-            /* 確変時の枠線・視覚的演出 */
-            .fever-active-wrapper {
-                border: 3px solid #ff4500 !important;
-                box-shadow: 0 0 25px #ff4500, inset 0 0 15px rgba(255, 69, 0, 0.4) !important;
-                animation: slotsFeverGlow 1.5s ease-in-out infinite alternate;
-            }
-            @keyframes slotsFeverGlow {
-                0% { border-color: #ff4500; box-shadow: 0 0 20px #ff4500, inset 0 0 10px rgba(255, 69, 0, 0.3); }
-                100% { border-color: #ff8c00; box-shadow: 0 0 35px #ff8c00, inset 0 0 25px rgba(255, 140, 0, 0.6); }
-            }
-            
-            .text-fever {
-                color: #ff4500 !important;
-                text-shadow: 0 0 8px rgba(255, 69, 0, 0.8);
-                font-weight: bold;
-                animation: slotsFeverPulse 1s infinite alternate;
-            }
-            @keyframes slotsFeverPulse {
-                0% { opacity: 0.8; transform: scale(1); }
-                100% { opacity: 1; transform: scale(1.03); }
-            }
-
-            .fever-badge {
-                background: linear-gradient(135deg, #ff4500, #ff8c00);
-                color: #fff;
-                padding: 2px 8px;
-                border-radius: 4px;
-                font-size: 0.75rem;
-                font-weight: bold;
-                animation: slotsFeverPulse 0.5s infinite alternate;
-                margin-left: 8px;
-                display: inline-block;
-                vertical-align: middle;
-            }
-
-            /* 横画面・大画面 (min-width: 769px) 用のレイアウト自動調整 */
-            @media (min-width: 769px) {
-                .chip-btn {
-                    flex: 1; /* 横並びで均一に配置 */
-                }
-                #slots-btn-custom-bet {
-                    flex: 1;
-                }
-                .action-row {
-                    flex-direction: row;
-                    align-items: stretch;
-                }
-                .banking-buttons {
-                    flex: 1;
-                    grid-template-columns: repeat(2, 1fr); /* 2ボタンを横に配置 */
-                }
-                #slots-btn-spin {
-                    flex: 0 0 160px; /* デスクトップでは右側に適度な幅で配置 */
-                    padding: 0 10px;
-                    margin-top: 0;
-                }
-            }
-
-            @media (max-width: 768px) {
-                .slots-main-container {
-                    flex-direction: column;
-                }
-                .slots-paytable {
-                    flex: none;
-                    width: 100%;
-                    box-sizing: border-box;
-                }
-                .paytable-list {
-                    flex-direction: row;
-                    flex-wrap: wrap;
-                    justify-content: space-around;
-                    gap: 10px;
-                }
-                .paytable-item {
-                    flex: 0 0 45%;
-                    border-bottom: none;
-                    background: rgba(255,255,255,0.05);
-                    padding: 6px 10px;
-                    border-radius: 6px;
-                }
-            }
-        `;
-        document.head.appendChild(style);
+        // 外部の css/slots.css で一括制御するため空にします
     },
 
+    /**
+     * リールセル高さをリール窓の実高さに応じて精密再計算
+     */
     resizeReelCells() {
         const windowEl = document.querySelector('.slots-reel-window');
         if (!windowEl) return;
         
         const windowHeight = windowEl.clientHeight;
+        if (windowHeight <= 0) return;
+
         const cellHeight = Math.floor(windowHeight / 3);
 
         const cells = document.querySelectorAll('.slots-cell');
@@ -289,8 +67,9 @@ window.SlotsGame = {
             cell.style.lineHeight = `${cellHeight}px`;
         });
 
+        // 停止中の場合に実高さと座標を正確に同期
         this._reels.forEach((strip, reelIdx) => {
-            if (!this._spinning) {
+            if (!this._spinning && strip) {
                 const pos = this._currentPositions[reelIdx];
                 strip.style.transform = `translateY(-${pos * cellHeight}px)`;
             }
@@ -344,7 +123,6 @@ window.SlotsGame = {
                             <div class="paytable-item">
                                 <div class="pay-sym-wrapper">
                                     <span class="pay-sym">📎</span>
-                                    <span>3つ揃い</span>
                                 </div>
                                 <div>
                                     <span class="pay-mul">x100</span>
@@ -354,7 +132,6 @@ window.SlotsGame = {
                             <div class="paytable-item">
                                 <div class="pay-sym-wrapper">
                                     <span class="pay-sym">🗿</span>
-                                    <span>3つ揃い</span>
                                 </div>
                                 <div>
                                     <span class="pay-mul">x30</span>
@@ -364,21 +141,18 @@ window.SlotsGame = {
                             <div class="paytable-item">
                                 <div class="pay-sym-wrapper">
                                     <span class="pay-sym">🛰️</span>
-                                    <span>3つ揃い</span>
                                 </div>
                                 <span class="pay-mul">x15</span>
                             </div>
                             <div class="paytable-item">
                                 <div class="pay-sym-wrapper">
                                     <span class="pay-sym">🥑</span>
-                                    <span>3つ揃い</span>
                                 </div>
                                 <span class="pay-mul">x5</span>
                             </div>
                             <div class="paytable-item">
                                 <div class="pay-sym-wrapper">
                                     <span class="pay-sym">🍒</span>
-                                    <span>3つ揃い</span>
                                 </div>
                                 <span class="pay-mul">x2</span>
                             </div>
@@ -451,7 +225,6 @@ window.SlotsGame = {
     },
 
     buildReels() {
-        // 現在確変中かどうかに応じて参照するリール配列を切り替える
         const configs = this._feverSpinsLeft > 0 ? this._feverReelConfigs : this._reelConfigs;
         this._reels.forEach((strip, idx) => {
             const config = configs[idx];
@@ -483,34 +256,57 @@ window.SlotsGame = {
             });
         });
 
+        // カスタムベット設定（厳格な数値判定と安全ガード付き）
         document.getElementById('slots-btn-custom-bet').addEventListener('click', () => {
-            window.CasinoNumpad.open('bet', (val) => {
-                this._currentBet = val;
-                this.updateUI();
-            });
+            if (this._spinning) return;
+            if (window.CasinoNumpad && typeof window.CasinoNumpad.open === 'function') {
+                window.CasinoNumpad.open('bet', (val) => {
+                    if (val === null) return;
+                    const parsed = parseInt(val, 10);
+                    if (isNaN(parsed)) return;
+
+                    const bankroll = window.CasinoStorage.getBankroll();
+                    let validBet = Math.max(1, parsed);
+                    if (bankroll > 0) {
+                        validBet = Math.min(validBet, bankroll);
+                    } else {
+                        validBet = 0;
+                    }
+
+                    this._currentBet = validBet;
+                    this.updateUI();
+                });
+            }
         });
 
         document.getElementById('slots-btn-borrow').addEventListener('click', () => {
-            window.CasinoNumpad.open('borrow', () => {
-                this.updateUI();
-                this.syncNetWorthToCloud();
-            });
+            if (this._spinning) return;
+            if (window.CasinoNumpad && typeof window.CasinoNumpad.open === 'function') {
+                window.CasinoNumpad.open('borrow', () => {
+                    this.updateUI();
+                    this.syncNetWorthToCloud();
+                });
+            }
         });
 
         document.getElementById('slots-btn-repay').addEventListener('click', () => {
-            window.CasinoNumpad.open('repay', () => {
-                this.updateUI();
-                this.syncNetWorthToCloud();
-            });
+            if (this._spinning) return;
+            if (window.CasinoNumpad && typeof window.CasinoNumpad.open === 'function') {
+                window.CasinoNumpad.open('repay', () => {
+                    this.updateUI();
+                    this.syncNetWorthToCloud();
+                });
+            }
         });
 
-        // 独立したATM総合ボタンのイベントリスナー（CasinoAtmモジュール起動）
+        // ATM総合ボタンのイベントリスナー（CasinoAtmモジュール起動＆表示完全同期）
         document.getElementById('slots-btn-atm-trigger').addEventListener('click', () => {
             if (this._spinning) return;
             
-            if (window.CasinoAtm) {
+            if (window.CasinoAtm && typeof window.CasinoAtm.open === 'function') {
                 window.CasinoAtm.open(() => {
                     this.updateUI();
+                    this.syncNetWorthToCloud();
                 });
             } else {
                 console.warn("CasinoAtm module is not loaded.");
@@ -572,7 +368,6 @@ window.SlotsGame = {
         document.getElementById('slots-btn-repay').disabled = (debt <= 0 || bankroll <= 0 || this._spinning);
         document.getElementById('slots-btn-custom-bet').disabled = this._spinning;
 
-        // 独立したATMトリガーボタンの制御
         const atmTrigger = document.getElementById('slots-btn-atm-trigger');
         if (atmTrigger) {
             atmTrigger.disabled = this._spinning;
@@ -592,7 +387,7 @@ window.SlotsGame = {
 
         window.CasinoStorage.setBankroll(bankroll - this._currentBet);
 
-        // ★ 遅延利息システムによる自動利息徴収の実行 ★
+        // 遅延利息システムによる自動利息徴収の実行
         const interestResult = window.CasinoStorage.applyInterest();
 
         this._spinning = true;
@@ -665,7 +460,7 @@ window.SlotsGame = {
             strip.style.transform = `translateY(-${currentPos * cellHeight - 20}px)`;
         });
 
-        // 予備動作完了後、高速スピンへ移行 (各リール個別の長さに基づき移動量を調整)
+        // 予備動作完了後、高速スピンへ移行
         setTimeout(() => {
             this._reels.forEach((strip, reelIdx) => {
                 const configLength = this._activeSpinConfigs[reelIdx].length;
@@ -747,7 +542,6 @@ window.SlotsGame = {
     },
 
     evaluateResult() {
-        // スピン開始時に追加された画面全体の揺れ演出（jackpot-shake）を確実に解除します
         const wrapper = document.querySelector('.slots-game-wrapper');
         if (wrapper) {
             wrapper.classList.remove('jackpot-shake');
@@ -862,15 +656,18 @@ window.SlotsGame = {
             msgEl.classList.add('win-tier3');
         }
 
-        // 揃ったシンボルのハイライト
+        // 揃ったシンボルのハイライト（配列範囲外アクセスに対する安全ガード付き）
         winLines.forEach(p => {
             p.cells.forEach(coord => {
                 const reelIdx = coord[0];
                 const rowIdx = coord[1];
                 const strip = this._reels[reelIdx];
+                if (!strip || !strip.children || strip.children.length === 0) return;
+
                 const finalPos = this._currentPositions[reelIdx];
-                const domIndex = finalPos + rowIdx;
+                const domIndex = (finalPos + rowIdx) % strip.children.length;
                 const cellDom = strip.children[domIndex];
+
                 if (cellDom) {
                     if (feverTriggered || tier === 3) {
                         cellDom.classList.add('win-highlight-tier3');

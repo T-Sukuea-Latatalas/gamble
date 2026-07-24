@@ -13,6 +13,38 @@ class SoundEffects {
         }
     }
 
+    /**
+     * 種別名（文字列）に応じた効果音の共通再生メソッド
+     * @param {string} type - 'card', 'coin', 'chip', 'click', 'win', 'lose' 等
+     */
+    play(type) {
+        if (!type || typeof type !== 'string') return;
+
+        const key = type.toLowerCase();
+        switch (key) {
+            case 'card':
+                this.playCard();
+                break;
+            case 'coin':
+            case 'chip':
+            case 'click':
+                this.playCoin();
+                break;
+            case 'win':
+            case 'blackjack':
+                this.playWin();
+                break;
+            case 'lose':
+            case 'bust':
+                this.playLose();
+                break;
+            default:
+                // 未登録のキーの場合は安全にコイン音をフォールバック再生
+                this.playCoin();
+                break;
+        }
+    }
+
     // カードが配られる・めくれる時の摩擦音
     playCard() {
         this.init();

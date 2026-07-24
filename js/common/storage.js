@@ -105,6 +105,15 @@ const CasinoStorage = {
         }
     },
 
+    // --- エイリアスメソッド（各種インターフェースとの互換性確保） ---
+    getWallet() {
+        return this.getBankroll();
+    },
+
+    saveWallet(value) {
+        this.setBankroll(value);
+    },
+
     getBalance() {
         return this.getBankroll();
     },
@@ -126,6 +135,10 @@ const CasinoStorage = {
             }
             this.save();
         }
+    },
+
+    saveDebt(value) {
+        this.setDebt(value);
     },
 
     /**
@@ -162,6 +175,10 @@ const CasinoStorage = {
             this._atm = Math.max(0, Math.floor(parsed / 1000));
             this.save();
         }
+    },
+
+    saveAtm(value) {
+        this.setAtm(value);
     },
 
     depositAtm(amount) {

@@ -11,6 +11,7 @@ const CasinoLobby = {
         const currentUsername = window.CasinoStorage.getUsername();
 
         // 左右2カラムのレイアウト構造をレンダリング（モバイル対応済みの共通CSSに対応）
+        // ランキングタブに「poker_max_win」用のタブを含み、ロビーグリッドにポーカーカードを配置
         viewport.innerHTML = `
             <div class="lobby-container-two-column">
                 <!-- 左ペイン (ランキングエリア) -->
@@ -37,6 +38,7 @@ const CasinoLobby = {
                             <button class="ranking-tab active" data-tab="net_worth">純資産</button>
                             <button class="ranking-tab" data-tab="blackjack_max_win">BJ最大勝利</button>
                             <button class="ranking-tab" data-tab="slots_max_win">スロット</button>
+                            <button class="ranking-tab" data-tab="poker_max_win">ポーカー</button>
                         </div>
 
                         <div id="ranking-content-area" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
@@ -63,6 +65,11 @@ const CasinoLobby = {
                                 <h2 class="lobby-card-title">Golden Slots</h2>
                                 <p class="lobby-card-desc">5本のラインが織り成す高配当。ダークグリーンとゴールドの豪華スロット機。</p>
                             </div>
+                            <div class="lobby-card" id="btn-play-poker">
+                                <div class="lobby-card-icon">👑</div>
+                                <h2 class="lobby-card-title">Poker Classic</h2>
+                                <p class="lobby-card-desc">配られた5枚のカードから残すものを選択し、最強の役（Jacks or Better）を狙おう。</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -79,6 +86,11 @@ const CasinoLobby = {
             this.launchGame('slots');
         });
 
+        // Poker起動イベント登録
+        document.getElementById('btn-play-poker').addEventListener('click', () => {
+            this.launchGame('poker');
+        });
+
         // ロビー専用 ATM同期・更新用共通ヘルパー
         const updateLobbyUIAndSync = async () => {
             const atmVal = window.CasinoStorage.getAtm();
@@ -93,7 +105,6 @@ const CasinoLobby = {
 
         // ロビーでのATM操作イベント登録
         document.getElementById('btn-lobby-atm').addEventListener('click', () => {
-            // 新設されたCasinoAtmモジュールを直接起動
             if (window.CasinoAtm) {
                 window.CasinoAtm.open(updateLobbyUIAndSync);
             } else {
@@ -239,7 +250,15 @@ const CasinoLobby = {
             window.BlackjackGame.init(viewport);
         } else if (gameId === 'slots') {
             window.SlotsGame.init(viewport);
+        } else if (gameId === 'poker') {
+            // ビデオポーカー起動（DOM要素viewportを渡す形に統一）
+            window.PokerGame.init(viewport);
         }
+    },
+
+    // 外部（ゲーム側）からロビーに戻るための呼び出し受付用インターフェース
+    show() {
+        this.renderLobby();
     }
 };
 
