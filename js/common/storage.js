@@ -2,7 +2,7 @@
 const CasinoStorage = {
     _bankroll: 1000,
     _debt: 0,
-    _maxDebt: 10000, // 借金上限額 ($10,000)
+    _maxDebt: 999999999, // 借金上限を事実上撤廃
     _uuid: '',
     _username: '',
 
@@ -102,36 +102,34 @@ const CasinoStorage = {
     },
 
     /**
-     * 借金上限額の取得
+     * 借金上限額の取得（上限を事実上撤廃したため、大きな値を返します）
      */
     getMaxDebt() {
         return this._maxDebt;
     },
 
     /**
-     * 追加で借入可能な残り枠を取得
+     * 追加で借入可能な残り枠を取得（常に十分な上限のない値を返します）
      */
     getRemainingBorrowLimit() {
-        return Math.max(0, this._maxDebt - this._debt);
+        return 999999999;
     },
 
     /**
-     * 指定額の借入が可能か判定
+     * 指定額の借入が可能か判定（常に制限なしで借入可能とします）
      */
     canBorrow(amount) {
-        const parsed = parseInt(amount, 10);
-        if (isNaN(parsed) || parsed <= 0) return false;
-        return (this._debt + parsed) <= this._maxDebt;
+        return true;
     },
 
     /**
      * 破産チェックおよびリセット処理
-     * 残高が$0かつ借金が上限に達して追加借入ができない場合に破産を発火
+     * 残高が$1未満（0以下など）になった場合に破産を発火
      * @returns {boolean} 破産処理が実行されたかどうか
      */
     checkAndHandleBankruptcy() {
-        if (this._bankroll <= 0 && this.getRemainingBorrowLimit() <= 0) {
-            alert(`【 BANKRUPT / 破産発生 】\n残高が$0になり、借金上限（$${this._maxDebt.toLocaleString()}）に達しました。\n救済措置として、残高$1,000 / 借金$0 にリセットして再スタートします。`);
+        if (this._bankroll < 1) {
+            alert(`【 BANKRUPT / 破産発生 】\n残高が底を突きました。\n救済措置として、残高$1,000 / 借金$0 にリセットして再スタートします。`);
             
             this._bankroll = 1000;
             this._debt = 0;
@@ -144,6 +142,39 @@ const CasinoStorage = {
             return true;
         }
         return false;
+    },
+
+    /**
+     * 自動利息取り立てメソッド
+     * 借金の指定パーセンテージを残高（bankroll）から徴収します。
+     * 残高が足りない場合は、引ききれなかった未払額が現在の借金（debt）に自動加算されます。
+     * @param {number} interestRate 金利（デフォルトは1% = 0.01）
+     * @returns {{collected: number, addedToDebt: number}} 実際に徴収した金額と借金に上乗せされた金額
+     */
+    applyInterest(interestRate = 0.01) {
+        if (this._debt <= 0) return { collected: 0, addedToDebt: 0 };
+
+        // 利息計算（端数は切り上げ）
+        const rawInterest = Math.ceil(this._debt * interestRate);
+        if (rawInterest <= 0) return { collected: 0, addedToDebt: 0 };
+
+        let collected = 0;
+        let addedToDebt = 0;
+
+        if (this._bankroll >= rawInterest) {
+            this._bankroll -= rawInterest;
+            collected = rawInterest;
+        } else {
+            // 残高の全額を徴収し、不足分は自動融資として借金を上乗せ
+            collected = this._bankroll;
+            this._bankroll = 0;
+            const unpaid = rawInterest - collected;
+            this._debt += unpaid;
+            addedToDebt = unpaid;
+        }
+
+        this.save();
+        return { collected, addedToDebt };
     },
 
     getUUID() {
