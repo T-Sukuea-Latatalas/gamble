@@ -123,6 +123,74 @@ window.SlotsGame = {
                 min-width: 0;
             }
             
+            /* コントロール・ボタン操作エリアのレスポンシブレイアウト */
+            .slots-controls {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                padding: 15px;
+                background: rgba(20, 20, 30, 0.9);
+                border: 1px solid rgba(255, 215, 0, 0.15);
+                border-radius: 12px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            .bet-display-row {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-weight: bold;
+                font-size: 1.1rem;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+                padding-bottom: 6px;
+            }
+            .chips-container {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 6px;
+                justify-content: center;
+                width: 100%;
+            }
+            .chip-btn {
+                flex: 1 1 calc(33.3% - 6px); /* モバイル縦画面では横3〜4列 */
+                min-width: 55px;
+                padding: 8px 4px;
+                font-size: 0.85rem;
+                box-sizing: border-box;
+            }
+            #slots-btn-custom-bet {
+                flex: 1 1 calc(33.3% - 6px);
+                min-width: 55px;
+                padding: 8px 4px;
+                font-size: 0.85rem;
+                box-sizing: border-box;
+            }
+            .action-row {
+                display: flex;
+                flex-direction: column;
+                gap: 12px;
+                width: 100%;
+            }
+            .banking-buttons {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr); /* モバイルは誤タップしにくい2x2構成 */
+                gap: 8px;
+                width: 100%;
+            }
+            .banking-buttons .slots-btn {
+                width: 100%;
+                box-sizing: border-box;
+                padding: 10px 4px;
+                font-size: 0.85rem;
+            }
+            #slots-btn-spin {
+                width: 100%;
+                padding: 14px;
+                font-size: 1.3rem;
+                font-weight: bold;
+                box-shadow: 0 4px 15px rgba(255, 215, 0, 0.2);
+            }
+            
             /* 確変時の枠線・視覚的演出 */
             .fever-active-wrapper {
                 border: 3px solid #ff4500 !important;
@@ -156,6 +224,29 @@ window.SlotsGame = {
                 margin-left: 8px;
                 display: inline-block;
                 vertical-align: middle;
+            }
+
+            /* 横画面・大画面 (min-width: 769px) 用のレイアウト自動調整 */
+            @media (min-width: 769px) {
+                .chip-btn {
+                    flex: 1; /* 横並びで均一に配置 */
+                }
+                #slots-btn-custom-bet {
+                    flex: 1;
+                }
+                .action-row {
+                    flex-direction: row;
+                    align-items: stretch;
+                }
+                .banking-buttons {
+                    flex: 1;
+                    grid-template-columns: repeat(4, 1fr); /* 4ボタンを横1行に整列 */
+                }
+                #slots-btn-spin {
+                    flex: 0 0 160px; /* デスクトップでは右側に適度な幅で配置 */
+                    padding: 0 10px;
+                    margin-top: 0;
+                }
             }
 
             @media (max-width: 768px) {
