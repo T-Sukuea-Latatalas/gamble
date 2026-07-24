@@ -213,23 +213,19 @@ const BlackjackGame = {
         });
     },
 
-    // ATMトリガーの管理
+    // ATMトリガーの管理 (CasinoAtmモジュール起動にリファクタリング)
     handleAtmTrigger() {
         this.sfx.init();
         if (this.gameState !== 'betting' || this.isProcessing) return;
-        const choice = prompt("ATMメニュー:\n預金するには「1」、引き出すには「2」を入力してください。\n(キャンセルする場合はそのまま閉じてください)");
-        if (choice === "1") {
-            window.CasinoNumpad.open('atm_deposit', () => {
+
+        if (window.CasinoAtm) {
+            window.CasinoAtm.open(() => {
                 this.checkBetValidity();
                 this.updateUI();
                 this.syncCloudNetWorth();
             });
-        } else if (choice === "2") {
-            window.CasinoNumpad.open('atm_withdraw', () => {
-                this.checkBetValidity();
-                this.updateUI();
-                this.syncCloudNetWorth();
-            });
+        } else {
+            console.warn("CasinoAtm module is not loaded.");
         }
     },
 
