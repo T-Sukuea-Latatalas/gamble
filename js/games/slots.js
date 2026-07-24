@@ -173,7 +173,7 @@ window.SlotsGame = {
             }
             .banking-buttons {
                 display: grid;
-                grid-template-columns: repeat(2, 1fr); /* BORROW と REPAY のスッキリした構成 */
+                grid-template-columns: repeat(2, 1fr); /* BORROW と REPAY の構成 */
                 gap: 8px;
                 width: 100%;
             }
@@ -504,7 +504,7 @@ window.SlotsGame = {
             });
         });
 
-        // 独立したATM総合ボタンのイベントリスナー（CasinoAtmモジュール起動にリファクタリング）
+        // 独立したATM総合ボタンのイベントリスナー（CasinoAtmモジュール起動）
         document.getElementById('slots-btn-atm-trigger').addEventListener('click', () => {
             if (this._spinning) return;
             
@@ -584,7 +584,7 @@ window.SlotsGame = {
 
         const bankroll = window.CasinoStorage.getBankroll();
 
-        // 残高不足時の判定（シンプルな警告）
+        // 残高不足時の判定
         if (this._currentBet > bankroll) {
             alert("残高が不足しています。BORROWから借金するか、ATMから引き出してください。");
             return;
@@ -641,10 +641,10 @@ window.SlotsGame = {
 
         const windowEl = document.querySelector('.slots-reel-window');
         const cellHeight = windowEl ? Math.floor(windowEl.clientHeight / 3) : 80;
-        const configLength = this._activeSpinConfigs[0].length;
 
-        // 【巻き戻しフェーズ】
+        // 【巻き戻しフェーズ】 各リール個別の長さに基づいて計算
         this._reels.forEach((strip, reelIdx) => {
+            const configLength = this._activeSpinConfigs[reelIdx].length;
             const currentPos = this._currentPositions[reelIdx];
             const equivalentPos = currentPos % configLength;
             
@@ -665,9 +665,10 @@ window.SlotsGame = {
             strip.style.transform = `translateY(-${currentPos * cellHeight - 20}px)`;
         });
 
-        // 予備動作完了後、高速スピンへ移行
+        // 予備動作完了後、高速スピンへ移行 (各リール個別の長さに基づき移動量を調整)
         setTimeout(() => {
             this._reels.forEach((strip, reelIdx) => {
+                const configLength = this._activeSpinConfigs[reelIdx].length;
                 strip.style.transition = 'transform 2.0s cubic-bezier(0.5, 0, 0.7, 0.2)';
                 const cruisePos = this._currentPositions[reelIdx] + configLength * 3.5;
                 strip.style.transform = `translateY(-${cruisePos * cellHeight}px)`;
@@ -688,6 +689,7 @@ window.SlotsGame = {
 
         this._reels.forEach((strip, reelIdx) => {
             setTimeout(() => {
+                const configLength = this._activeSpinConfigs[reelIdx].length;
                 const style = window.getComputedStyle(strip);
                 const transform = style.transform || style.webkitTransform;
                 let currentY = 0;
@@ -726,7 +728,7 @@ window.SlotsGame = {
 
                     if (reelIdx === 2) {
                         setTimeout(() => {
-                            this.evaluateResult(targetPositions);
+                            this.evaluateResult(); // 最終座標が確定した後に実座標ベースで判定
                         }, 350);
                     }
                 }, duration * 1000);
@@ -744,13 +746,21 @@ window.SlotsGame = {
         }, 150);
     },
 
-    evaluateResult(stopPositions) {
+    evaluateResult() {
+        // スピン開始時に追加された画面全体の揺れ演出（jackpot-shake）を確実に解除します
+        const wrapper = document.querySelector('.slots-game-wrapper');
+        if (wrapper) {
+            wrapper.classList.remove('jackpot-shake');
+        }
+
         const configs = this._activeSpinConfigs || this._reelConfigs;
         const visibleGrid = [];
+        
+        // 実際の物理停止座標（this._currentPositions）に同期して絵柄を決定
         for (let r = 0; r < 3; r++) {
             const config = configs[r];
             const len = config.length;
-            const stopPos = stopPositions[r];
+            const stopPos = this._currentPositions[r];
             
             visibleGrid.push([
                 config[stopPos % len],
