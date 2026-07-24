@@ -123,25 +123,27 @@ const CasinoStorage = {
     },
 
     /**
-     * 破産チェックおよびリセット処理
-     * 残高が$1未満（0以下など）になった場合に破産を発火
-     * @returns {boolean} 破産処理が実行されたかどうか
+     * 破産チェック（自動リセットは廃止したため、常にfalseを返します。互換性のためにメソッドのみ維持）
+     * @returns {boolean}
      */
     checkAndHandleBankruptcy() {
-        if (this._bankroll < 1) {
-            alert(`【 BANKRUPT / 破産発生 】\n残高が底を突きました。\n救済措置として、残高$1,000 / 借金$0 にリセットして再スタートします。`);
-            
-            this._bankroll = 1000;
-            this._debt = 0;
-            this.save();
-
-            // クラウドランキングへ純資産$1,000を即座に送信
-            if (window.CasinoRanking && typeof window.CasinoRanking.submitScore === 'function') {
-                window.CasinoRanking.submitScore('net_worth', 1000);
-            }
-            return true;
-        }
         return false;
+    },
+
+    /**
+     * 手動破産処理の実行
+     * プレイヤーが能動的にリセットを選択した際に呼び出されます。
+     */
+    triggerBankruptcy() {
+        this._bankroll = 1000;
+        this._debt = 0;
+        this.save();
+
+        // クラウドランキングへ純資産$1,000を即座に送信
+        if (window.CasinoRanking && typeof window.CasinoRanking.submitScore === 'function') {
+            window.CasinoRanking.submitScore('net_worth', 1000);
+        }
+        return true;
     },
 
     /**
