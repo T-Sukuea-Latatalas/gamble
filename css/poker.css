@@ -1,0 +1,492 @@
+@charset "utf-8";
+
+/* ==========================================================================
+   1. TABLE DESIGN & BASIC SYSTEM (ポーカーテーブル全体のレイアウト)
+   ========================================================================== */
+#poker-game-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 850px;
+    height: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0 auto;
+    color: #ffffff;
+    font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', Meiryo, sans-serif;
+    /* 深みのあるダークグリーンフェルトを再現した高品位グラデーション */
+    background: radial-gradient(circle at center, #115c25 0%, #062b10 100%);
+    border: 4px double #dfb75c; /* 高級真鍮・ゴールド二重境界線 */
+    border-radius: 12px;
+    box-shadow: 
+        0 15px 35px rgba(0, 0, 0, 0.8),
+        inset 0 0 80px rgba(0, 0, 0, 0.7);
+    padding: 4px 8px;
+    box-sizing: border-box;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 木目調の立体エッジ枠をシミュレートするシャドウレイヤー */
+#poker-game-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    pointer-events: none;
+}
+
+.poker-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 2px;
+    border-bottom: 1px solid rgba(223, 183, 92, 0.3);
+    padding-bottom: 2px;
+    flex-shrink: 0;
+}
+
+.poker-header h2 {
+    font-size: clamp(14px, 2.2vh, 18px);
+    margin: 0;
+    text-shadow: 0 0 8px rgba(223, 183, 92, 0.6);
+    letter-spacing: 1px;
+}
+
+/* 資金状況・ATM・借金情報の統一ステータスパネル */
+.poker-status-panel {
+    display: flex;
+    justify-content: space-around;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(223, 183, 92, 0.2);
+    border-radius: 6px;
+    padding: 2px 6px;
+    margin-bottom: 4px;
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+    box-sizing: border-box;
+    flex-shrink: 0;
+}
+
+.status-item {
+    text-align: center;
+    flex: 1;
+}
+
+.status-label {
+    font-size: 8px;
+    color: #bfa15f;
+    text-transform: uppercase;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    margin-bottom: 1px;
+}
+
+.status-value {
+    font-size: clamp(11px, 1.6vh, 15px);
+    font-weight: 700;
+    color: #ffffff;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+}
+
+#poker-bet.status-value {
+    color: #ffd700;
+    text-shadow: 0 0 6px rgba(255, 215, 0, 0.4);
+}
+
+/* ==========================================================================
+   2. PAYOUT TABLE (配当表グリッド - スマホ・小画面での非表示処理)
+   ========================================================================== */
+.payout-table-summary {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px 4px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 4px 6px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    width: 100%;
+    box-sizing: border-box;
+    flex-shrink: 1;
+    min-height: 0;
+    overflow-y: auto;
+    max-height: 18dvh;
+}
+
+/* モバイル環境・画面高さが足りない環境では役一覧を非表示化してカードとボタン領域を最大化 */
+@media (max-width: 768px), (max-height: 700px) {
+    .payout-table-summary {
+        display: none !important;
+    }
+}
+
+.payout-item {
+    font-size: clamp(8px, 1vh, 10px);
+    padding: 2px 4px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    justify-content: space-between;
+    transition: all 0.3s ease;
+    color: #cccccc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.payout-item.active-win {
+    background: linear-gradient(135deg, rgba(223, 183, 92, 0.3) 0%, rgba(223, 183, 92, 0.1) 100%);
+    border-color: #ffd700;
+    color: #ffd700;
+    font-weight: bold;
+    animation: activePulse 1.5s infinite alternate;
+}
+
+@keyframes activePulse {
+    from {
+        box-shadow: 0 0 4px rgba(255, 215, 0, 0.2);
+        transform: scale(1);
+    }
+    to {
+        box-shadow: 0 0 12px rgba(255, 215, 0, 0.8);
+        transform: scale(1.02);
+    }
+}
+
+/* ==========================================================================
+   3. CARDS DISPLAY AREA (トランプカードとHOLD演出)
+   ========================================================================== */
+.poker-cards-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 2%;
+    width: 100%;
+    max-width: 680px;
+    margin: 2px auto;
+    box-sizing: border-box;
+    perspective: 1200px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.poker-card-slot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 18%;
+    max-width: 110px;
+    aspect-ratio: 2.2 / 3.2;
+    position: relative;
+    cursor: pointer;
+    touch-action: manipulation;
+    /* 画面高さに合わせたフォントサイズ調整軸 */
+    font-size: clamp(4px, 1dvh, 10px);
+}
+
+.card-wrapper-3d {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.2);
+}
+
+.card-wrapper-3d.flipped {
+    transform: rotateY(180deg);
+}
+
+.card-inner {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    transform-style: preserve-3d;
+}
+
+.card-front, .card-back {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    backface-visibility: hidden;
+    border-radius: 0.4em;
+    box-shadow: 0 0.3em 0.8em rgba(0, 0, 0, 0.5);
+    box-sizing: border-box;
+}
+
+.card-back {
+    background: linear-gradient(135deg, #b71c1c 0%, #7f0000 100%);
+    border: 0.2em solid #ffffff;
+    box-shadow: inset 0 0 0.4em rgba(0, 0, 0, 0.5);
+}
+
+.card-front {
+    background: #ffffff;
+    background-image: radial-gradient(#ffffff 60%, #f5f5f5 100%);
+    color: #000000;
+    transform: rotateY(180deg);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 0.4em;
+    border: 1px solid #dddddd;
+}
+
+.card-front.suit-H, .card-front.suit-D { color: #d32f2f; }
+.card-front.suit-S, .card-front.suit-C { color: #212121; }
+
+.card-corner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 1.1em;
+    font-weight: bold;
+    line-height: 1.1;
+}
+
+.card-corner.top-left { align-self: flex-start; }
+.card-corner.bottom-right { align-self: flex-end; transform: rotate(180deg); }
+
+.card-center {
+    font-size: 2.2em;
+    align-self: center;
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+}
+
+.poker-card-slot.held .card-wrapper-3d.flipped {
+    transform: translateY(-0.8em) rotateY(180deg);
+}
+
+.poker-card-slot.held .card-wrapper-3d {
+    transform: translateY(-0.8em) rotateY(0deg);
+}
+
+.poker-card-slot.held .card-front {
+    box-shadow: 
+        0 0 8px #ffd700,
+        0 0 20px rgba(255, 215, 0, 0.6),
+        0 6px 16px rgba(0, 0, 0, 0.6);
+    border: 2px solid #ffd700;
+}
+
+.hold-indicator {
+    margin-top: 2px;
+    font-size: 0.8em;
+    font-weight: 900;
+    color: #ffd700;
+    text-shadow: 0 0 4px rgba(255, 215, 0, 0.8);
+    background: linear-gradient(180deg, #1d211e 0%, #060806 100%);
+    padding: 1px 6px;
+    border-radius: 4px;
+    border: 1px solid #ffd700;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    opacity: 0;
+    transform: translateY(-3px);
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.poker-card-slot.held .hold-indicator {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* ==========================================================================
+   4. CONTROLS & CHIPS AREA (最下端ピタ吸着・完全露出構造)
+   ========================================================================== */
+.poker-controls {
+    width: 100%;
+    flex-shrink: 0;
+    margin-top: auto; /* 最下端に確実に密着固定 */
+    padding: 4px 0;
+    padding-bottom: env(safe-area-inset-bottom, 4px);
+}
+
+.poker-bet-panel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+.chip-selector {
+    display: flex;
+    gap: 4px;
+}
+
+.chip-btn {
+    width: clamp(34px, 4.5vh, 42px);
+    height: clamp(34px, 4.5vh, 42px);
+    border-radius: 50%;
+    border: 2px dashed rgba(255, 255, 255, 0.8);
+    color: #ffffff;
+    font-weight: 900;
+    font-size: 10px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+    box-shadow: 
+        0 3px 6px rgba(0,0,0,0.5),
+        inset 0 0 5px rgba(255,255,255,0.3);
+    touch-action: manipulation;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.chip-btn[data-value="10"] { background: radial-gradient(circle, #2980b9 0%, #1c547a 100%); border-color: #a9cbe2; }
+.chip-btn[data-value="50"] { background: radial-gradient(circle, #c0392b 0%, #832217 100%); border-color: #f5b0a7; }
+.chip-btn[data-value="100"] { background: radial-gradient(circle, #27ae60 0%, #145a32 100%); border-color: #a3e4d7; }
+.chip-btn[data-value="500"] { background: radial-gradient(circle, #8e44ad 0%, #512268 100%); border-color: #d7bde2; }
+.chip-btn[data-value="1000"] { background: radial-gradient(circle, #f39c12 0%, #b77c12 100%); border-color: #fdedec; color: #212121; text-shadow: none; }
+
+@media (hover: hover) {
+    .chip-btn:hover:not(:disabled) {
+        transform: scale(1.1) translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0,0,0,0.6);
+    }
+}
+
+.chip-btn.selected {
+    border: 3px solid #ffd700;
+    box-shadow: 0 0 12px #ffd700, 0 3px 6px rgba(0,0,0,0.5);
+    transform: scale(1.1) translateY(-2px);
+}
+
+.action-btn {
+    background: linear-gradient(180deg, #3a4f63 0%, #253340 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: clamp(10px, 1.3vh, 12px);
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 3px 5px rgba(0, 0, 0, 0.3);
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    touch-action: manipulation;
+}
+
+@media (hover: hover) {
+    .action-btn:hover:not(:disabled) {
+        background: linear-gradient(180deg, #4b6680 0%, #304253 100%);
+        box-shadow: 0 5px 10px rgba(0,0,0,0.4);
+    }
+}
+
+.action-btn:active:not(:disabled) {
+    transform: translateY(1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.action-btn:disabled {
+    background: #444444 !important;
+    border-color: #555555;
+    color: #888888;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: none !important;
+}
+
+.action-row {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+}
+
+.btn-deal {
+    background: linear-gradient(180deg, #2ecc71 0%, #27ae60 100%);
+    border: 1px solid #27ae60;
+    font-size: clamp(14px, 2.2vh, 18px);
+    padding: 6px 12px;
+    flex-grow: 1;
+    min-height: 42px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.btn-draw {
+    background: linear-gradient(180deg, #3498db 0%, #2980b9 100%);
+    border: 1px solid #2980b9;
+    font-size: clamp(14px, 2.2vh, 18px);
+    padding: 6px 12px;
+    flex-grow: 1;
+    min-height: 42px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* ==========================================================================
+   5. MESSAGE BAR
+   ========================================================================== */
+.message-bar {
+    background: rgba(0, 0, 0, 0.7);
+    color: #e5e5e5;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: clamp(10px, 1.3vh, 12px);
+    font-weight: 500;
+    text-align: center;
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 4px;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-left: 4px solid #dfb75c;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
+    flex-shrink: 0;
+}
+
+.result-bounce {
+    animation: bounceIn 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+@keyframes bounceIn {
+    0% { transform: scale(0.3); opacity: 0; }
+    50% { transform: scale(1.08); opacity: 0.9; }
+    70% { transform: scale(0.92); opacity: 0.95; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* ==========================================================================
+   6. RESPONSIVE DESIGN (小画面最適化)
+   ========================================================================== */
+@media (max-width: 480px) {
+    #poker-game-wrapper {
+        padding: 4px 6px;
+    }
+
+    .poker-bet-panel {
+        margin-bottom: 4px;
+        gap: 4px;
+    }
+
+    .chip-selector {
+        width: 100%;
+        justify-content: space-around;
+    }
+
+    .chip-btn {
+        width: 34px;
+        height: 34px;
+        font-size: 9px;
+    }
+
+    .action-btn {
+        padding: 4px 6px;
+        min-height: 36px;
+    }
+}

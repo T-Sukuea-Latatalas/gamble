@@ -1,0 +1,332 @@
+@charset "utf-8";
+
+/* ==========================================================================
+   想定されるHTML構造（参考）
+   ==========================================================================
+   <div class="atm-overlay">
+     <div class="atm-modal">
+       
+       <header class="atm-header">
+         <h1 class="atm-title">ATM PORTAL SYSTEM / ご利用メニュー</h1>
+       </header>
+       
+       <div class="atm-status-card">
+         <div class="status-item">
+           <span class="status-label">
+             手元資金 <small>CASH ON HAND</small>
+           </span>
+           <span class="status-value value-white">$100,000</span>
+         </div>
+         <div class="status-item">
+           <span class="status-label">
+             借金残高 <small>DEBT / LOAN</small>
+           </span>
+           <span class="status-value value-red">$50,000</span>
+         </div>
+         <div class="status-item">
+           <span class="status-label">
+             預金残高 <small>ATM SAVINGS</small>
+           </span>
+           <span class="status-value value-gold">$1,200,000</span>
+         </div>
+       </div>
+       
+       <div class="atm-menu">
+         <button class="atm-btn btn-deposit">預け入れ (DEPOSIT)</button>
+         <button class="atm-btn btn-withdraw">引き出し (WITHDRAW)</button>
+         <button class="atm-btn btn-repay">ローン返済 (REPAY DEBT)</button>
+         <button class="atm-btn btn-borrow">新規融資 (BORROW CASH)</button>
+         <button class="atm-btn btn-exit">取引終了 (EXIT)</button>
+       </div>
+
+     </div>
+   </div>
+   ========================================================================== */
+
+/* --- 変数定義 --- */
+:root {
+  --color-gold: #ffd700;
+  --color-gold-glow: rgba(255, 215, 0, 0.35);
+  --color-neon-red: #ff4d4d;
+  --color-neon-red-glow: rgba(255, 77, 77, 0.5);
+  --color-emerald-deep: #062c1a;
+  --color-bg-dark: #050a07;
+  --color-card-bg: rgba(0, 0, 0, 0.65);
+  --font-family-base: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", sans-serif;
+  --font-family-money: "Courier New", Courier, monospace;
+}
+
+/* --- 全体像（モーダルオーバーレイ） --- */
+.atm-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1500; /* テンキー（z-index: 2000）より下、かつ通常ゲーム画面より上に配置 */
+  font-family: var(--font-family-base);
+  box-sizing: border-box;
+  padding: 16px;
+}
+
+.atm-modal {
+  width: 100%;
+  max-width: 540px;
+  background: linear-gradient(135deg, var(--color-emerald-deep) 0%, var(--color-bg-dark) 100%);
+  border: 6px double var(--color-gold);
+  border-radius: 16px;
+  box-shadow: 0 0 35px var(--color-gold-glow), inset 0 0 15px rgba(0, 0, 0, 0.8);
+  padding: clamp(1.5rem, 4vw, 2.5rem);
+  box-sizing: border-box;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 背景にカジノの高級感を出すためのうっすらとしたグリッド模様（装飾） */
+.atm-modal::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* コンテンツをグリッドパターンの上に表示するため */
+.atm-header,
+.atm-status-card,
+.atm-menu {
+  position: relative;
+  z-index: 2;
+}
+
+/* --- ヘッダーエリア --- */
+.atm-header {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.atm-title {
+  color: var(--color-gold);
+  font-size: clamp(1.1rem, 3.5vw, 1.4rem);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin: 0;
+  text-shadow: 0 0 8px var(--color-gold-glow), 0 0 15px var(--color-gold-glow);
+  border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+  padding-bottom: 0.75rem;
+  display: inline-block;
+  width: 100%;
+}
+
+/* --- ステータスカード（中央の残高情報表示エリア） --- */
+.atm-status-card {
+  background-color: var(--color-card-bg);
+  border: 1px solid var(--color-gold);
+  border-radius: 12px;
+  padding: 1.25rem clamp(1rem, 3vw, 1.5rem);
+  margin-bottom: 2rem;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.status-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px dashed rgba(255, 215, 0, 0.15);
+  padding-bottom: 0.75rem;
+}
+
+.status-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.status-label {
+  font-size: clamp(0.75rem, 2.5vw, 0.85rem);
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.3;
+  font-weight: bold;
+}
+
+.status-label small {
+  display: block;
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+  opacity: 0.6;
+}
+
+.status-value {
+  font-family: var(--font-family-money);
+  font-size: clamp(1.1rem, 3.5vw, 1.4rem);
+  font-weight: bold;
+  text-align: right;
+}
+
+/* 各ステータスの文字色定義 */
+.value-white {
+  color: #ffffff;
+  text-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+}
+
+.value-red {
+  color: var(--color-neon-red);
+  text-shadow: 0 0 8px var(--color-neon-red-glow);
+}
+
+.value-gold {
+  color: var(--color-gold);
+  text-shadow: 0 0 8px var(--color-gold-glow);
+}
+
+/* --- メニューボタン群（下部のアクションボタン） --- */
+.atm-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  align-items: center;
+  width: 100%;
+}
+
+.atm-btn {
+  width: 100%;
+  max-width: 380px;
+  padding: 0.85rem 1.5rem;
+  background-color: #1a1f1c;
+  border: 2px solid #3a423d;
+  border-radius: 50px; /* あつ森ライクな丸角ボタン */
+  color: #e0e0e0;
+  font-size: clamp(0.85rem, 2.8vw, 0.95rem);
+  font-weight: bold;
+  text-align: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  outline: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+/* ホバー/アクティブ時のベース変化 */
+.atm-btn:not(:disabled):not(.disabled):hover {
+  background-color: var(--color-gold);
+  border-color: var(--color-gold);
+  color: #050a07;
+  box-shadow: 0 0 15px var(--color-gold-glow);
+  transform: translateY(-1px);
+}
+
+.atm-btn:not(:disabled):not(.disabled):active {
+  transform: translateY(1px);
+}
+
+/* トランプマークインジケータの設定（疑似要素） */
+.atm-btn::before {
+  position: absolute;
+  left: 1.5rem;
+  opacity: 0;
+  transform: scale(0.5) translateX(-10px);
+  transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  font-size: 1.1rem;
+}
+
+/* ボタンごとに異なるスート（マーク）を割り当て */
+.btn-deposit::before { content: "♠"; }
+.btn-withdraw::before { content: "♦"; color: var(--color-neon-red); }
+.btn-repay::before { content: "♣"; }
+.btn-borrow::before { content: "♥"; color: var(--color-neon-red); }
+.btn-exit::before { content: "♠"; }
+
+/* ホバー時にインジケータを表示し、テキストを少し右に寄せてバランスを取る */
+.atm-btn:not(:disabled):not(.disabled):hover::before {
+  opacity: 1;
+  transform: scale(1) translateX(0);
+}
+
+/* ホバー時にマークの色がボタン背景に埋もれないよう、黒に統一 */
+.atm-btn:not(:disabled):not(.disabled):hover::before {
+  color: #050a07 !important;
+}
+
+/* --- 取引終了 (EXIT) ボタンの個別調整 --- */
+.atm-btn.btn-exit {
+  border-color: rgba(255, 77, 77, 0.6);
+  color: var(--color-neon-red);
+  margin-top: 0.5rem; /* 終了ボタンを一歩離して配置 */
+}
+
+.atm-btn.btn-exit:not(:disabled):not(.disabled):hover {
+  background-color: var(--color-neon-red);
+  border-color: var(--color-neon-red);
+  color: #ffffff;
+  box-shadow: 0 0 15px var(--color-neon-red-glow);
+}
+
+.atm-btn.btn-exit:not(:disabled):not(.disabled):hover::before {
+  color: #ffffff !important;
+}
+
+/* --- あつ森準拠：無効（disabled）状態のスタイル --- */
+.atm-btn:disabled,
+.atm-btn.disabled {
+  opacity: 0.35;
+  background-color: #0d120f;
+  border-color: #2a302c;
+  color: #555555;
+  cursor: not-allowed;
+  pointer-events: none; /* すべてのインタラクション（ホバー・クリック）を無効化 */
+  box-shadow: none;
+  transform: none;
+}
+
+/* 無効時のトランプマーク表示を完全に遮断 */
+.atm-btn:disabled::before,
+.atm-btn.disabled::before {
+  display: none !important;
+}
+
+/* --- レスポンシブ対応 (モバイル縦画面：幅480px以下) --- */
+@media (max-width: 480px) {
+  .atm-overlay {
+    padding: 10px;
+  }
+
+  .atm-modal {
+    padding: 1.25rem 1rem;
+    border-width: 4px; /* モバイル向けに枠線をやや細く */
+  }
+
+  .atm-status-card {
+    padding: 1rem 0.75rem;
+    margin-bottom: 1.5rem;
+    gap: 0.85rem;
+  }
+
+  .status-item {
+    padding-bottom: 0.6rem;
+  }
+
+  .atm-btn {
+    padding: 0.75rem 1rem;
+  }
+
+  /* 画面幅が狭い場合、トランプマークが重なるのを防ぐため、少し左余白を調整 */
+  .atm-btn::before {
+    left: 1rem;
+    font-size: 1rem;
+  }
+}
