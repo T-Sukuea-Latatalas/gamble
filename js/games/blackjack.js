@@ -26,10 +26,11 @@ const BlackjackGame = {
         
         window.CasinoNumpad.init(this.sfx);
 
-        // UIテーブルをビューポートへレンダリング (ATM表示を追加)
+        // UIテーブルをビューポートへレンダリング (ATM操作をヘッダーへ統合)
         this.container.innerHTML = `
-            <div class="blackjack-top-bar">
-                <button class="back-lobby-btn" id="btn-back-lobby">← LOBBY</button>
+            <div class="blackjack-top-bar" style="display: flex; justify-content: space-between; align-items: center; width: 100%; box-sizing: border-box; padding: 10px 15px;">
+                <button class="back-lobby-btn" id="btn-back-lobby" style="margin: 0;">← LOBBY</button>
+                <button class="action-btn" id="btn-atm-trigger" style="background: linear-gradient(135deg, #ffd700, #ffa500); color: #000; font-weight: bold; padding: 6px 15px; border-radius: 4px; font-size: 0.9rem; border: none; cursor: pointer; margin: 0; display: inline-block;">ATM</button>
             </div>
             <div class="header">
                 <h1>♠ Blackjack Classic ♦</h1>
@@ -71,6 +72,7 @@ const BlackjackGame = {
         document.getElementById('btn-stand').addEventListener('click', () => this.stand());
         document.getElementById('btn-double').addEventListener('click', () => this.doubleDown());
         document.getElementById('btn-split').addEventListener('click', () => this.split());
+        document.getElementById('btn-atm-trigger').addEventListener('click', () => this.handleAtmTrigger());
 
         // デッキ再生成とゲーム状態初期化
         this.deck = this.createDeck();
@@ -211,24 +213,24 @@ const BlackjackGame = {
         });
     },
 
-    atmDeposit() {
+    // ATMトリガーの管理
+    handleAtmTrigger() {
         this.sfx.init();
         if (this.gameState !== 'betting' || this.isProcessing) return;
-        window.CasinoNumpad.open('atm_deposit', () => {
-            this.checkBetValidity();
-            this.updateUI();
-            this.syncCloudNetWorth();
-        });
-    },
-
-    atmWithdraw() {
-        this.sfx.init();
-        if (this.gameState !== 'betting' || this.isProcessing) return;
-        window.CasinoNumpad.open('atm_withdraw', () => {
-            this.checkBetValidity();
-            this.updateUI();
-            this.syncCloudNetWorth();
-        });
+        const choice = prompt("ATMメニュー:\n預金するには「1」、引き出すには「2」を入力してください。\n(キャンセルする場合はそのまま閉じてください)");
+        if (choice === "1") {
+            window.CasinoNumpad.open('atm_deposit', () => {
+                this.checkBetValidity();
+                this.updateUI();
+                this.syncCloudNetWorth();
+            });
+        } else if (choice === "2") {
+            window.CasinoNumpad.open('atm_withdraw', () => {
+                this.checkBetValidity();
+                this.updateUI();
+                this.syncCloudNetWorth();
+            });
+        }
     },
 
     numpadBet() {
@@ -902,7 +904,6 @@ const BlackjackGame = {
 
         const bankroll = window.CasinoStorage.getBankroll();
         const debt = window.CasinoStorage.getDebt();
-        const atm = window.CasinoStorage.getAtm();
 
         CHIP_VALUES.forEach(val => {
             if (val <= bankroll) {
@@ -951,23 +952,6 @@ const BlackjackGame = {
         repayBtn.disabled = (this.gameState !== 'betting' || this.isProcessing || debt <= 0 || bankroll <= 0);
         chipArea.appendChild(repayBtn);
 
-        // ATM 預金 / 引き出しボタンを追加
-        const atmDepBtn = document.createElement('button');
-        atmDepBtn.className = 'action-btn atm-dep-btn';
-        atmDepBtn.id = 'btn-atm-dep';
-        atmDepBtn.textContent = 'ATM DEP';
-        atmDepBtn.onclick = () => this.atmDeposit();
-        atmDepBtn.disabled = (this.gameState !== 'betting' || this.isProcessing || bankroll < 1000);
-        chipArea.appendChild(atmDepBtn);
-
-        const atmWdlBtn = document.createElement('button');
-        atmWdlBtn.className = 'action-btn atm-wdl-btn';
-        atmWdlBtn.id = 'btn-atm-wdl';
-        atmWdlBtn.textContent = 'ATM WDL';
-        atmWdlBtn.onclick = () => this.atmWithdraw();
-        atmWdlBtn.disabled = (this.gameState !== 'betting' || this.isProcessing || atm <= 0);
-        chipArea.appendChild(atmWdlBtn);
-
         const numpadBetBtn = document.createElement('button');
         numpadBetBtn.className = 'action-btn numpad-bet-btn';
         numpadBetBtn.id = 'btn-numpad-bet';
@@ -1001,6 +985,11 @@ const BlackjackGame = {
         const btnStand = document.getElementById('btn-stand');
         const btnDouble = document.getElementById('btn-double');
         const btnSplit = document.getElementById('btn-split');
+        const btnAtmTrigger = document.getElementById('btn-atm-trigger');
+
+        if (btnAtmTrigger) {
+            btnAtmTrigger.disabled = (this.gameState !== 'betting' || this.isProcessing);
+        }
 
         if (!btnDeal) return;
 
