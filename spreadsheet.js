@@ -11,9 +11,9 @@ const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzUjFUO4ZqCHsxcgsMN
  * 1. 現在のプレイヤーデータをスプレッドシートへ送信（送信後に最新ランキングも取得）
  */
 async function sendDataToSpreadsheet() {
-  // URLが未設定、または初期ダミー文字列の場合のみ通信をスキップ
-  if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("https://script.google.com/macros/s/AKfycbzUjFUO4ZqCHsxcgsMNow_jUzkgUz-Tj7zvzv4_NNHccXQ5w2rTZ53puhnvNHi36qFJLw/exec") || GAS_API_URL.includes("YOUR_GAS")) {
-    console.log("【スプレッドシート未連携】GAS_API_URL が設定されていないためオンライン更新をスキップします。");
+  // ★バグ修正: URLが未設定、またはダミー表示用の文字が入っている場合のみ通信をスキップ
+  if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("ここに") || GAS_API_URL.includes("YOUR_GAS")) {
+    console.log("【スプレッドシート未連携】GAS_API_URL が設定されていないため、処理をスキップします。");
     return;
   }
 
@@ -64,8 +64,9 @@ async function sendDataToSpreadsheet() {
  * 2. スプレッドシートから最新のランキングデータを取得して画面に反映
  */
 async function fetchRankingFromSpreadsheet() {
-  if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("https://script.google.com/macros/s/AKfycbzUjFUO4ZqCHsxcgsMNow_jUzkgUz-Tj7zvzv4_NNHccXQ5w2rTZ53puhnvNHi36qFJLw/exec") || GAS_API_URL.includes("YOUR_GAS")) {
-    console.log("【スプレッドシート未連携】GAS_API_URL が未設定のためランキング取得をスキップします。");
+  // ★バグ修正: URLが未設定、またはダミー表示用の文字が入っている場合のみ通信をスキップ
+  if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("ここに") || GAS_API_URL.includes("YOUR_GAS")) {
+    console.log("【スプレッドシート未連携】GAS_API_URL が設定されていないため、処理をスキップします。");
     return;
   }
 
@@ -79,6 +80,7 @@ async function fetchRankingFromSpreadsheet() {
     }
 
     const rankings = await response.json();
+    console.log("最新ランキングデータ取得成功:", rankings);
 
     // 各ランキングの描画
     updateRankingList('ranking-net-worth', rankings.netWorth, 'netWorth');
