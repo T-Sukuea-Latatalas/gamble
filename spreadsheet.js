@@ -9,11 +9,14 @@ const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzUjFUO4ZqCHsxcgsMN
 
 /**
  * 1. 現在のプレイヤーデータをスプレッドシートへ送信（送信後に最新ランキングも取得）
+ * @param {boolean} isManualTest 手動テストボタンからの呼び出しかどうか
  */
-async function sendDataToSpreadsheet() {
+async function sendDataToSpreadsheet(isManualTest = false) {
   // ★バグ修正: URLが未設定、またはダミー表示用の文字が入っている場合のみ通信をスキップ
   if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("ここに") || GAS_API_URL.includes("YOUR_GAS")) {
-    console.log("【スプレッドシート未連携】GAS_API_URL が設定されていないため、処理をスキップします。");
+    const msg = "【スプレッドシート未連携】GAS_API_URL が設定されていないため通信をスキップします。";
+    console.log(msg);
+    if (isManualTest) alert(msg);
     return;
   }
 
@@ -23,9 +26,10 @@ async function sendDataToSpreadsheet() {
       loadData();
     }
 
-    // playerData や userId の存在チェックを厳密に行う
     if (!window.playerData || !playerData.userId) {
-      console.warn("【スプレッドシート送信スキップ】プレイヤーデータが未初期化のため一時待機します。");
+      const msg = "【送信キャンセル】プレイヤーデータが未初期化です。";
+      console.warn(msg);
+      if (isManualTest) alert(msg);
       return;
     }
 
@@ -37,7 +41,7 @@ async function sendDataToSpreadsheet() {
       highScores: playerData.highScores || { blackjack: 0, slots: 0, roulette: 0, poker: 0 }
     };
 
-    console.log("スプレッドシートへ送信中...:", payload);
+    console.log("【スプレッドシートへ送信中データ】", payload);
 
     const response = await fetch(GAS_API_URL, {
       method: "POST",
@@ -46,17 +50,24 @@ async function sendDataToSpreadsheet() {
     });
 
     if (!response.ok) {
-      throw new Error(`送信エラー Status: ${response.status}`);
+      throw new Error(`送信エラー HTTP Status: ${response.status}`);
     }
 
     const result = await response.json();
     console.log("スプレッドシート送信成功結果:", result);
+
+    if (isManualTest) {
+      alert(`⚡ スプレッドシート通信成功！\n\nレスポンス: ${result.status}\nメッセージ: ${result.message || 'データが正しく反映されました。'}`);
+    }
 
     // 送信成功後、最新ランキングを取得して画面を再描画
     fetchRankingFromSpreadsheet();
 
   } catch (error) {
     console.error("スプレッドシートへのデータ送信に失敗しました:", error);
+    if (isManualTest) {
+      alert(`❌ 通信エラーが発生しました！\n\nエラー内容:\n${error.message}`);
+    }
   }
 }
 
@@ -64,7 +75,6 @@ async function sendDataToSpreadsheet() {
  * 2. スプレッドシートから最新のランキングデータを取得して画面に反映
  */
 async function fetchRankingFromSpreadsheet() {
-  // ★バグ修正: URLが未設定、またはダミー表示用の文字が入っている場合のみ通信をスキップ
   if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("ここに") || GAS_API_URL.includes("YOUR_GAS")) {
     console.log("【スプレッドシート未連携】GAS_API_URL が設定されていないため、処理をスキップします。");
     return;
@@ -177,33 +187,40 @@ function updateRankingList(elementId, listData, valueKey) {
 }
 
 /**
- * 4. ★ 読み込み順バグの完全対策 ★
- * 全てのゲームスクリプトがロード完了した後に saveData 関数を上書き・拡張します
+ * 4. ★ 読み込み順バグ対策 ＆ テストボタン登録 ★
  */
 let isSaveDataHooked = false;
 
 function applySaveDataHook() {
-  if (isSaveDataHooked) return; // 二重フック防止
+  if (isSaveDataHooked) return;
 
   if (typeof saveData === 'function') {
     const originalSaveData = saveData;
 
     saveData = function() {
-      // 1. 本来のローカルストレージ保存を実行
-      originalSaveData();
-      
-      // 2. スプレッドシートへ自動送信
-      sendDataToSpreadsheet();
+      originalSaveData();       // ローカルストレージに保存
+      sendDataToSpreadsheet();  // スプレッドシートへ自動送信
     };
 
     isSaveDataHooked = true;
-    console.log("【スプレッドシート連携】セーブフックを完了しました。データ変更時に自動送信されます。");
+    console.log("【スプレッドシート連携】セーブフックを完了しました。");
   }
 }
 
-// 画面のすべてのファイルが完全に読み込まれたタイミング（load）で確実に実行
+// テストボタンのイベント登録
+function setupTestButton() {
+  const testBtn = document.getElementById('test-spreadsheet-btn');
+  if (testBtn) {
+    testBtn.addEventListener('click', () => {
+      sendDataToSpreadsheet(true); // 手動テスト実行（alert表示ON）
+    });
+  }
+}
+
+// 画面読み込み完了時に実行
 window.addEventListener('load', () => {
   applySaveDataHook();
+  setupTestButton();
 
   // ランキングを初回取得
   setTimeout(() => {
