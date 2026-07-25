@@ -4,15 +4,62 @@
  * ==========================================
  */
 
+// LocalStorageの共通キー名
+const SPREADSHEET_STORAGE_KEY = 'fever_casino_player_data';
+
 // ★デプロイ後に発行された「Web アプリの URL」を貼り付けます
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzUjFUO4ZqCHsxcgsMNow_jUzkgUz-Tj7zvzv4_NNHccXQ5w2rTZ53puhnvNHi36qFJLw/exec";
+
+/**
+ * プレイヤーデータが存在しない場合に自動生成・復旧する安全関数
+ */
+function ensurePlayerDataInitialized() {
+  if (!window.playerData) {
+    window.playerData = {
+      userId: '',
+      userName: 'ゲストプレイヤー',
+      cash: 1000,
+      bank: 0,
+      debt: 0,
+      debtPlayCount: 0,
+      highScores: { blackjack: 0, slots: 0, roulette: 0, poker: 0 }
+    };
+  }
+
+  // LocalStorageからの読み込みを試みる
+  try {
+    const saved = localStorage.getItem(SPREADSHEET_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      window.playerData = { ...window.playerData, ...parsed };
+    }
+  } catch (e) {
+    console.error("セーブデータの復元に失敗しました:", e);
+  }
+
+  // それでも userId が空の場合は、自動で一意のユーザーIDを生成して保存（自動修復）
+  if (!window.playerData.userId || String(window.playerData.userId).trim() === '') {
+    if (window.crypto && window.crypto.randomUUID) {
+      window.playerData.userId = window.crypto.randomUUID();
+    } else {
+      window.playerData.userId = 'user_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9);
+    }
+
+    try {
+      localStorage.setItem(SPREADSHEET_STORAGE_KEY, JSON.stringify(window.playerData));
+      console.log("【自動初期化完了】新しいユーザーIDを発行・保存しました:", window.playerData.userId);
+    } catch (e) {
+      console.error("初期化データの保存に失敗しました:", e);
+    }
+  }
+}
 
 /**
  * 1. 現在のプレイヤーデータをスプレッドシートへ送信（送信後に最新ランキングも取得）
  * @param {boolean} isManualTest 手動テストボタンからの呼び出しかどうか
  */
 async function sendDataToSpreadsheet(isManualTest = false) {
-  // ★バグ修正: URLが未設定、またはダミー表示用の文字が入っている場合のみ通信をスキップ
+  // URLが未設定、またはダミー表示用の文字が入っている場合のみ通信をスキップ
   if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("ここに") || GAS_API_URL.includes("YOUR_GAS")) {
     const msg = "【スプレッドシート未連携】GAS_API_URL が設定されていないため通信をスキップします。";
     console.log(msg);
@@ -21,17 +68,8 @@ async function sendDataToSpreadsheet(isManualTest = false) {
   }
 
   try {
-    // playerDataのロード確認（未初期化の場合は安全にロードを試みる）
-    if (typeof loadData === 'function' && (!window.playerData || !playerData.userId)) {
-      loadData();
-    }
-
-    if (!window.playerData || !playerData.userId) {
-      const msg = "【送信キャンセル】プレイヤーデータが未初期化です。";
-      console.warn(msg);
-      if (isManualTest) alert(msg);
-      return;
-    }
+    // ★ プレイヤーデータの自動初期化・チェックを実行 ★
+    ensurePlayerDataInitialized();
 
     const netWorth = (Number(playerData.cash) || 0) + (Number(playerData.bank) || 0) - (Number(playerData.debt) || 0);
     const payload = {
@@ -187,7 +225,7 @@ function updateRankingList(elementId, listData, valueKey) {
 }
 
 /**
- * 4. ★ 読み込み順バグ対策 ＆ テストボタン登録 ★
+ * 4. セーブ処理 (saveData) が実行されたら自動でスプレッドシートにも送信するフック処理
  */
 let isSaveDataHooked = false;
 
@@ -219,6 +257,7 @@ function setupTestButton() {
 
 // 画面読み込み完了時に実行
 window.addEventListener('load', () => {
+  ensurePlayerDataInitialized();
   applySaveDataHook();
   setupTestButton();
 
