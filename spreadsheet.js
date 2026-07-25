@@ -11,30 +11,33 @@ const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzUjFUO4ZqCHsxcgsMN
  * 1. 現在のプレイヤーデータをスプレッドシートへ送信（送信後に最新ランキングも取得）
  */
 async function sendDataToSpreadsheet() {
-  // ★バグ修正: URLが未設定、または初期ダミー文字列の場合のみ通信をスキップ
-  if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("ここにGAS") || GAS_API_URL.includes("YOUR_GAS")) {
+  // URLが未設定、または初期ダミー文字列の場合のみ通信をスキップ
+  if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("https://script.google.com/macros/s/AKfycbzUjFUO4ZqCHsxcgsMNow_jUzkgUz-Tj7zvzv4_NNHccXQ5w2rTZ53puhnvNHi36qFJLw/exec") || GAS_API_URL.includes("YOUR_GAS")) {
     console.log("【スプレッドシート未連携】GAS_API_URL が設定されていないためオンライン更新をスキップします。");
     return;
   }
 
   try {
-    // playerDataの読み込み確認（未ロード時は安全にロードを試みる）
+    // playerDataのロード確認（未初期化の場合は安全にロードを試みる）
     if (typeof loadData === 'function' && (!window.playerData || !playerData.userId)) {
       loadData();
     }
 
+    // playerData や userId の存在チェックを厳密に行う
     if (!window.playerData || !playerData.userId) {
-      console.warn("プレイヤーデータが未初期化のため、スプレッドシート送信を一時待機します。");
+      console.warn("【スプレッドシート送信スキップ】プレイヤーデータが未初期化のため一時待機します。");
       return;
     }
 
-    const netWorth = (playerData.cash || 0) + (playerData.bank || 0) - (playerData.debt || 0);
+    const netWorth = (Number(playerData.cash) || 0) + (Number(playerData.bank) || 0) - (Number(playerData.debt) || 0);
     const payload = {
       userId: playerData.userId,
       userName: playerData.userName || "ゲスト",
       netWorth: netWorth,
       highScores: playerData.highScores || { blackjack: 0, slots: 0, roulette: 0, poker: 0 }
     };
+
+    console.log("スプレッドシートへ送信中...:", payload);
 
     const response = await fetch(GAS_API_URL, {
       method: "POST",
@@ -47,9 +50,9 @@ async function sendDataToSpreadsheet() {
     }
 
     const result = await response.json();
-    console.log("スプレッドシート送信結果:", result);
+    console.log("スプレッドシート送信成功結果:", result);
 
-    // 送信成功後、最新ランキングを取得して描画
+    // 送信成功後、最新ランキングを取得して画面を再描画
     fetchRankingFromSpreadsheet();
 
   } catch (error) {
@@ -61,8 +64,7 @@ async function sendDataToSpreadsheet() {
  * 2. スプレッドシートから最新のランキングデータを取得して画面に反映
  */
 async function fetchRankingFromSpreadsheet() {
-  // ★バグ修正: URLが未設定、または初期ダミー文字列の場合のみ通信をスキップ
-  if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("ここにGAS") || GAS_API_URL.includes("YOUR_GAS")) {
+  if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("https://script.google.com/macros/s/AKfycbzUjFUO4ZqCHsxcgsMNow_jUzkgUz-Tj7zvzv4_NNHccXQ5w2rTZ53puhnvNHi36qFJLw/exec") || GAS_API_URL.includes("YOUR_GAS")) {
     console.log("【スプレッドシート未連携】GAS_API_URL が未設定のためランキング取得をスキップします。");
     return;
   }
@@ -173,23 +175,36 @@ function updateRankingList(elementId, listData, valueKey) {
 }
 
 /**
- * 4. 既存のセーブ処理 (saveData) が実行されたら自動でスプレッドシートにも送信するフック処理
+ * 4. ★ 読み込み順バグの完全対策 ★
+ * 全てのゲームスクリプトがロード完了した後に saveData 関数を上書き・拡張します
  */
-if (typeof saveData === 'function') {
-  const originalSaveData = saveData;
-  
-  saveData = function() {
-    originalSaveData();       // ローカルストレージに保存
-    sendDataToSpreadsheet();  // スプレッドシートへ自動送信
-  };
+let isSaveDataHooked = false;
+
+function applySaveDataHook() {
+  if (isSaveDataHooked) return; // 二重フック防止
+
+  if (typeof saveData === 'function') {
+    const originalSaveData = saveData;
+
+    saveData = function() {
+      // 1. 本来のローカルストレージ保存を実行
+      originalSaveData();
+      
+      // 2. スプレッドシートへ自動送信
+      sendDataToSpreadsheet();
+    };
+
+    isSaveDataHooked = true;
+    console.log("【スプレッドシート連携】セーブフックを完了しました。データ変更時に自動送信されます。");
+  }
 }
 
-/**
- * ページ読み込み完了時にランキングを取得
- */
-document.addEventListener('DOMContentLoaded', () => {
-  // playerDataの準備完了を確実に待ってからランキングを取得
+// 画面のすべてのファイルが完全に読み込まれたタイミング（load）で確実に実行
+window.addEventListener('load', () => {
+  applySaveDataHook();
+
+  // ランキングを初回取得
   setTimeout(() => {
     fetchRankingFromSpreadsheet();
-  }, 150);
+  }, 100);
 });
