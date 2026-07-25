@@ -17,7 +17,7 @@
   <div class="lobby-wrapper">
 
     <!-- ------------------------------------------
-         1. 左側：ランキングエリア
+         1. 左側：ランキングエリア (スワイプ型UI)
          ------------------------------------------ -->
     <aside class="ranking-sidebar">
       <h2>🏆 ランキング</h2>
@@ -29,9 +29,14 @@
           <input type="text" id="username-input" placeholder="名前を入力" value="ゲスト">
           <button id="change-username-btn" type="button">変更</button>
         </div>
+        
+        <!-- ★ デバッグ用：通信テストボタン ★ -->
+        <button id="test-spreadsheet-btn" class="test-spreadsheet-btn" type="button" style="margin-top: 8px; width: 100%; padding: 6px; background: #25352c; color: #dfb15b; border: 1px solid #dfb15b; border-radius: 4px; font-weight: bold; cursor: pointer;">
+          ⚡ スプレッドシート通信テスト
+        </button>
       </div>
 
-      <!-- ★ ランキング項目インジケーター（均一幅・横スライドナビ） ★ -->
+      <!-- ランキング項目インジケーター -->
       <div class="ranking-indicators-wrapper">
         <div class="ranking-indicators" id="ranking-indicators">
           <button class="indicator-btn active" data-index="0" type="button">純資産</button>
@@ -42,7 +47,7 @@
         </div>
       </div>
 
-      <!-- ★ スワイプ可能なランキングスライダーコンテナ ★ -->
+      <!-- スワイプ可能なランキングスライダーコンテナ -->
       <div class="ranking-slider-container">
         <div class="ranking-slider" id="ranking-slider">
           
@@ -114,7 +119,6 @@
             <span class="label">銀行貯金額:</span>
             <span id="bank-amount" class="value">$5,000</span>
           </div>
-          <!-- 借金額（赤文字指定用クラス追加） -->
           <div class="status-item">
             <span class="label">借金額:</span>
             <span id="debt-amount" class="value debt-value">$0</span>
