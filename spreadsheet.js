@@ -11,36 +11,40 @@ const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzUjFUO4ZqCHsxcgsMN
  * 1. 現在のプレイヤーデータをスプレッドシートへ送信（送信後に最新ランキングも取得）
  */
 async function sendDataToSpreadsheet() {
-  // ★バグ修正: URLが未設定、または初期ダミー文字列の場合のみスキップ
-  if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("https://script.google.com/macros/s/AKfycbzUjFUO4ZqCHsxcgsMNow_jUzkgUz-Tj7zvzv4_NNHccXQ5w2rTZ53puhnvNHi36qFJLw/exec")) {
+  // ★バグ修正: URLが未設定、または初期ダミー文字列の場合のみ通信をスキップ
+  if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("ここにGAS") || GAS_API_URL.includes("YOUR_GAS")) {
     console.log("【スプレッドシート未連携】GAS_API_URL が設定されていないためオンライン更新をスキップします。");
     return;
   }
 
-  // playerDataの読み込み確認
-  if (typeof loadData === 'function' && (!window.playerData || !playerData.userId)) {
-    loadData();
-  }
-
-  if (!window.playerData || !playerData.userId) {
-    console.warn("プレイヤーデータが未初期化のため、送信をスキップします。");
-    return;
-  }
-
-  const netWorth = (playerData.cash || 0) + (playerData.bank || 0) - (playerData.debt || 0);
-  const payload = {
-    userId: playerData.userId,
-    userName: playerData.userName || "ゲスト",
-    netWorth: netWorth,
-    highScores: playerData.highScores || { blackjack: 0, slots: 0, roulette: 0, poker: 0 }
-  };
-
   try {
+    // playerDataの読み込み確認（未ロード時は安全にロードを試みる）
+    if (typeof loadData === 'function' && (!window.playerData || !playerData.userId)) {
+      loadData();
+    }
+
+    if (!window.playerData || !playerData.userId) {
+      console.warn("プレイヤーデータが未初期化のため、スプレッドシート送信を一時待機します。");
+      return;
+    }
+
+    const netWorth = (playerData.cash || 0) + (playerData.bank || 0) - (playerData.debt || 0);
+    const payload = {
+      userId: playerData.userId,
+      userName: playerData.userName || "ゲスト",
+      netWorth: netWorth,
+      highScores: playerData.highScores || { blackjack: 0, slots: 0, roulette: 0, poker: 0 }
+    };
+
     const response = await fetch(GAS_API_URL, {
       method: "POST",
-      headers: { "Content-Type": "text/plain" },
+      headers: { "Content-Type": "text/plain" }, // GASの仕様に合わせた通信設定
       body: JSON.stringify(payload)
     });
+
+    if (!response.ok) {
+      throw new Error(`送信エラー Status: ${response.status}`);
+    }
 
     const result = await response.json();
     console.log("スプレッドシート送信結果:", result);
@@ -57,8 +61,9 @@ async function sendDataToSpreadsheet() {
  * 2. スプレッドシートから最新のランキングデータを取得して画面に反映
  */
 async function fetchRankingFromSpreadsheet() {
-  // ★バグ修正: 条件判定を修正
-  if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("https://script.google.com/macros/s/AKfycbzUjFUO4ZqCHsxcgsMNow_jUzkgUz-Tj7zvzv4_NNHccXQ5w2rTZ53puhnvNHi36qFJLw/exec")) {
+  // ★バグ修正: URLが未設定、または初期ダミー文字列の場合のみ通信をスキップ
+  if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("ここにGAS") || GAS_API_URL.includes("YOUR_GAS")) {
+    console.log("【スプレッドシート未連携】GAS_API_URL が未設定のためランキング取得をスキップします。");
     return;
   }
 
@@ -131,11 +136,11 @@ function showErrorStatus() {
  */
 function updateRankingList(elementId, listData, valueKey) {
   const olElement = document.getElementById(elementId);
-  if (!olElement || !listData) return;
+  if (!olElement) return;
 
   olElement.innerHTML = '';
 
-  if (listData.length === 0) {
+  if (!listData || !Array.isArray(listData) || listData.length === 0) {
     olElement.innerHTML = '<li>データがありません</li>';
     return;
   }
@@ -183,7 +188,8 @@ if (typeof saveData === 'function') {
  * ページ読み込み完了時にランキングを取得
  */
 document.addEventListener('DOMContentLoaded', () => {
+  // playerDataの準備完了を確実に待ってからランキングを取得
   setTimeout(() => {
     fetchRankingFromSpreadsheet();
-  }, 100);
-})
+  }, 150);
+});
