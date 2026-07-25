@@ -1,0 +1,374 @@
+@charset "UTF-8";
+
+/* ==========================================
+   ルーレットPRO専用スタイル (game-roulette.css)
+   ========================================== */
+
+:root {
+  --gold: #dfb15b;
+  --gold-hover: #fcd581;
+  --bg-dark: #0f1412;
+  --table-green: #0a3319;
+  --text-main: #f0f4f1;
+  --text-sub: #a0b0a6;
+  --roulette-red: #e74c3c;
+  --roulette-black: #2c3e50;
+  --roulette-green: #2ecc71;
+  --danger-red: #ff4d4d; /* 借金用赤色 */
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  overflow-x: hidden;
+}
+
+.hidden { display: none !important; }
+
+.game-container {
+  width: 100%;
+  max-width: 800px;
+  background-color: #161e19;
+  border: 2px solid var(--gold);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  position: relative;
+}
+
+/* ヘッダー */
+.game-header {
+  background-color: #0b110d;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--gold);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.game-title {
+  font-size: 1.2rem;
+  color: var(--gold);
+  letter-spacing: 1px;
+}
+
+.header-btn {
+  color: var(--text-main);
+  text-decoration: none;
+  background-color: #233327;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  border: 1px solid var(--gold);
+}
+
+.player-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.status-value {
+  color: var(--gold);
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+/* ★ 借金額の赤文字指定 ★ */
+.debt-value, #debt-display {
+  color: var(--danger-red) !important;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(255, 77, 77, 0.3);
+}
+
+.open-atm-btn {
+  background: linear-gradient(135deg, var(--gold), #b8860b);
+  color: #000;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.open-atm-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.open-atm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.roulette-main {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: radial-gradient(circle, var(--table-green) 0%, #051a0d 100%);
+}
+
+/* ホイール ＆ ボールビジュアル */
+.wheel-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.wheel-container {
+  position: relative;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.wheel-rim {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 8px solid var(--gold);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.roulette-wheel {
+  width: 92%;
+  height: 92%;
+  border-radius: 50%;
+  position: relative;
+  transition: transform 5s cubic-bezier(0.1, 0.85, 0.2, 1);
+}
+
+.wheel-num-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin-top: -10px;
+  margin-left: -10px;
+  font-size: 0.65rem;
+  font-weight: bold;
+  color: #fff;
+  text-align: center;
+  line-height: 20px;
+  pointer-events: none;
+}
+
+.ball-track {
+  position: absolute;
+  width: 82%;
+  height: 82%;
+  border-radius: 50%;
+  z-index: 6;
+  transition: transform 5s cubic-bezier(0.05, 0.9, 0.15, 1);
+}
+
+.roulette-ball {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  background: radial-gradient(circle, #ffffff 0%, #b0b0b0 100%);
+  border-radius: 50%;
+  box-shadow: 0 0 8px #ffffff;
+  transition: top 1.2s ease-in-out;
+}
+
+.roulette-ball.in-pocket {
+  top: 38px; /* 内側ポケットの位置 */
+}
+
+.wheel-center {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  background: radial-gradient(circle, var(--gold) 0%, #8a6422 100%);
+  border-radius: 50%;
+  border: 2px solid #fff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1.2rem;
+  z-index: 7;
+}
+
+.result-display {
+  width: 100%;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--gold);
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--gold);
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ベットエリア */
+.bet-section {
+  background-color: rgba(0, 0, 0, 0.4);
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(223, 177, 91, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bet-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.total-bet-info { font-size: 0.9rem; color: var(--gold); }
+.total-bet-info b { font-size: 1.1rem; }
+
+.clear-bets-btn {
+  background: #34495e;
+  color: #fff;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.clear-bets-btn:hover { background-color: #e74c3c; }
+
+.bet-spot {
+  position: relative;
+  padding: 10px 4px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  border: 1.5px solid transparent;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.outside-bets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.bet-spot.red-btn { background-color: var(--roulette-red); }
+.bet-spot.black-btn { background-color: var(--roulette-black); }
+.bet-spot.option-btn { background-color: #34495e; }
+
+.numbers-grid-title { font-size: 0.75rem; color: var(--gold); text-align: center; }
+
+.numbers-grid { display: flex; gap: 6px; }
+
+.green-zero {
+  width: 42px;
+  background-color: var(--roulette-green);
+  color: #000;
+  font-size: 1rem;
+}
+
+.numbers-container {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 4px;
+}
+
+.num-spot.red { background-color: var(--roulette-red); }
+.num-spot.black { background-color: var(--roulette-black); }
+
+/* チップバッジ */
+.chip-badge {
+  position: absolute;
+  top: -8px;
+  right: -6px;
+  background: radial-gradient(circle, #fcd581 0%, #dfb15b 100%);
+  color: #000;
+  border: 2px dashed #000;
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.6);
+  z-index: 10;
+}
+
+.spin-btn {
+  background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%);
+  color: #000;
+  font-size: 1.1rem;
+  font-weight: bold;
+  padding: 10px;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(223, 177, 91, 0.4);
+  transition: all 0.2s;
+}
+
+.spin-btn:hover:not(:disabled) { transform: translateY(-2px); }
+.spin-btn:disabled { background: #555; color: #888; cursor: not-allowed; }
+
+.result-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  display: flex; justify-content: center; align-items: center;
+  z-index: 100; pointer-events: none; animation: overlayFade 0.4s ease-out forwards;
+}
+
+@keyframes overlayFade { from { opacity: 0; } to { opacity: 1; } }
+
+.win-overlay .overlay-text {
+  font-size: 3.5rem; font-weight: 900; color: #fcd581; text-shadow: 0 0 20px #dfb15b;
+}
+
+.lose-overlay { background: rgba(0, 0, 0, 0.7); }
+.lose-overlay .overlay-text { font-size: 3rem; font-weight: 900; color: #7f8c8d; }
+
+.particle {
+  position: fixed; top: -20px; font-size: 1.5rem; pointer-events: none;
+  animation: fall 2.5s linear forwards; z-index: 3000;
+}
+
+@keyframes fall { to { transform: translateY(105vh) rotate(360deg); opacity: 0; } }

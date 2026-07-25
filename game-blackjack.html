@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ブラックジャック - Fever Casino</title>
+  <!-- ① デザイン（CSS）ファイルの読み込み -->
+  <link rel="stylesheet" href="game-blackjack.css">
+  <!-- 共通テンキー用CSS -->
+  <link rel="stylesheet" href="keypad.css">
+</head>
+<body>
+
+  <!-- 勝敗演出用オーバーレイ -->
+  <div id="win-overlay" class="result-overlay win-overlay hidden">
+    <div class="overlay-text">YOU WIN! 🎉</div>
+  </div>
+  <div id="lose-overlay" class="result-overlay lose-overlay hidden">
+    <div class="overlay-text">YOU LOSE... 💀</div>
+  </div>
+
+  <!-- 粒子エフェクトコンテナ -->
+  <div id="particle-container"></div>
+
+  <div class="game-container">
+    
+    <!-- ヘッダーエリア -->
+    <header class="game-header">
+      <a href="index.html" class="header-btn">🏠 ロビーに戻る</a>
+      <h1 class="game-title">🃏 BLACKJACK PRO</h1>
+      
+      <div class="player-status">
+        <div class="status-item">
+          <span class="status-label">所持金:</span>
+          <span id="cash-display" class="status-value">$0</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">借金:</span>
+          <span id="debt-display" class="status-value debt-value">$0</span>
+        </div>
+        <!-- ATM起動ボタン -->
+        <button type="button" id="open-atm-btn" class="open-atm-btn">🏦 ATM</button>
+      </div>
+    </header>
+
+    <!-- メインカジノテーブル -->
+    <main class="casino-table">
+
+      <!-- ディーラーエリア -->
+      <section class="hand-area dealer-area">
+        <div class="area-info">
+          <h2>ディーラー <span id="dealer-score" class="score-badge">?</span></h2>
+        </div>
+        <div id="dealer-cards" class="cards-container"></div>
+      </section>
+
+      <!-- メッセージアナウンス領域 -->
+      <div id="message-display" class="message-display">
+        賭け金を選択して「ディール開始」を押してください
+      </div>
+
+      <!-- プレイヤーエリア（マルチハンド対応） -->
+      <section id="player-area" class="hand-area player-area">
+        <div class="area-info">
+          <h2><span id="player-name">プレイヤー</span></h2>
+        </div>
+        <div id="player-hands-container" class="player-hands-container"></div>
+      </section>
+
+      <!-- コントロール操作エリア -->
+      <section class="control-panel">
+        
+        <!-- ベット入力ゾーン（ゲーム開始前） -->
+        <div id="bet-controls" class="control-group">
+          <button type="button" 
+                  id="bet-select-btn" 
+                  class="amount-select-btn" 
+                  data-amount="100" 
+                  data-label="賭け金: " 
+                  data-max="10000">
+            賭け金: $100
+          </button>
+
+          <button id="deal-btn" class="action-btn main-btn" type="button">🃏 ディール開始</button>
+        </div>
+
+        <!-- プレイ操作ゾーン -->
+        <div id="game-controls" class="control-group hidden">
+          <button id="hit-btn" class="action-btn hit-btn" type="button">➕ ヒット</button>
+          <button id="stand-btn" class="action-btn stand-btn" type="button">✋ スタンド</button>
+          <button id="double-btn" class="action-btn double-btn" type="button">⚡ ダブル</button>
+          <button id="split-btn" class="action-btn split-btn" type="button">✂️ スプリット</button>
+        </div>
+
+        <!-- 次のゲームボタン -->
+        <div id="next-controls" class="control-group hidden">
+          <button id="next-btn" class="action-btn main-btn" type="button">🔄 次のゲームへ</button>
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- ★ ATMモーダルウィンドウ ★ -->
+  <div id="atm-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🏦 カジノ銀行（ATM）</h2>
+        <button id="close-atm-btn" class="close-btn" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="atm-step-section">
+          <p class="step-title">① 取引メニューを選択:</p>
+          <div class="atm-mode-grid">
+            <button class="mode-btn deposit" type="button" data-mode="deposit">預ける</button>
+            <button class="mode-btn withdraw" type="button" data-mode="withdraw">引き出す</button>
+            <button class="mode-btn repay" type="button" data-mode="repay">返済する</button>
+            <button class="mode-btn borrow" type="button" data-mode="borrow">借金する</button>
+          </div>
+        </div>
+        <div id="atm-action-panel" class="atm-action-panel hidden">
+          <div class="selected-mode-badge">選択中: <b id="selected-mode-text">-</b></div>
+          <p class="step-title">② 金額を指定して確定:</p>
+          <div class="action-row">
+            <button type="button" id="atm-amount-btn" class="amount-select-btn" data-amount="0" data-label="取引額: ">金額を入力: $0</button>
+            <button id="atm-execute-btn" class="execute-btn" type="button">✅ 取引を確定</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② JavaScriptファイルの読み込み -->
+  <script src="lobby.js"></script>
+  <script src="atm.js"></script>
+  <script src="spreadsheet.js"></script>
+  <script src="keypad.js"></script>
+  <script src="game-blackjack.js"></script>
+
+</body>
+</html>

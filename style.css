@@ -1,0 +1,487 @@
+@charset "UTF-8";
+
+/* ==========================================
+   1. デザイン変数
+   ========================================== */
+:root {
+  --bg-dark: #121614;
+  --bg-card: #1b2620;
+  --bg-card-light: #25352c;
+
+  --gold: #dfb15b;
+  --gold-hover: #fcd581;
+  --gold-shadow: rgba(223, 177, 91, 0.3);
+
+  --text-main: #f0f4f1;
+  --text-sub: #a0b0a6;
+
+  --btn-green: #2ecc71;
+  --btn-blue: #3498db;
+  --btn-red: #e74c3c;
+  --btn-purple: #9b59b6;
+
+  --danger-red: #ff4d4d; /* ★ 借金強調用の目立つ赤色 */
+}
+
+/* ==========================================
+   2. 全体リセット ＆ 基本スタイル
+   ========================================== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ==========================================
+   3. 画面全体のレイアウト（左右2カラム）
+   ========================================== */
+.lobby-wrapper {
+  display: flex;
+  min-height: 100vh;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ------------------------------------------
+   左側：ランキングエリア (スワイプ型UI)
+   ------------------------------------------ */
+.ranking-sidebar {
+  width: 320px;
+  background-color: var(--bg-card);
+  border-right: 2px solid var(--gold);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.ranking-sidebar h2 {
+  font-size: 1.4rem;
+  color: var(--gold);
+  border-bottom: 1px solid var(--gold-shadow);
+  padding-bottom: 8px;
+}
+
+.user-profile {
+  background: var(--bg-card-light);
+  padding: 10px;
+  border-radius: 8px;
+}
+
+.user-profile label {
+  font-size: 0.8rem;
+  color: var(--text-sub);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.input-group {
+  display: flex;
+  gap: 6px;
+}
+
+.input-group input {
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #3a4d41;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-size: 0.9rem;
+}
+
+.input-group button {
+  padding: 6px 12px;
+  background-color: var(--gold);
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.input-group button:hover {
+  background-color: var(--gold-hover);
+}
+
+/* ★ ランキングインジケーター（均一ボタン・横スクロール） ★ */
+.ranking-indicators-wrapper {
+  overflow-x: auto;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE */
+}
+
+.ranking-indicators-wrapper::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.ranking-indicators {
+  display: flex;
+  gap: 6px;
+  width: max-content;
+  padding: 2px 0;
+}
+
+.indicator-btn {
+  flex: 0 0 100px; /* すべて均一な幅（100px）に設定 */
+  width: 100px;
+  padding: 6px 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  background-color: var(--bg-card-light);
+  color: var(--text-sub);
+  border: 1px solid #3a4d41;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.2s;
+}
+
+.indicator-btn.active, .indicator-btn:hover {
+  background-color: var(--gold);
+  color: #000;
+  border-color: var(--gold);
+  box-shadow: 0 0 8px var(--gold-shadow);
+}
+
+/* ★ スライダー構造（CSS Scroll Snap） ★ */
+.ranking-slider-container {
+  flex: 1;
+  background-color: var(--bg-dark);
+  border-radius: 8px;
+  border: 1px solid #2a3a30;
+  overflow: hidden;
+  position: relative;
+}
+
+.ranking-slider {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory; /* ピタッと吸い込まれるスワイプ効果 */
+  scroll-behavior: smooth;
+  height: 100%;
+  max-height: 420px;
+  scrollbar-width: none;
+}
+
+.ranking-slider::-webkit-scrollbar {
+  display: none;
+}
+
+.ranking-slide {
+  flex: 0 0 100%; /* 各スライドが幅100%を保持 */
+  width: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  padding: 12px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.slide-title {
+  font-size: 0.85rem;
+  color: var(--gold);
+  margin-bottom: 8px;
+  border-bottom: 1px dashed rgba(223, 177, 91, 0.3);
+  padding-bottom: 4px;
+}
+
+.ranking-list {
+  list-style: none;
+}
+
+.ranking-list li {
+  padding: 8px 10px;
+  border-bottom: 1px solid #2a3a30;
+  font-size: 0.85rem;
+  border-radius: 4px;
+}
+
+.ranking-list li.my-rank {
+  background: linear-gradient(135deg, rgba(223, 177, 91, 0.25), rgba(37, 53, 44, 0.8));
+  border: 2px solid var(--gold);
+  color: #ffffff;
+  font-weight: bold;
+  box-shadow: 0 0 10px var(--gold-shadow);
+  margin: 4px 0;
+}
+
+/* ------------------------------------------
+   右側：メインロビーエリア
+   ------------------------------------------ */
+.main-lobby {
+  flex: 1;
+  padding: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.status-header {
+  background-color: var(--bg-card);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  border: 1px solid var(--gold-shadow);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+.view-mode-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(223, 177, 91, 0.15);
+}
+
+.toggle-label {
+  font-size: 0.8rem;
+  color: var(--text-sub);
+}
+
+.view-btn {
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  background-color: var(--bg-dark);
+  color: var(--text-sub);
+  border: 1px solid #3a4d41;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.view-btn.active, .view-btn:hover {
+  background-color: var(--gold);
+  color: #000;
+  font-weight: bold;
+}
+
+.status-container {
+  display: flex;
+  gap: 25px;
+  flex-wrap: wrap;
+}
+
+.status-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.status-item .label {
+  font-size: 0.8rem;
+  color: var(--text-sub);
+}
+
+.status-item .value {
+  font-size: 1.3rem;
+  font-weight: bold;
+}
+
+/* ★ 借金額を赤文字にする指定 ★ */
+.status-item .debt-value, #debt-amount {
+  color: var(--danger-red) !important;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(255, 77, 77, 0.3);
+}
+
+.status-item.highlight .value {
+  color: var(--gold);
+  font-size: 1.5rem;
+}
+
+.atm-open-btn {
+  background: linear-gradient(135deg, var(--gold), #b8860b);
+  color: #000;
+  font-size: 1rem;
+  font-weight: bold;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 30px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px var(--gold-shadow);
+  transition: all 0.2s;
+}
+
+.atm-open-btn:hover {
+  transform: translateY(-2px);
+}
+
+/* ゲーム選択エリア */
+.game-selection h2 {
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+  color: var(--gold);
+}
+
+.game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px;
+}
+
+.game-card {
+  background-color: var(--bg-card);
+  border: 1px solid #2a3a30;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 15px;
+  transition: transform 0.2s;
+}
+
+.game-card:hover {
+  transform: translateY(-5px);
+  border-color: var(--gold);
+}
+
+a.play-game-btn {
+  display: inline-block;
+  text-decoration: none;
+  background-color: var(--bg-card-light);
+  color: var(--gold);
+  border: 1px solid var(--gold);
+  padding: 10px;
+  border-radius: 6px;
+  font-weight: bold;
+}
+
+a.play-game-btn:hover {
+  background-color: var(--gold);
+  color: #000;
+}
+
+/* モーダル */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(3px);
+}
+
+.modal-content {
+  position: relative;
+  background-color: var(--bg-card);
+  border: 2px solid var(--gold);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 500px;
+  padding: 25px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  z-index: 1001;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--gold-shadow);
+  padding-bottom: 10px;
+}
+
+.modal-header h2 {
+  font-size: 1.3rem;
+  color: var(--gold);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: var(--text-sub);
+  font-size: 1.8rem;
+  cursor: pointer;
+}
+
+.atm-step-section { margin-bottom: 20px; }
+.step-title { font-size: 0.85rem; color: var(--text-sub); margin-bottom: 8px; font-weight: bold; }
+
+.atm-mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.mode-btn {
+  padding: 12px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  font-weight: bold;
+  color: #fff;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.2s;
+}
+
+.mode-btn.active { opacity: 1; border-color: #ffffff; box-shadow: 0 0 12px rgba(255, 255, 255, 0.5); transform: scale(1.02); }
+.mode-btn.deposit { background-color: var(--btn-green); }
+.mode-btn.withdraw { background-color: var(--btn-blue); }
+.mode-btn.repay { background-color: var(--btn-red); }
+.mode-btn.borrow { background-color: var(--btn-purple); }
+
+.atm-action-panel {
+  background-color: var(--bg-dark);
+  border: 1px solid #2a3a30;
+  border-radius: 12px;
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.selected-mode-badge { font-size: 0.9rem; color: var(--text-sub); }
+.selected-mode-badge b { color: var(--gold); font-size: 1.05rem; }
+
+.action-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.action-row .amount-select-btn { flex: 1; min-width: 180px; }
+
+.execute-btn {
+  background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%);
+  color: #000;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  body:not(.force-desktop) .lobby-wrapper { flex-direction: column; }
+  body:not(.force-desktop) .ranking-sidebar { width: 100%; border-right: none; border-bottom: 2px solid var(--gold); }
+}
+
+body.force-desktop .lobby-wrapper { flex-direction: row !important; }
+body.force-mobile .lobby-wrapper { flex-direction: column !important; }

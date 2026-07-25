@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ルーレットPRO - Fever Casino</title>
+  <!-- ① デザイン（CSS）ファイルの読み込み -->
+  <link rel="stylesheet" href="game-roulette.css">
+  <!-- 共通テンキー用CSS -->
+  <link rel="stylesheet" href="keypad.css">
+</head>
+<body>
+
+  <!-- 勝敗演出用オーバーレイ ＆ 粒子 -->
+  <div id="win-overlay" class="result-overlay win-overlay hidden">
+    <div class="overlay-text">WIN! 🎉</div>
+  </div>
+  <div id="lose-overlay" class="result-overlay lose-overlay hidden">
+    <div class="overlay-text">NO WIN... 💀</div>
+  </div>
+  <div id="particle-container"></div>
+
+  <div class="game-container">
+    
+    <!-- ヘッダーエリア -->
+    <header class="game-header">
+      <a href="index.html" class="header-btn">🏠 ロビーに戻る</a>
+      <h1 class="game-title">🎡 REAL ROULETTE PRO</h1>
+      
+      <div class="player-status">
+        <div class="status-item">
+          <span class="status-label">所持金:</span>
+          <span id="cash-display" class="status-value">$0</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">借金:</span>
+          <span id="debt-display" class="status-value debt-value">$0</span>
+        </div>
+        <!-- ATM起動ボタン -->
+        <button type="button" id="open-atm-btn" class="open-atm-btn">🏦 ATM</button>
+      </div>
+    </header>
+
+    <!-- メインエリア -->
+    <main class="roulette-main">
+
+      <!-- リアルルーレットホイール ＆ ボール表示エリア -->
+      <section class="wheel-section">
+        <div class="wheel-container">
+          <div class="wheel-rim"></div>
+          <!-- 時計回りに回るホイール -->
+          <div id="roulette-wheel" class="roulette-wheel"></div>
+          <!-- 反時計回りに回るボールトラック -->
+          <div id="ball-track" class="ball-track">
+            <div id="roulette-ball" class="roulette-ball"></div>
+          </div>
+          <div class="wheel-center">🎡</div>
+        </div>
+
+        <!-- 当選結果アナウンス -->
+        <div id="result-display" class="result-display">
+          賭けたい場所をタップしてチップを置いてください
+        </div>
+      </section>
+
+      <!-- ベットテーブル（チップ配置エリア） -->
+      <section class="bet-section">
+        
+        <div class="bet-header-row">
+          <div class="total-bet-info">
+            総賭け金: <b id="total-bet-amount">$0</b>
+          </div>
+          <button id="clear-bets-btn" class="clear-bets-btn" type="button">🗑️ チップをすべてクリア</button>
+        </div>
+
+        <!-- アウトサイドベット -->
+        <div class="outside-bets">
+          <button type="button" class="bet-spot red-btn" data-key="color_red" data-label="赤 (RED)">
+            赤 (RED) 2倍
+            <span class="chip-badge hidden">$0</span>
+          </button>
+          <button type="button" class="bet-spot black-btn" data-key="color_black" data-label="黒 (BLACK)">
+            黒 (BLACK) 2倍
+            <span class="chip-badge hidden">$0</span>
+          </button>
+          <button type="button" class="bet-spot option-btn" data-key="parity_odd" data-label="奇数 (ODD)">
+            奇数 (ODD) 2倍
+            <span class="chip-badge hidden">$0</span>
+          </button>
+          <button type="button" class="bet-spot option-btn" data-key="parity_even" data-label="偶数 (EVEN)">
+            偶数 (EVEN) 2倍
+            <span class="chip-badge hidden">$0</span>
+          </button>
+        </div>
+
+        <!-- インサイドベット（数字1点賭け） -->
+        <div class="numbers-grid-title">▼ 数字1点賭け (36倍) ▼</div>
+        <div class="numbers-grid">
+          <button type="button" class="bet-spot green-zero" data-key="number_0" data-label="数字【0】">
+            0
+            <span class="chip-badge hidden">$0</span>
+          </button>
+          <div id="numbers-container" class="numbers-container"></div>
+        </div>
+
+        <!-- スピンボタン -->
+        <button id="spin-btn" class="spin-btn" type="button">🔥 SPIN (ルーレットを回す)</button>
+
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- ★ ATMモーダルウィンドウ ★ -->
+  <div id="atm-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🏦 カジノ銀行（ATM）</h2>
+        <button id="close-atm-btn" class="close-btn" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="atm-step-section">
+          <p class="step-title">① 取引メニューを選択:</p>
+          <div class="atm-mode-grid">
+            <button class="mode-btn deposit" type="button" data-mode="deposit">預ける</button>
+            <button class="mode-btn withdraw" type="button" data-mode="withdraw">引き出す</button>
+            <button class="mode-btn repay" type="button" data-mode="repay">返済する</button>
+            <button class="mode-btn borrow" type="button" data-mode="borrow">借金する</button>
+          </div>
+        </div>
+        <div id="atm-action-panel" class="atm-action-panel hidden">
+          <div class="selected-mode-badge">選択中: <b id="selected-mode-text">-</b></div>
+          <p class="step-title">② 金額を指定して確定:</p>
+          <div class="action-row">
+            <button type="button" id="atm-amount-btn" class="amount-select-btn" data-amount="0" data-label="取引額: ">金額を入力: $0</button>
+            <button id="atm-execute-btn" class="execute-btn" type="button">✅ 取引を確定</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② JavaScriptファイルの読み込み -->
+  <script src="lobby.js"></script>
+  <script src="atm.js"></script>
+  <script src="spreadsheet.js"></script>
+  <script src="keypad.js"></script>
+  <script src="game-roulette.js"></script>
+
+</body>
+</html>

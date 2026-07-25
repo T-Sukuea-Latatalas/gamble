@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>スロットマシン 3x3 - Fever Casino</title>
+  <!-- ① デザイン（CSS）ファイルの読み込み -->
+  <link rel="stylesheet" href="game-slot.css">
+  <!-- 共通テンキー用CSS -->
+  <link rel="stylesheet" href="keypad.css">
+</head>
+<body>
+
+  <!-- 当たり時のお祝い粒子コンテナ -->
+  <div id="particle-container"></div>
+
+  <div class="game-container" id="slot-container">
+    
+    <!-- ヘッダーエリア -->
+    <header class="game-header">
+      <a href="index.html" class="header-btn">🏠 ロビーに戻る</a>
+      <h1 class="game-title">🎰 REAL REEL SLOT</h1>
+      
+      <div class="player-status">
+        <div class="status-item">
+          <span class="status-label">所持金:</span>
+          <span id="cash-display" class="status-value">$0</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">借金:</span>
+          <span id="debt-display" class="status-value debt-value">$0</span>
+        </div>
+        <!-- ATM起動ボタン -->
+        <button type="button" id="open-atm-btn" class="open-atm-btn">🏦 ATM</button>
+      </div>
+    </header>
+
+    <!-- 確変（FEVER MODE）ステータスバー -->
+    <div id="fever-banner" class="fever-banner hidden">
+      🔥 FEVER MODE 開催中 (配当2倍) - 残り <b id="fever-count">10</b> 回 🔥
+    </div>
+
+    <!-- スロット筐体本体 -->
+    <main class="slot-machine">
+
+      <!-- 簡易配当表 -->
+      <section class="paytable-container">
+        <div class="paytable-title">🏆 配当表（5ライン判定：横3 + 斜め2）</div>
+        <div class="paytable-grid">
+          <span class="pay-item">🎰🎰🎰 : <b>50倍 + 確変10回</b></span>
+          <span class="pay-item">7️⃣7️⃣7️⃣ : <b>25倍</b></span>
+          <span class="pay-item">💎💎💎 : <b>10倍</b></span>
+          <span class="pay-item">🔔🔔🔔 : <b>5倍</b></span>
+          <span class="pay-item">🍋🍋🍋 : <b>3倍</b></span>
+          <span class="pay-item">🍒🍒🍒 : <b>2倍</b></span>
+        </div>
+      </section>
+
+      <!-- ★ 縦スクロール回転 3x3 リールディスプレイ ★ -->
+      <section class="reels-window-3x3">
+        <div class="reels-frame">
+          <!-- リール1（左） -->
+          <div class="reel-column" id="reel-col-0">
+            <div class="reel-strip" id="strip-0"></div>
+          </div>
+          <!-- リール2（中） -->
+          <div class="reel-column" id="reel-col-1">
+            <div class="reel-strip" id="strip-1"></div>
+          </div>
+          <!-- リール3（右） -->
+          <div class="reel-column" id="reel-col-2">
+            <div class="reel-strip" id="strip-2"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- アナウンスディスプレイ -->
+      <div id="slot-message" class="slot-message">
+        賭け金を選択して「SPIN」を押してください！
+      </div>
+
+      <!-- 操作パネル -->
+      <section class="control-panel">
+        <div class="bet-input-group">
+          <!-- バーチャルテンキー連動ボタン -->
+          <button type="button" 
+                  id="bet-select-btn" 
+                  class="amount-select-btn" 
+                  data-amount="10" 
+                  data-label="賭け金: " 
+                  data-max="10000">
+            賭け金: $10
+          </button>
+        </div>
+
+        <button id="spin-btn" class="spin-btn" type="button">🔥 SPIN (回転)</button>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- ★ ATMモーダルウィンドウ ★ -->
+  <div id="atm-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🏦 カジノ銀行（ATM）</h2>
+        <button id="close-atm-btn" class="close-btn" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="atm-step-section">
+          <p class="step-title">① 取引メニューを選択:</p>
+          <div class="atm-mode-grid">
+            <button class="mode-btn deposit" type="button" data-mode="deposit">預ける</button>
+            <button class="mode-btn withdraw" type="button" data-mode="withdraw">引き出す</button>
+            <button class="mode-btn repay" type="button" data-mode="repay">返済する</button>
+            <button class="mode-btn borrow" type="button" data-mode="borrow">借金する</button>
+          </div>
+        </div>
+        <div id="atm-action-panel" class="atm-action-panel hidden">
+          <div class="selected-mode-badge">選択中: <b id="selected-mode-text">-</b></div>
+          <p class="step-title">② 金額を指定して確定:</p>
+          <div class="action-row">
+            <button type="button" id="atm-amount-btn" class="amount-select-btn" data-amount="0" data-label="取引額: ">金額を入力: $0</button>
+            <button id="atm-execute-btn" class="execute-btn" type="button">✅ 取引を確定</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ② JavaScriptファイルの読み込み -->
+  <script src="lobby.js"></script>
+  <script src="atm.js"></script>
+  <script src="spreadsheet.js"></script>
+  <script src="keypad.js"></script>
+  <script src="game-slot.js"></script>
+
+</body>
+</html>

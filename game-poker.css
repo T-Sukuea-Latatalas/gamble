@@ -1,0 +1,315 @@
+@charset "UTF-8";
+
+/* ==========================================
+   ビデオポーカーPRO専用スタイル (game-poker.css)
+   ========================================== */
+
+:root {
+  --gold: #dfb15b;
+  --gold-hover: #fcd581;
+  --bg-dark: #0a0e14;
+  --poker-blue: #122338;
+  --poker-blue-light: #1c3652;
+  --text-main: #f0f4f1;
+  --text-sub: #a0b0a6;
+  --card-red: #e74c3c;
+  --card-black: #2c3e50;
+  --danger-red: #ff4d4d; /* 借金用赤色 */
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  overflow-x: hidden;
+}
+
+.hidden { display: none !important; }
+
+.game-container {
+  width: 100%;
+  max-width: 750px;
+  background-color: var(--poker-blue);
+  border: 2px solid var(--gold);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  position: relative;
+  transition: filter 0.3s, transform 0.3s;
+}
+
+/* ヘッダー */
+.game-header {
+  background-color: #081018;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--gold);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.game-title {
+  font-size: 1.2rem;
+  color: var(--gold);
+  letter-spacing: 1px;
+}
+
+.header-btn {
+  color: var(--text-main);
+  text-decoration: none;
+  background-color: #1a2f4c;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  border: 1px solid var(--gold);
+}
+
+.player-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.status-value {
+  color: var(--gold);
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+/* ★ 借金額の赤文字指定 ★ */
+.debt-value, #debt-display {
+  color: var(--danger-red) !important;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(255, 77, 77, 0.3);
+}
+
+.open-atm-btn {
+  background: linear-gradient(135deg, var(--gold), #b8860b);
+  color: #000;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.open-atm-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.open-atm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* メイン領域 */
+.poker-main {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 配当一覧表 (ペイテーブル) */
+.paytable {
+  background-color: #091522;
+  border: 1px solid rgba(223, 177, 91, 0.3);
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px 10px;
+  font-size: 0.75rem;
+}
+
+.pay-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.pay-row b { color: var(--gold); }
+
+.pay-row.active-pay {
+  background-color: var(--gold);
+  color: #000 !important;
+  font-weight: bold;
+  box-shadow: 0 0 12px var(--gold);
+  animation: payGlow 0.6s infinite alternate;
+}
+
+@keyframes payGlow {
+  from { opacity: 0.8; }
+  to { opacity: 1; transform: scale(1.02); }
+}
+
+.pay-row.active-pay b { color: #000; }
+
+.poker-message {
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: var(--gold);
+  background-color: #081018;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--gold);
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 手札 ＆ 3Dフリップ構造 */
+.cards-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 130px;
+  padding: 5px 0;
+}
+
+.poker-card-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  transition: transform 0.25s ease-out, filter 0.3s;
+  perspective: 800px;
+}
+
+.poker-card-wrapper.held {
+  transform: translateY(-12px);
+}
+
+.poker-card-wrapper.lose-state {
+  filter: brightness(0.5);
+  transform: translateY(6px);
+}
+
+.hold-badge {
+  background-color: var(--gold);
+  color: #000;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  visibility: hidden;
+}
+
+.poker-card-wrapper.held .hold-badge {
+  visibility: visible;
+}
+
+.card-inner {
+  width: 100%;
+  max-width: 100px;
+  height: 120px;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.poker-card-wrapper.flipped .card-inner {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 6px;
+  font-weight: bold;
+  font-size: 1rem;
+  user-select: none;
+}
+
+.card-front {
+  background-color: #ffffff;
+  border: 2px solid #ccc;
+  transform: rotateY(180deg);
+}
+
+.poker-card-wrapper.held .card-front {
+  border-color: var(--gold);
+  box-shadow: 0 0 12px var(--gold);
+}
+
+.card-front.red { color: var(--card-red); }
+.card-front.black { color: var(--card-black); }
+
+.card-top { text-align: left; line-height: 1; }
+.card-center { text-align: center; font-size: 1.6rem; }
+.card-bottom { text-align: right; line-height: 1; }
+
+.card-back {
+  background: linear-gradient(135deg, #1565c0 0%, #0d47a1 100%);
+  border: 2px solid #ffffff;
+}
+
+.control-panel {
+  background-color: #081018;
+  padding: 12px;
+  border-radius: 10px;
+}
+
+.control-group {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+}
+
+.action-btn {
+  padding: 10px 24px;
+  font-size: 0.95rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.main-btn {
+  background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%);
+  color: #000;
+}
+
+.draw-btn {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  color: #fff;
+}
+
+.particle {
+  position: fixed; top: -20px; font-size: 1.5rem; pointer-events: none;
+  animation: fall 2.5s linear forwards; z-index: 3000;
+}
+
+@keyframes fall { to { transform: translateY(105vh) rotate(360deg); opacity: 0; } }

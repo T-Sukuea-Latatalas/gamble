@@ -1,0 +1,320 @@
+@charset "UTF-8";
+
+/* ==========================================
+   ブラックジャックPRO専用スタイル (game-blackjack.css)
+   ========================================== */
+
+:root {
+  --table-green: #0e4022;
+  --table-green-dark: #07261a;
+  --gold: #dfb15b;
+  --gold-hover: #fcd581;
+  --bg-dark: #121614;
+  --text-main: #f0f4f1;
+  --text-sub: #a0b0a6;
+  --card-red: #d32f2f;
+  --card-black: #212121;
+  --danger-red: #ff4d4d; /* 借金用赤色 */
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  overflow-x: hidden;
+}
+
+.hidden { display: none !important; }
+
+.game-container {
+  width: 100%;
+  max-width: 850px;
+  background-color: var(--bg-dark);
+  border: 2px solid var(--gold);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  position: relative;
+}
+
+/* ヘッダー */
+.game-header {
+  background-color: #1a241e;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--gold);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.game-title {
+  font-size: 1.2rem;
+  color: var(--gold);
+  letter-spacing: 1px;
+}
+
+.header-btn {
+  color: var(--text-main);
+  text-decoration: none;
+  background-color: #2b3a31;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  border: 1px solid var(--gold);
+}
+
+.player-status {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.status-value {
+  color: var(--gold);
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+/* ★ 借金額の赤文字指定 ★ */
+.debt-value, #debt-display {
+  color: var(--danger-red) !important;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(255, 77, 77, 0.3);
+}
+
+.open-atm-btn {
+  background: linear-gradient(135deg, var(--gold), #b8860b);
+  color: #000;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.open-atm-btn:hover:not(:disabled) { transform: translateY(-1px); }
+.open-atm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* カジノテーブル */
+.casino-table {
+  background: radial-gradient(circle, var(--table-green) 0%, var(--table-green-dark) 100%);
+  padding: 20px;
+  min-height: 550px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+/* 手札エリア */
+.hand-area {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid rgba(223, 177, 91, 0.2);
+}
+
+.area-info h2 {
+  font-size: 0.95rem;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.score-badge {
+  background-color: var(--gold);
+  color: #000;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.player-hands-container {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.hand-box {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.2);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 6px;
+  transition: all 0.3s;
+}
+
+.hand-box.active-hand {
+  border-color: var(--gold);
+  box-shadow: 0 0 12px var(--gold);
+  background: rgba(223, 177, 91, 0.08);
+}
+
+.hand-header {
+  font-size: 0.75rem;
+  color: var(--gold);
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+
+/* カードコンテナ */
+.cards-container {
+  display: flex;
+  gap: 8px;
+  min-height: 90px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* カード基本スタイル（標準時はアニメーションなし） */
+.card {
+  width: 60px;
+  height: 90px;
+  background-color: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 4px;
+  font-weight: bold;
+  font-size: 0.95rem;
+  user-select: none;
+}
+
+/* ★ 新しく配られたカード（1枚）だけに適用するスライドアニメーション ★ */
+.card.deal-animate {
+  animation: dealSlide 0.35s ease-out forwards;
+}
+
+@keyframes dealSlide {
+  from {
+    transform: translateY(-50px) scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.card.red { color: var(--card-red); }
+.card.black { color: var(--card-black); }
+
+.card-top { text-align: left; line-height: 1; }
+.card-center { text-align: center; font-size: 1.3rem; }
+.card-bottom { text-align: right; line-height: 1; }
+
+.card.back {
+  background: linear-gradient(135deg, #b71c1c 0%, #880e4f 100%);
+  border: 2px solid #ffffff;
+}
+
+.card.back::after {
+  content: "♠♣♥♦";
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.6rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+/* メッセージ表示 */
+.message-display {
+  text-align: center;
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: var(--gold);
+  background-color: rgba(0, 0, 0, 0.7);
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--gold);
+  margin: 10px 0;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 操作パネル */
+.control-panel {
+  background-color: rgba(0, 0, 0, 0.4);
+  padding: 10px;
+  border-radius: 12px;
+}
+
+.control-group {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.action-btn {
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-btn:hover:not(:disabled) { transform: translateY(-2px); }
+.action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.main-btn { background: linear-gradient(135deg, var(--gold), #b8860b); color: #000; }
+.hit-btn { background: linear-gradient(135deg, #2ecc71, #27ae60); color: #fff; }
+.stand-btn { background: linear-gradient(135deg, #e74c3c, #c0392b); color: #fff; }
+.double-btn { background: linear-gradient(135deg, #f39c12, #d35400); color: #fff; }
+.split-btn { background: linear-gradient(135deg, #9b59b6, #8e44ad); color: #fff; }
+
+/* 勝敗演出 */
+.result-overlay {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  display: flex; justify-content: center; align-items: center;
+  z-index: 100; pointer-events: none; animation: overlayFade 0.4s ease-out forwards;
+}
+
+@keyframes overlayFade { from { opacity: 0; } to { opacity: 1; } }
+
+.win-overlay .overlay-text {
+  font-size: 3.5rem; font-weight: 900; color: #fcd581; text-shadow: 0 0 20px #dfb15b;
+}
+
+.lose-overlay { background: rgba(0, 0, 0, 0.7); }
+.lose-overlay .overlay-text { font-size: 3rem; font-weight: 900; color: #7f8c8d; }
+
+.particle {
+  position: fixed; top: -20px; font-size: 1.5rem; pointer-events: none;
+  animation: fall 2.5s linear forwards; z-index: 3000;
+}
+
+@keyframes fall { to { transform: translateY(105vh) rotate(360deg); opacity: 0; } }
