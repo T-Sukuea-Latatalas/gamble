@@ -1,6 +1,6 @@
 /**
  * ==========================================
- * Fever Casino - データ管理＆ロビー制御スクリプト (lobby.js)
+ * Fever Casino - データ管理＆ロビー・全ゲーム共通制御スクリプト (lobby.js)
  * ==========================================
  */
 
@@ -23,6 +23,9 @@ let playerData = {
   }
 };
 
+/**
+ * ランダムで一意なユーザーID（UUID風）を生成する関数
+ */
 function generateUserId() {
   if (window.crypto && window.crypto.randomUUID) {
     return window.crypto.randomUUID();
@@ -30,6 +33,9 @@ function generateUserId() {
   return 'user_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9);
 }
 
+/**
+ * プレイヤーデータを LocalStorage に保存する関数
+ */
 function saveData() {
   try {
     const jsonString = JSON.stringify(playerData);
@@ -41,7 +47,7 @@ function saveData() {
 }
 
 /**
- * LocalStorageから最新データを確実にロードする
+ * LocalStorage から最新データを確実にロードする関数
  */
 function loadData() {
   try {
@@ -62,34 +68,59 @@ function loadData() {
   }
 }
 
+/**
+ * 数値を3桁カンマ区切りのドル表記（例: $1,000）に整形する関数
+ */
 function formatCurrency(num) {
-  return '$' + (num || 0).toLocaleString();
+  return '$' + (Number(num) || 0).toLocaleString();
 }
 
 /**
- * ★ 画面のステータス表示（所持金・貯金・借金・純資産）の完全同期関数
+ * ★ 全画面共通: 画面上の全ステータス表示（所持金・貯金・借金・純資産・名前）を完全同期する関数
  */
 function updateUI() {
-  const netWorth = (playerData.cash || 0) + (playerData.bank || 0) - (playerData.debt || 0);
+  const cash = Number(playerData.cash) || 0;
+  const bank = Number(playerData.bank) || 0;
+  const debt = Number(playerData.debt) || 0;
+  const netWorth = cash + bank - debt;
+  const userName = playerData.userName || 'ゲストプレイヤー';
 
-  const cashEl = document.getElementById('cash-amount');
-  const bankEl = document.getElementById('bank-amount');
-  const debtEl = document.getElementById('debt-amount');
-  const netWorthEl = document.getElementById('net-worth-amount');
-  const usernameInputEl = document.getElementById('username-input');
+  // ----------------------------------------------------
+  // ① ロビー画面 (index.html) 用の要素更新
+  // ----------------------------------------------------
+  const lobbyCashEl = document.getElementById('cash-amount');
+  const lobbyBankEl = document.getElementById('bank-amount');
+  const lobbyDebtEl = document.getElementById('debt-amount');
+  const lobbyNetWorthEl = document.getElementById('net-worth-amount');
+  const lobbyUsernameInputEl = document.getElementById('username-input');
 
-  if (cashEl) cashEl.textContent = formatCurrency(playerData.cash);
-  if (bankEl) bankEl.textContent = formatCurrency(playerData.bank);
-  if (debtEl) debtEl.textContent = formatCurrency(playerData.debt);
-  if (netWorthEl) netWorthEl.textContent = formatCurrency(netWorth);
+  if (lobbyCashEl) lobbyCashEl.textContent = formatCurrency(cash);
+  if (lobbyBankEl) lobbyBankEl.textContent = formatCurrency(bank);
+  if (lobbyDebtEl) lobbyDebtEl.textContent = formatCurrency(debt);
+  if (lobbyNetWorthEl) lobbyNetWorthEl.textContent = formatCurrency(netWorth);
 
-  if (usernameInputEl && document.activeElement !== usernameInputEl) {
-    usernameInputEl.value = playerData.userName || 'ゲストプレイヤー';
+  if (lobbyUsernameInputEl && document.activeElement !== lobbyUsernameInputEl) {
+    lobbyUsernameInputEl.value = userName;
   }
+
+  // ----------------------------------------------------
+  // ② 各ゲーム画面 (game-*.html) 用の要素更新
+  // ----------------------------------------------------
+  const gameCashEl = document.getElementById('cash-display');
+  const gameDebtEl = document.getElementById('debt-display');
+  const gameNameEl = document.getElementById('player-name');
+
+  if (gameCashEl) gameCashEl.textContent = formatCurrency(cash);
+  if (gameDebtEl) gameDebtEl.textContent = formatCurrency(debt);
+  if (gameNameEl) gameNameEl.textContent = userName;
 }
 
+// ゲーム画面用の旧関数（updateCashDisplay）が呼ばれた際も安全に updateUI を動かす完全互換設定
+window.updateCashDisplay = updateUI;
+
 /**
- * 借金利子システム (applyDebtInterest)
+ * ★ 共通借金利子システム (applyDebtInterest)
+ * 各ゲームで1プレイ終了するたびに自動実行されます。
  */
 function applyDebtInterest() {
   if (!playerData.debt || playerData.debt <= 0) {
@@ -98,13 +129,20 @@ function applyDebtInterest() {
     return { interestAmount: 0, rate: 0, newDebt: 0 };
   }
 
+  // 未返済プレイ回数を+1
   playerData.debtPlayCount = (playerData.debtPlayCount || 0) + 1;
+
+  // 金利計算: 初期1%、5プレイごとに+1%上昇 (1~4回=1%, 5~9回=2%, 10~14回=3%...)
   const currentRate = 1 + Math.floor(playerData.debtPlayCount / 5);
+
+  // 加算利子の計算 (端数切り上げ)
   const interestAmount = Math.ceil(playerData.debt * (currentRate / 100));
   playerData.debt += interestAmount;
 
   saveData();
   updateUI();
+
+  console.log(`【利子発生】未返済プレイ数:${playerData.debtPlayCount}回 | 金利:${currentRate}% | 利子:+$${interestAmount} | 総借金額:$${playerData.debt}`);
 
   return {
     interestAmount: interestAmount,
@@ -114,6 +152,9 @@ function applyDebtInterest() {
   };
 }
 
+/**
+ * ユーザー名変更ボタンのイベント登録
+ */
 function setupUsernameChange() {
   const changeBtn = document.getElementById('change-username-btn');
   const usernameInput = document.getElementById('username-input');
@@ -134,7 +175,7 @@ function setupUsernameChange() {
 }
 
 /**
- * ★ スワイプ ＆ インジケーター連動処理 (setupRankingSwipe) ★
+ * ロビー用: ランキングスワイプ ＆ インジケーター連動処理
  */
 function setupRankingSwipe() {
   const slider = document.getElementById('ranking-slider');
@@ -144,20 +185,18 @@ function setupRankingSwipe() {
 
   let isClickScrolling = false;
 
-  // 1. 手動スワイプ（スクロール）検知 ➔ インジケーターを追従点灯
+  // 手動スワイプ検知 ➔ インジケーターの自動切り替え
   slider.addEventListener('scroll', () => {
     if (isClickScrolling) return;
 
     const slideWidth = slider.clientWidth;
     if (slideWidth === 0) return;
 
-    // 現在何番目のスライドが表示されているか計算
     const activeIndex = Math.round(slider.scrollLeft / slideWidth);
 
     indicators.forEach((btn, idx) => {
       if (idx === activeIndex) {
         btn.classList.add('active');
-        // インジケーター自体も画面中央へスムーズスクロール移動
         btn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
       } else {
         btn.classList.remove('active');
@@ -165,7 +204,7 @@ function setupRankingSwipe() {
     });
   });
 
-  // 2. インジケータータップ ➔ 該当スライドへ直接滑らかスライド移動
+  // インジケータークリック ➔ スライド移動
   indicators.forEach((btn, idx) => {
     btn.addEventListener('click', () => {
       isClickScrolling = true;
@@ -186,6 +225,9 @@ function setupRankingSwipe() {
   });
 }
 
+/**
+ * 表示モード（自動 / PC / スマホ）の切り替え適用
+ */
 function applyViewMode(mode) {
   document.body.classList.remove('force-desktop', 'force-mobile');
 
@@ -221,7 +263,7 @@ function setupViewModeToggle() {
 }
 
 /**
- * ★ 完全同期のための初期化 ＆ イベント登録 ★
+ * ★ 全画面共通の初期化関数 ★
  */
 function initLobby() {
   loadData();
@@ -231,16 +273,16 @@ function initLobby() {
   setupViewModeToggle();
 }
 
-// 1. 初回DOMContentLoadedでロード＆表示
+// 1. 初回 DOMContentLoaded で確実にデータ読み込み ＆ UI描画
 document.addEventListener('DOMContentLoaded', initLobby);
 
-// 2. 他ページ（ゲーム画面等）からブラウザの「戻る」などで復帰した際にも即座に再ロード＆完全同期！
+// 2. ブラウザの「戻る」などで他ページから復帰した際にも即座に全自動ロード ＆ 完全同期！
 window.addEventListener('pageshow', () => {
   loadData();
   updateUI();
 });
 
-// 3. 別ウィンドウ・別タブでLocalStorageが変更された際も自動完全同期！
+// 3. 別タブや別ウィンドウで LocalStorage が変更された場合も即座に画面表示をリアルタイム同期！
 window.addEventListener('storage', (event) => {
   if (event.key === STORAGE_KEY) {
     loadData();
