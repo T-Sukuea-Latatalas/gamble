@@ -19,15 +19,11 @@ let wheelRotation = 0; // ホイール角度
 let ballRotation = 0;  // ボール角度
 
 /**
- * 所持金・借金額のリアルタイム画面更新
+ * ★ 画面の所持金・借金表示を完全同期 (lobby.js の共通 updateUI を安全呼び出し) ★
  */
 function updateCashDisplay() {
-  const cashEl = document.getElementById('cash-display');
-  const debtEl = document.getElementById('debt-display');
-
-  if (window.playerData) {
-    if (cashEl) cashEl.textContent = '$' + (playerData.cash || 0).toLocaleString();
-    if (debtEl) debtEl.textContent = '$' + (playerData.debt || 0).toLocaleString();
+  if (typeof updateUI === 'function') {
+    updateUI();
   }
 }
 
@@ -143,15 +139,13 @@ function updateChipBadges() {
 }
 
 /**
- * ★ バグ修正: 「チップをすべてクリア」の完全リセット関数 ★
+ * 「チップをすべてクリア」のリセット関数
  */
 function clearAllBets() {
   if (isSpinning) return;
 
-  // 1. チップデータオブジェクトを空にする
   placedBets = {};
 
-  // 2. 全ベットボタンの表示データ・属性を完全初期化
   document.querySelectorAll('.bet-spot').forEach(spot => {
     spot.setAttribute('data-amount', '0');
     const badge = spot.querySelector('.chip-badge');
@@ -161,7 +155,6 @@ function clearAllBets() {
     }
   });
 
-  // 3. 総賭け金表示を $0 にリセット
   const totalEl = document.getElementById('total-bet-amount');
   if (totalEl) {
     totalEl.textContent = '$0';
@@ -169,7 +162,7 @@ function clearAllBets() {
 }
 
 /**
- * ★ 3. スピン処理 (ボールの真ん中ぴったり停止計算) ★
+ * 3. スピン処理 (ボールの真ん中ぴったり停止計算)
  */
 function startSpin() {
   if (isSpinning) return;
@@ -186,7 +179,7 @@ function startSpin() {
     return;
   }
 
-  // 賭け金差し引き
+  // 賭け金引き落とし
   playerData.cash -= totalBet;
   saveData();
 
@@ -196,23 +189,18 @@ function startSpin() {
   document.getElementById('result-display').textContent = '🎡 ルーレット回転中...';
   hideOverlays();
 
-  // ① 当選数字のランダム決定
+  // 当選数字のランダム決定
   const winningIndex = Math.floor(Math.random() * WHEEL_NUMBERS.length);
   const winningNumber = WHEEL_NUMBERS[winningIndex];
 
-  // ★ ② ボール停止位置の絶対精度補正計算 ★
-  const step = 360 / WHEEL_NUMBERS.length; // 1コマ約9.7297度
+  // ボール停止位置の精度補正計算
+  const step = 360 / WHEEL_NUMBERS.length;
 
-  // ホイール: 時計回りに5周 (+1800度) 回す
-  wheelRotation += 1800;
+  wheelRotation += 1800; // 時計回りに5周
 
-  // 当選数字の「真ん中（中心位置）」の相対角度
   const sectorCenterDeg = winningIndex * step + (step / 2);
-
-  // ホイール回転後の当選セクター中心の現在角度
   const targetSectorWorldDeg = (wheelRotation + sectorCenterDeg) % 360;
 
-  // ボール: 反時計回りに-6周 (-2160度) 戻しつつ、targetSectorWorldDeg に寸分の狂いもなくピッタリ重ねる
   const targetBallBase = ballRotation - 2160;
   const currentWorldBallDeg = ((targetBallBase % 360) + 360) % 360;
   const diffDeg = (currentWorldBallDeg - targetSectorWorldDeg + 360) % 360;
@@ -228,12 +216,12 @@ function startSpin() {
   wheelEl.style.transform = `rotate(${wheelRotation}deg)`;
   ballTrackEl.style.transform = `rotate(${ballRotation}deg)`;
 
-  // 3.8秒後にボールが外周から「当選数字の真ん中のポケット」へ落下
+  // ボールをポケットへ落とす
   setTimeout(() => {
     ballEl.classList.add('in-pocket');
   }, 3800);
 
-  // 5秒後に判定完了
+  // 回転終了 ＆ 勝敗判定
   setTimeout(() => {
     evaluateResults(winningNumber, totalBet);
     isSpinning = false;
@@ -279,7 +267,7 @@ function evaluateResults(winningNumber, totalBet) {
     showLoseEffect();
   }
 
-  // 借金利子の適用
+  // ★ 借金利子の適用 ★
   if (typeof applyDebtInterest === 'function') {
     applyDebtInterest();
   }
@@ -291,6 +279,8 @@ function showWinEffect() {
   document.getElementById('win-overlay').classList.remove('hidden');
 
   const container = document.getElementById('particle-container');
+  if (!container) return;
+
   container.innerHTML = '';
   const items = ['🪙', '✨', '💎', '🎉'];
 
