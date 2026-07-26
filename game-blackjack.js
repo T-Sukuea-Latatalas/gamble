@@ -21,17 +21,11 @@ const VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * 所持金・借金額のリアルタイム画面更新
+ * ★ 画面の所持金・借金・プレイヤー名を完全同期（lobby.js の共通 updateUI を呼び出し） ★
  */
 function updateCashDisplay() {
-  const cashEl = document.getElementById('cash-display');
-  const debtEl = document.getElementById('debt-display');
-  const nameEl = document.getElementById('player-name');
-
-  if (window.playerData) {
-    if (cashEl) cashEl.textContent = '$' + (playerData.cash || 0).toLocaleString();
-    if (debtEl) debtEl.textContent = '$' + (playerData.debt || 0).toLocaleString();
-    if (nameEl) nameEl.textContent = playerData.userName || 'プレイヤー';
+  if (typeof updateUI === 'function') {
+    updateUI();
   }
 }
 
@@ -76,7 +70,7 @@ function calculateScore(cards) {
 }
 
 /**
- * ★ カードエレメントの作成（新規カードのみ deal-animate を付与） ★
+ * カードエレメントの作成（新規カードのみ deal-animate を付与）
  */
 function createCardElement(card, isHidden = false, isNew = false) {
   const cardDiv = document.createElement('div');
@@ -92,7 +86,6 @@ function createCardElement(card, isHidden = false, isNew = false) {
     `;
   }
 
-  // ★ 新しいカードだけ配りアニメーションを適用 ★
   if (isNew) {
     cardDiv.classList.add('deal-animate');
   }
@@ -101,9 +94,10 @@ function createCardElement(card, isHidden = false, isNew = false) {
 }
 
 /**
- * ★ UI更新ロジック: 既存DOM要素を再利用し、新カードのみ追加してアニメーション ★
+ * UIの全体更新 ＆ 画面の所持金・借金表示を完全同期
  */
-function updateUI(hideDealerCard = true) {
+function updateGameUI(hideDealerCard = true) {
+  // 画面の金額・名前表示を同期
   updateCashDisplay();
 
   // 1. ディーラー描画
@@ -115,7 +109,6 @@ function updateUI(hideDealerCard = true) {
       card.element = createCardElement(card, isHidden, true);
       dealerContainer.appendChild(card.element);
     } else {
-      // 伏せカードのオープン処理
       if (!isHidden && card.element.classList.contains('back')) {
         const newEl = createCardElement(card, false, false);
         dealerContainer.replaceChild(newEl, card.element);
@@ -147,7 +140,6 @@ function updateUI(hideDealerCard = true) {
       handsContainer.appendChild(handBox);
     }
 
-    // クラス更新
     if (index === activeHandIndex && playerHands.length > 1 && !handObj.isDone) {
       handBox.classList.add('active-hand');
     } else {
@@ -160,7 +152,6 @@ function updateUI(hideDealerCard = true) {
 
     const cardsComp = handBox.querySelector('.cards-container');
 
-    // 手札カードの差分追加
     handObj.cards.forEach(card => {
       if (!card.element) {
         card.element = createCardElement(card, false, true);
@@ -169,7 +160,7 @@ function updateUI(hideDealerCard = true) {
     });
   });
 
-  // ボタンの状態切り替え
+  // ボタンの有効化状態チェック
   const activeHand = playerHands[activeHandIndex];
   if (activeHand && !activeHand.isDone && !isDealing) {
     const doubleBtn = document.getElementById('double-btn');
@@ -210,39 +201,37 @@ async function startDeal() {
   activeHandIndex = 0;
   isDealing = true;
 
-  // DOMのリセット
   document.getElementById('dealer-cards').innerHTML = '';
   document.getElementById('player-hands-container').innerHTML = '';
 
-  // ボタン制御
-  document.getElementById('open-atm-btn').disabled = true; // ATMボタン無効化
+  document.getElementById('open-atm-btn').disabled = true; // ATM無効化
   document.getElementById('bet-controls').classList.add('hidden');
   document.getElementById('game-controls').classList.remove('hidden');
   document.getElementById('next-controls').classList.add('hidden');
   document.getElementById('message-display').textContent = 'カードを配っています...';
 
-  // 時間差配付 (1枚ずつ)
+  // 時間差配付
   playerHands[0].cards.push(deck.pop());
-  updateUI(true);
+  updateGameUI(true);
   await delay(300);
 
   dealerHand.push(deck.pop());
-  updateUI(true);
+  updateGameUI(true);
   await delay(300);
 
   playerHands[0].cards.push(deck.pop());
-  updateUI(true);
+  updateGameUI(true);
   await delay(300);
 
   dealerHand.push(deck.pop());
-  updateUI(true);
+  updateGameUI(true);
 
   isDealing = false;
   document.getElementById('message-display').textContent = 'ヒット、スタンド、またはアクションを選択してください。';
 
-  updateUI(true);
+  updateGameUI(true);
 
-  // ★ 21自動スタンド機能 ★
+  // 21自動スタンド
   if (calculateScore(playerHands[0].cards) === 21) {
     document.getElementById('message-display').textContent = '21達成！自動スタンドします。';
     await delay(500);
@@ -258,11 +247,10 @@ async function handleHit() {
   if (!hand || hand.isDone || isDealing) return;
 
   hand.cards.push(deck.pop());
-  updateUI(true);
+  updateGameUI(true);
 
   const score = calculateScore(hand.cards);
 
-  // ★ 21達成時の即時自動スタンド ★
   if (score === 21) {
     document.getElementById('message-display').textContent = '21達成！自動スタンドします。';
     hand.isDone = true;
@@ -306,7 +294,7 @@ async function handleDoubleDown() {
   document.getElementById('message-display').textContent = 'ダブルダウン！';
 
   hand.cards.push(deck.pop());
-  updateUI(true);
+  updateGameUI(true);
   await delay(600);
 
   hand.isDone = true;
@@ -334,7 +322,6 @@ async function handleSplit() {
   const card1 = hand.cards[0];
   const card2 = hand.cards[1];
 
-  // カードエレメントをクリアして再配置
   delete card1.element;
   delete card2.element;
 
@@ -345,20 +332,19 @@ async function handleSplit() {
   activeHandIndex = 0;
 
   document.getElementById('player-hands-container').innerHTML = '';
-  updateUI(true);
+  updateGameUI(true);
   await delay(300);
 
   playerHands[0].cards.push(deck.pop());
-  updateUI(true);
+  updateGameUI(true);
   await delay(300);
 
   playerHands[1].cards.push(deck.pop());
-  updateUI(true);
+  updateGameUI(true);
 
   isDealing = false;
-  updateUI(true);
+  updateGameUI(true);
 
-  // 1手目が21なら自動スタンド
   if (calculateScore(playerHands[0].cards) === 21) {
     document.getElementById('message-display').textContent = 'ハンド1が21達成！自動スタンドします。';
     playerHands[0].isDone = true;
@@ -375,7 +361,7 @@ function proceedNextHandOrDealer() {
 
   if (nextUnfinished !== -1) {
     activeHandIndex = nextUnfinished;
-    updateUI(true);
+    updateGameUI(true);
     document.getElementById('message-display').textContent = `ハンド ${activeHandIndex + 1} のプレイを選択してください。`;
   } else {
     playDealerTurn();
@@ -393,13 +379,13 @@ async function playDealerTurn() {
   const allBusted = playerHands.every(h => calculateScore(h.cards) > 21);
 
   // 伏せカードオープン
-  updateUI(false);
+  updateGameUI(false);
   await delay(600);
 
   if (!allBusted) {
     while (calculateScore(dealerHand) < 17) {
       dealerHand.push(deck.pop());
-      updateUI(false);
+      updateGameUI(false);
       await delay(600);
     }
   }
