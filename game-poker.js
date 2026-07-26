@@ -28,15 +28,11 @@ let isAnimating = false;
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * 所持金 ＆ 借金表示のリアルタイム同期
+ * ★ 画面の所持金・借金表示を完全同期 (lobby.js の共通 updateUI を安全呼び出し) ★
  */
 function updateCashDisplay() {
-  const cashEl = document.getElementById('cash-display');
-  const debtEl = document.getElementById('debt-display');
-
-  if (window.playerData) {
-    if (cashEl) cashEl.textContent = '$' + (playerData.cash || 0).toLocaleString();
-    if (debtEl) debtEl.textContent = '$' + (playerData.debt || 0).toLocaleString();
+  if (typeof updateUI === 'function') {
+    updateUI();
   }
 }
 
@@ -232,7 +228,7 @@ function evaluateHand() {
     document.querySelectorAll('.poker-card-wrapper').forEach(w => w.classList.add('lose-state'));
   }
 
-  // ★ 借金利子システムの実行（1プレイ終了時） ★
+  // ★ 借金利子システムの実行 ★
   if (typeof applyDebtInterest === 'function') {
     applyDebtInterest();
   }
@@ -242,6 +238,8 @@ function evaluateHand() {
 
 function triggerWinEffects() {
   const container = document.getElementById('particle-container');
+  if (!container) return;
+
   container.innerHTML = '';
   const items = ['🪙', '✨', '💎', '♠️', '♦️'];
 
