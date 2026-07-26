@@ -75,7 +75,7 @@
           <button id="clear-bets-btn" class="clear-bets-btn" type="button">🗑️ チップをすべてクリア</button>
         </div>
 
-        <!-- アウトサイドベット -->
+        <!-- アウトサイドベット (スマホ時は2x2配置) -->
         <div class="outside-bets">
           <button type="button" class="bet-spot red-btn" data-key="color_red" data-label="赤 (RED)">
             赤 (RED) 2倍
@@ -95,14 +95,16 @@
           </button>
         </div>
 
-        <!-- インサイドベット（数字1点賭け） -->
-        <div class="numbers-grid-title">▼ 数字1点賭け (36倍) ▼</div>
-        <div class="numbers-grid">
-          <button type="button" class="bet-spot green-zero" data-key="number_0" data-label="数字【0】">
-            0
-            <span class="chip-badge hidden">$0</span>
-          </button>
-          <div id="numbers-container" class="numbers-container"></div>
+        <!-- ★ インサイドベット（数字1点賭け：横スワイプ対応） ★ -->
+        <div class="numbers-grid-title">▼ 数字1点賭け (36倍) 【左右にスクロールできます ➔】 ▼</div>
+        <div class="numbers-grid-scroll">
+          <div class="numbers-grid">
+            <button type="button" class="bet-spot green-zero" data-key="number_0" data-label="数字【0】">
+              0
+              <span class="chip-badge hidden">$0</span>
+            </button>
+            <div id="numbers-container" class="numbers-container"></div>
+          </div>
         </div>
 
         <!-- スピンボタン -->
