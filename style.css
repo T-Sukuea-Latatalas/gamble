@@ -422,6 +422,45 @@ a.play-game-btn:hover {
   color: var(--gold);
 }
 
+/* ==========================================
+   ATMモーダル内ステータス表示（新設）
+   ========================================== */
+.atm-status-summary {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background-color: var(--bg-dark);
+  border: 1px solid rgba(223, 177, 91, 0.3);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 18px;
+  gap: 10px;
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.6);
+}
+
+.atm-status-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.atm-status-item .label {
+  font-size: 0.75rem;
+  color: var(--text-sub);
+  margin-bottom: 2px;
+}
+
+.atm-status-item .val {
+  font-size: 1.05rem;
+  font-weight: bold;
+  color: var(--gold);
+}
+
+.atm-status-item .val.debt-value {
+  color: var(--danger-red) !important;
+  text-shadow: 0 0 8px rgba(255, 77, 77, 0.3);
+}
+
 .close-btn {
   background: none;
   border: none;
