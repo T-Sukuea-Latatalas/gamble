@@ -28,7 +28,7 @@ let isAnimating = false;
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * ★ 画面の所持金・借金表示を完全同期 (lobby.js の共通 updateUI を安全呼び出し) ★
+ * ★ 画面の所持金・借金表示を完全同期 ★
  */
 function updateCashDisplay() {
   if (typeof updateUI === 'function') {
@@ -98,10 +98,10 @@ async function startDeal() {
 
   currentBet = betVal;
   playerData.cash -= currentBet;
-  saveData();
+  saveData(); // ベット額引き落としを即座に反映
 
   isAnimating = true;
-  document.getElementById('open-atm-btn').disabled = true; // ATMボタン無効化
+  document.getElementById('open-atm-btn').disabled = true;
   createDeck();
   heldStates = [false, false, false, false, false];
 
@@ -228,12 +228,12 @@ function evaluateHand() {
     document.querySelectorAll('.poker-card-wrapper').forEach(w => w.classList.add('lose-state'));
   }
 
-  // ★ 借金利子システムの実行 ★
+  // ★ 借金利子システムの実行 ＆ 保存（saveData内で即時UI更新） ★
   if (typeof applyDebtInterest === 'function') {
     applyDebtInterest();
+  } else {
+    saveData();
   }
-
-  saveData();
 }
 
 function triggerWinEffects() {
@@ -263,7 +263,7 @@ function prepareNextGame() {
   hand = [null, null, null, null, null];
   heldStates = [false, false, false, false, false];
 
-  document.getElementById('open-atm-btn').disabled = false; // ATMボタン再有効化
+  document.getElementById('open-atm-btn').disabled = false;
   document.querySelectorAll('.pay-row').forEach(r => r.classList.remove('active-pay'));
 
   const wrappers = document.querySelectorAll('.poker-card-wrapper');
