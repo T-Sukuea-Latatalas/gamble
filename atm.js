@@ -1,25 +1,23 @@
 /**
  * ==========================================
  * Fever Casino - 新・ATM制御スクリプト (atm.js)
+ * BigInt & formatCurrency 完全対応版
  * ==========================================
  */
 
-let selectedMode = null; // 'deposit', 'withdraw', 'repay', 'borrow'
-window.selectedAtmMode = null; // keypad.js 連携用グローバル参照
+let selectedMode = null;
+window.selectedAtmMode = null;
 
-/**
- * ゲームが現在プレイ中（進行中）かどうかを自動判定する関数
- * @returns {boolean} ゲーム進行中なら true
- */
+function safeToBigInt(v) {
+  if (typeof window.toBigInt === 'function') return window.toBigInt(v);
+  try { return BigInt(v || 0); } catch (e) { return 0n; }
+}
+
 function isGameInProgress() {
-  // ① スロットやルーレットの回転中フラグ
   if (typeof isSpinning !== 'undefined' && isSpinning) return true;
-  // ② ブラックジャックやポーカーのアニメーション・カード配付中フラグ
   if (typeof isDealing !== 'undefined' && isDealing) return true;
   if (typeof isAnimating !== 'undefined' && isAnimating) return true;
-  // ③ ポーカー等のゲーム状態が「ベット中」以外
   if (typeof gameState !== 'undefined' && gameState !== 'BETTING') return true;
-
   return false;
 }
 
@@ -41,11 +39,11 @@ function updateAtmStatusDisplay() {
     modalBody.insertBefore(summaryEl, modalBody.firstChild);
   }
 
-  const cash = (window.playerData && typeof window.playerData.cash === 'number') ? window.playerData.cash : 0;
-  const bank = (window.playerData && typeof window.playerData.bank === 'number') ? window.playerData.bank : 0;
-  const debt = (window.playerData && typeof window.playerData.debt === 'number') ? window.playerData.debt : 0;
+  const cash = safeToBigInt(window.playerData?.cash);
+  const bank = safeToBigInt(window.playerData?.bank);
+  const debt = safeToBigInt(window.playerData?.debt);
 
-  const format = (num) => '$' + (Number(num) || 0).toLocaleString();
+  const format = (num) => (typeof window.formatCurrency === 'function') ? window.formatCurrency(num) : '$' + safeToBigInt(num).toLocaleString();
 
   summaryEl.innerHTML = `
     <div class="atm-status-item">
@@ -63,50 +61,37 @@ function updateAtmStatusDisplay() {
   `;
 }
 
-/**
- * 画面全体のUI（所持金・貯金・借金額など）を確実に更新・同期する関数
- */
 function refreshAllUI() {
-  // ロビー画面のUI更新関数を呼び出し
   if (typeof updateUI === 'function') {
     updateUI();
   }
-  // 各ゲーム画面の所持金更新関数を呼び出し
   if (typeof updateCashDisplay === 'function') {
     updateCashDisplay();
   }
-  // ATMモーダル内のステータス表示を更新
   updateAtmStatusDisplay();
 }
 
-/**
- * 1. モーダル開閉と初期化
- */
 function setupAtmModal() {
   const atmModal = document.getElementById('atm-modal');
-  // ID指定またはクラス指定の両方のATMボタンに対応
   const openBtns = document.querySelectorAll('#open-atm-btn, .open-atm-btn');
   const closeBtns = document.querySelectorAll('#close-atm-btn, .close-btn');
   const overlay = atmModal ? atmModal.querySelector('.modal-overlay') : null;
 
   if (!atmModal || openBtns.length === 0) return;
 
-  // 「ATMを開く」ボタンが押された時の処理
   openBtns.forEach(btn => {
     btn.addEventListener('click', () => {
-      // ゲーム進行中はATMを開けないように制御
       if (isGameInProgress()) {
         alert('ゲーム進行中はATMを利用できません。ゲーム終了後にご利用ください。');
         return;
       }
 
       resetAtmUI();
-      updateAtmStatusDisplay(); // 開いた時にモーダル内ステータスを同期
+      updateAtmStatusDisplay();
       atmModal.classList.remove('hidden');
     });
   });
 
-  // モーダルを閉じる処理
   const closeModal = () => {
     atmModal.classList.add('hidden');
   };
@@ -115,9 +100,6 @@ function setupAtmModal() {
   if (overlay) overlay.addEventListener('click', closeModal);
 }
 
-/**
- * ATMの表示状態を初期状態（メニュー未選択）に戻す
- */
 function resetAtmUI() {
   selectedMode = null;
   window.selectedAtmMode = null;
@@ -133,9 +115,6 @@ function resetAtmUI() {
   }
 }
 
-/**
- * 2. メニュー選択（預入・引出・返済・借入）のクリック処理
- */
 function setupModeSelection() {
   const modeBtns = document.querySelectorAll('.mode-btn');
   const actionPanel = document.getElementById('atm-action-panel');
@@ -154,7 +133,7 @@ function setupModeSelection() {
       btn.classList.add('active');
 
       selectedMode = btn.getAttribute('data-mode');
-      window.selectedAtmMode = selectedMode; // キーパッド用連携参照を更新
+      window.selectedAtmMode = selectedMode;
 
       if (labelEl) {
         labelEl.textContent = MODE_NAMES[selectedMode] || '-';
@@ -168,7 +147,7 @@ function setupModeSelection() {
 }
 
 /**
- * 3. 取引確定ボタンを押した時の処理
+ * 取引確定ボタン押下処理 (BigInt完全統一)
  */
 function handleExecuteTransaction() {
   if (!selectedMode) {
@@ -177,12 +156,19 @@ function handleExecuteTransaction() {
   }
 
   const amountBtn = document.getElementById('atm-amount-btn');
-  const amount = parseInt(amountBtn ? amountBtn.getAttribute('data-amount') : '0', 10) || 0;
+  const rawAmt = amountBtn ? amountBtn.getAttribute('data-amount') : '0';
+  const amount = safeToBigInt(rawAmt);
 
-  if (amount <= 0) {
+  if (amount <= 0n) {
     alert('「金額を入力」ボタンを押して、1以上の正しい金額を指定してください。');
     return;
   }
+
+  const format = (v) => (typeof window.formatCurrency === 'function') ? window.formatCurrency(v) : '$' + safeToBigInt(v).toLocaleString();
+
+  playerData.cash = safeToBigInt(playerData.cash);
+  playerData.bank = safeToBigInt(playerData.bank);
+  playerData.debt = safeToBigInt(playerData.debt);
 
   // ① 預け入れ (Deposit)
   if (selectedMode === 'deposit') {
@@ -192,7 +178,7 @@ function handleExecuteTransaction() {
     }
     playerData.cash -= amount;
     playerData.bank += amount;
-    alert(`$${amount.toLocaleString()} を銀行に預け入れました。`);
+    alert(`${format(amount)} を銀行に預け入れました。`);
   }
 
   // ② 引き出し (Withdraw)
@@ -203,12 +189,12 @@ function handleExecuteTransaction() {
     }
     playerData.bank -= amount;
     playerData.cash += amount;
-    alert(`$${amount.toLocaleString()} を銀行から引き出しました。`);
+    alert(`${format(amount)} を銀行から引き出しました。`);
   }
 
   // ③ 借金返済 (Repay)
   else if (selectedMode === 'repay') {
-    if (playerData.debt <= 0) {
+    if (playerData.debt <= 0n) {
       alert('現在、返済すべき借金はありません。');
       return;
     }
@@ -217,48 +203,41 @@ function handleExecuteTransaction() {
       return;
     }
     if (amount > playerData.debt) {
-      alert(`借金額以上の返済はできません。（現在の借金: $${playerData.debt.toLocaleString()}）`);
+      alert(`借金額以上の返済はできません。（現在の借金: ${format(playerData.debt)}）`);
       return;
     }
 
     playerData.cash -= amount;
     playerData.debt -= amount;
 
-    // ★ 完済時の処理: 連続未返済カウントを0にリセット！
-    if (playerData.debt === 0) {
+    if (playerData.debt === 0n) {
       playerData.debtPlayCount = 0;
       alert(`🎉 借金を全額完済しました！ 金利カウントがリセットされました。`);
     } else {
-      alert(`$${amount.toLocaleString()} の借金を返済しました。残りの借金: $${playerData.debt.toLocaleString()}`);
+      alert(`${format(amount)} の借金を返済しました。残りの借金: ${format(playerData.debt)}`);
     }
   }
 
-  // ④ 借金 (Borrow) ※上限なし！
+  // ④ 借金 (Borrow)
   else if (selectedMode === 'borrow') {
     playerData.debt += amount;
     playerData.cash += amount;
-    alert(`$${amount.toLocaleString()} を借入れました。現在の借金: $${playerData.debt.toLocaleString()}`);
+    alert(`${format(amount)} を借入れました。現在の借金: ${format(playerData.debt)}`);
   }
 
-  // ★ 1. ローカルストレージおよびスプレッドシートへ保存
   if (typeof saveData === 'function') {
     saveData();
   }
 
-  // ★ 2. ロビー ＆ ゲーム画面 ＆ ATM内の所持金表示を即座に完全同期
   refreshAllUI();
-
-  // ★ 3. ATM表示のリセット ＆ モーダルを閉じる
   resetAtmUI();
+
   const atmModal = document.getElementById('atm-modal');
   if (atmModal) {
     atmModal.classList.add('hidden');
   }
 }
 
-/**
- * 4. 初期化
- */
 document.addEventListener('DOMContentLoaded', () => {
   setupAtmModal();
   setupModeSelection();
