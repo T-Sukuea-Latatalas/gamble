@@ -1,35 +1,33 @@
 /**
  * ==========================================
  * Fever Casino - ルーレットPRO制御スクリプト (game-roulette.js)
+ * BigInt & 超巨大数値完全対応版
  * ==========================================
  */
 
-// 欧州ルーレットの盤面配列 (0〜36の配置順)
 const WHEEL_NUMBERS = [
   0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26
 ];
 
 const RED_NUMBERS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
 
-// 複数ベット記憶オブジェクト
 let placedBets = {};
 
 let isSpinning = false;
-let wheelRotation = 0; // ホイール角度
-let ballRotation = 0;  // ボール角度
+let wheelRotation = 0;
+let ballRotation = 0;
 
-/**
- * ★ 画面の所持金・借金表示を完全同期 ★
- */
+function safeToBigInt(v) {
+  if (typeof window.toBigInt === 'function') return window.toBigInt(v);
+  try { return BigInt(v || 0); } catch (e) { return 0n; }
+}
+
 function updateCashDisplay() {
   if (typeof updateUI === 'function') {
     updateUI();
   }
 }
 
-/**
- * 1. ホイールグラフィック描画
- */
 function initWheelGraphic() {
   const wheel = document.getElementById('roulette-wheel');
   if (!wheel) return;
@@ -59,9 +57,6 @@ function initWheelGraphic() {
   wheel.style.background = `conic-gradient(${gradientStops.join(', ')})`;
 }
 
-/**
- * 2. ベットテーブル初期化 ＆ テンキー連動
- */
 function initBetTable() {
   const container = document.getElementById('numbers-container');
   if (!container) return;
@@ -89,7 +84,7 @@ function initBetTable() {
     spot.addEventListener('click', () => {
       if (isSpinning) return;
       const key = spot.getAttribute('data-key');
-      const currentAmt = placedBets[key] || 0;
+      const currentAmt = safeToBigInt(placedBets[key]);
 
       spot.setAttribute('data-amount', currentAmt.toString());
       spot.setAttribute('data-label', spot.getAttribute('data-label') + ": ");
@@ -97,9 +92,9 @@ function initBetTable() {
 
     spot.addEventListener('change', () => {
       const key = spot.getAttribute('data-key');
-      const newAmt = parseInt(spot.getAttribute('data-amount'), 10) || 0;
+      const newAmt = safeToBigInt(spot.getAttribute('data-amount'));
 
-      if (newAmt > 0) {
+      if (newAmt > 0n) {
         placedBets[key] = newAmt;
       } else {
         delete placedBets[key];
@@ -110,19 +105,16 @@ function initBetTable() {
   });
 }
 
-/**
- * チップバッジと総賭け金の描画更新
- */
 function updateChipBadges() {
-  let total = 0;
+  let total = 0n;
 
   document.querySelectorAll('.bet-spot').forEach(spot => {
     const key = spot.getAttribute('data-key');
     const badge = spot.querySelector('.chip-badge');
-    const amt = placedBets[key] || 0;
+    const amt = safeToBigInt(placedBets[key]);
 
-    if (amt > 0) {
-      badge.textContent = '$' + (amt >= 1000 ? (amt/1000) + 'k' : amt);
+    if (amt > 0n) {
+      badge.textContent = (typeof window.formatCurrency === 'function') ? window.formatCurrency(amt) : '$' + amt.toLocaleString();
       badge.classList.remove('hidden');
       total += amt;
     } else {
@@ -132,13 +124,10 @@ function updateChipBadges() {
 
   const totalEl = document.getElementById('total-bet-amount');
   if (totalEl) {
-    totalEl.textContent = '$' + total.toLocaleString();
+    totalEl.textContent = (typeof window.formatCurrency === 'function') ? window.formatCurrency(total) : '$' + total.toLocaleString();
   }
 }
 
-/**
- * 「チップをすべてクリア」のリセット関数
- */
 function clearAllBets() {
   if (isSpinning) return;
 
@@ -159,26 +148,22 @@ function clearAllBets() {
   }
 }
 
-/**
- * 3. スピン処理
- */
 function startSpin() {
   if (isSpinning) return;
 
-  const totalBet = Object.values(placedBets).reduce((a, b) => a + b, 0);
+  const totalBet = Object.values(placedBets).reduce((a, b) => safeToBigInt(a) + safeToBigInt(b), 0n);
 
-  if (totalBet <= 0) {
+  if (totalBet <= 0n) {
     alert('少なくとも1箇所にチップ（賭け金）を配置してください。');
     return;
   }
 
-  if (totalBet > playerData.cash) {
+  if (totalBet > safeToBigInt(playerData.cash)) {
     alert('所持金が足りません！');
     return;
   }
 
-  // ベット額引き落とし＆即時画面反映
-  playerData.cash -= totalBet;
+  playerData.cash = safeToBigInt(playerData.cash) - totalBet;
   saveData();
 
   isSpinning = true;
@@ -223,44 +208,43 @@ function startSpin() {
   }, 5000);
 }
 
-/**
- * 4. 勝敗判定 ＆ 配当計算
- */
 function evaluateResults(winningNumber, totalBet) {
   const isRed = RED_NUMBERS.includes(winningNumber);
   const isZero = winningNumber === 0;
   const colorText = isZero ? '緑' : (isRed ? '赤' : '黒');
 
-  let totalPayout = 0;
+  let totalPayout = 0n;
 
   Object.keys(placedBets).forEach(key => {
-    const amt = placedBets[key];
+    const amt = safeToBigInt(placedBets[key]);
 
-    if (key === 'color_red' && isRed) totalPayout += amt * 2;
-    if (key === 'color_black' && !isRed && !isZero) totalPayout += amt * 2;
-    if (key === 'parity_odd' && !isZero && winningNumber % 2 !== 0) totalPayout += amt * 2;
-    if (key === 'parity_even' && !isZero && winningNumber % 2 === 0) totalPayout += amt * 2;
-    if (key === `number_${winningNumber}`) totalPayout += amt * 36;
+    if (key === 'color_red' && isRed) totalPayout += amt * 2n;
+    if (key === 'color_black' && !isRed && !isZero) totalPayout += amt * 2n;
+    if (key === 'parity_odd' && !isZero && winningNumber % 2 !== 0) totalPayout += amt * 2n;
+    if (key === 'parity_even' && !isZero && winningNumber % 2 === 0) totalPayout += amt * 2n;
+    if (key === `number_${winningNumber}`) totalPayout += amt * 36n;
   });
 
   const resultEl = document.getElementById('result-display');
+  const formattedPayout = (typeof window.formatCurrency === 'function') ? window.formatCurrency(totalPayout) : '$' + totalPayout.toLocaleString();
 
-  if (totalPayout > 0) {
-    playerData.cash += totalPayout;
+  if (totalPayout > 0n) {
+    playerData.cash = safeToBigInt(playerData.cash) + totalPayout;
 
-    const profit = totalPayout - totalBet;
-    if (profit > (playerData.highScores.roulette || 0)) {
+    const profit = totalPayout > totalBet ? totalPayout - totalBet : 0n;
+    const currentHigh = safeToBigInt(playerData.highScores?.roulette);
+    if (profit > currentHigh) {
+      if (!playerData.highScores) playerData.highScores = {};
       playerData.highScores.roulette = profit;
     }
 
-    resultEl.textContent = `🎉 当選！【 ${winningNumber} (${colorText}) 】 総配当 $${totalPayout.toLocaleString()} を獲得！`;
+    resultEl.textContent = `🎉 当選！【 ${winningNumber} (${colorText}) 】 総配当 ${formattedPayout} を獲得！`;
     showWinEffect();
   } else {
     resultEl.textContent = `当選【 ${winningNumber} (${colorText}) 】 - 不的中でした。`;
     showLoseEffect();
   }
 
-  // ★ 借金利子の適用 ＆ 保存（saveData内で即時UI更新） ★
   if (typeof applyDebtInterest === 'function') {
     applyDebtInterest();
   } else {
@@ -301,9 +285,6 @@ function hideOverlays() {
   document.getElementById('lose-overlay').classList.add('hidden');
 }
 
-/**
- * 初期化
- */
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof loadData === 'function') loadData();
   updateCashDisplay();
