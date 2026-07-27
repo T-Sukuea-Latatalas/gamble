@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - 共通バーチャルテンキー制御スクリプト (keypad.js)
- * BigInt & 省略表記対応版
+ * BigInt & 超巨大数値対応版
  * ==========================================
  */
 
@@ -151,7 +151,8 @@
       if (currentValueStr === '0') {
         currentValueStr = (num === '00') ? '0' : num;
       } else {
-        if (currentValueStr.length < 30) {
+        // ★ 最大50桁まで対応
+        if (currentValueStr.length < 50) {
           currentValueStr += num;
         }
       }
@@ -209,7 +210,7 @@
           } else if (mode === 'repay') {
             maxVal = debt < cash ? debt : cash;
           } else if (mode === 'borrow') {
-            maxVal = 999999999999999999999999999n;
+            maxVal = 99999999999999999999999999999999999999999999999999n;
           } else {
             maxVal = cash;
           }
