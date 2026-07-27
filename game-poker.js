@@ -1,6 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - ビデオポーカーPRO制御スクリプト (game-poker.js)
+ * BigInt & 超巨大数値完全対応版
  * ==========================================
  */
 
@@ -21,15 +22,17 @@ const RANKS = [
 let deck = [];
 let hand = [null, null, null, null, null];
 let heldStates = [false, false, false, false, false];
-let currentBet = 0;
-let gameState = 'BETTING'; // 'BETTING', 'HOLDING', 'RESULT'
+let currentBet = 0n;
+let gameState = 'BETTING';
 let isAnimating = false;
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-/**
- * ★ 画面の所持金・借金表示を完全同期 ★
- */
+function safeToBigInt(v) {
+  if (typeof window.toBigInt === 'function') return window.toBigInt(v);
+  try { return BigInt(v || 0); } catch (e) { return 0n; }
+}
+
 function updateCashDisplay() {
   if (typeof updateUI === 'function') {
     updateUI();
@@ -55,9 +58,6 @@ function createDeck() {
   }
 }
 
-/**
- * カードを3Dフリップ描画
- */
 async function flipCard(index, cardData) {
   const wrapper = document.querySelector(`.poker-card-wrapper[data-index="${index}"]`);
   if (!wrapper) return;
@@ -77,28 +77,25 @@ async function flipCard(index, cardData) {
   wrapper.classList.add('flipped');
 }
 
-/**
- * ディール
- */
 async function startDeal() {
   if (gameState !== 'BETTING' || isAnimating) return;
 
   const betBtn = document.getElementById('bet-select-btn');
-  const betVal = parseInt(betBtn.getAttribute('data-amount'), 10) || 0;
+  const betVal = safeToBigInt(betBtn ? betBtn.getAttribute('data-amount') : '0');
 
-  if (betVal <= 0) {
+  if (betVal <= 0n) {
     alert('1以上の賭け金を選択してください。');
     return;
   }
 
-  if (betVal > playerData.cash) {
+  if (betVal > safeToBigInt(playerData.cash)) {
     alert('所持金が足りません！');
     return;
   }
 
   currentBet = betVal;
-  playerData.cash -= currentBet;
-  saveData(); // ベット額引き落としを即座に反映
+  playerData.cash = safeToBigInt(playerData.cash) - currentBet;
+  saveData();
 
   isAnimating = true;
   document.getElementById('open-atm-btn').disabled = true;
@@ -113,7 +110,6 @@ async function startDeal() {
   document.getElementById('bet-group').classList.add('hidden');
   document.getElementById('poker-message').textContent = 'カードを配っています...';
 
-  // 時間差フリップ配付
   for (let i = 0; i < 5; i++) {
     hand[i] = deck.pop();
     await flipCard(i, hand[i]);
@@ -127,9 +123,6 @@ async function startDeal() {
   document.getElementById('poker-message').textContent = '残したいカードをタップして「ドロー」を押してください。';
 }
 
-/**
- * ドロー
- */
 async function startDraw() {
   if (gameState !== 'HOLDING' || isAnimating) return;
 
@@ -148,15 +141,11 @@ async function startDraw() {
   isAnimating = false;
   gameState = 'RESULT';
 
-  // 役判定へ
   evaluateHand();
 
   document.getElementById('next-group').classList.remove('hidden');
 }
 
-/**
- * 役判定 ＆ 配当処理
- */
 function evaluateHand() {
   document.querySelectorAll('.pay-row').forEach(r => r.classList.remove('active-pay'));
 
@@ -176,43 +165,45 @@ function evaluateHand() {
   const countValues = Object.values(counts).sort((a, b) => b - a);
 
   let rankName = '役なし';
-  let multiplier = 0;
+  let multiplier = 0n;
   let payElementId = '';
 
   if (isStraight && isFlush) {
     if (sorted[0].rankVal === 10 && sorted[4].rankVal === 14) {
-      rankName = '🎉 ロイヤルストレートフラッシュ！'; multiplier = 250; payElementId = 'pay-royal';
+      rankName = '🎉 ロイヤルストレートフラッシュ！'; multiplier = 250n; payElementId = 'pay-royal';
     } else {
-      rankName = '✨ ストレートフラッシュ！'; multiplier = 50; payElementId = 'pay-sf';
+      rankName = '✨ ストレートフラッシュ！'; multiplier = 50n; payElementId = 'pay-sf';
     }
   } else if (countValues[0] === 4) {
-    rankName = '🔥 フォーカード！'; multiplier = 25; payElementId = 'pay-4k';
+    rankName = '🔥 フォーカード！'; multiplier = 25n; payElementId = 'pay-4k';
   } else if (countValues[0] === 3 && countValues[1] === 2) {
-    rankName = '🏠 フルハウス！'; multiplier = 9; payElementId = 'pay-fh';
+    rankName = '🏠 フルハウス！'; multiplier = 9n; payElementId = 'pay-fh';
   } else if (isFlush) {
-    rankName = '🎨 フラッシュ！'; multiplier = 6; payElementId = 'pay-fl';
+    rankName = '🎨 フラッシュ！'; multiplier = 6n; payElementId = 'pay-fl';
   } else if (isStraight) {
-    rankName = '📏 ストレート！'; multiplier = 4; payElementId = 'pay-st';
+    rankName = '📏 ストレート！'; multiplier = 4n; payElementId = 'pay-st';
   } else if (countValues[0] === 3) {
-    rankName = '☘️ スリーカード！'; multiplier = 3; payElementId = 'pay-3k';
+    rankName = '☘️ スリーカード！'; multiplier = 3n; payElementId = 'pay-3k';
   } else if (countValues[0] === 2 && countValues[1] === 2) {
-    rankName = '✌️ ツーペア！'; multiplier = 2; payElementId = 'pay-2p';
+    rankName = '✌️ ツーペア！'; multiplier = 2n; payElementId = 'pay-2p';
   } else if (countValues[0] === 2) {
     const pairRank = Number(Object.keys(counts).find(k => counts[k] === 2));
     if (pairRank >= 11) {
-      rankName = '🃏 ジャックス・オア・ベター！'; multiplier = 1; payElementId = 'pay-job';
+      rankName = '🃏 ジャックス・オア・ベター！'; multiplier = 1n; payElementId = 'pay-job';
     }
   }
 
   const msgEl = document.getElementById('poker-message');
 
-  if (multiplier > 0) {
+  if (multiplier > 0n) {
     const payout = currentBet * multiplier;
-    const profit = payout - currentBet;
+    const profit = payout > currentBet ? payout - currentBet : 0n;
 
-    playerData.cash += payout;
+    playerData.cash = safeToBigInt(playerData.cash) + payout;
 
-    if (profit > (playerData.highScores.poker || 0)) {
+    const currentHigh = safeToBigInt(playerData.highScores?.poker);
+    if (profit > currentHigh) {
+      if (!playerData.highScores) playerData.highScores = {};
       playerData.highScores.poker = profit;
     }
 
@@ -220,7 +211,8 @@ function evaluateHand() {
       document.getElementById(payElementId).classList.add('active-pay');
     }
 
-    msgEl.textContent = `${rankName} 配当 $${payout.toLocaleString()} を獲得！ (${multiplier}倍)`;
+    const formattedPayout = (typeof window.formatCurrency === 'function') ? window.formatCurrency(payout) : '$' + payout.toLocaleString();
+    msgEl.textContent = `${rankName} 配当 ${formattedPayout} を獲得！ (${multiplier}倍)`;
     triggerWinEffects();
 
   } else {
@@ -228,7 +220,6 @@ function evaluateHand() {
     document.querySelectorAll('.poker-card-wrapper').forEach(w => w.classList.add('lose-state'));
   }
 
-  // ★ 借金利子システムの実行 ＆ 保存（saveData内で即時UI更新） ★
   if (typeof applyDebtInterest === 'function') {
     applyDebtInterest();
   } else {
@@ -255,9 +246,6 @@ function triggerWinEffects() {
   }
 }
 
-/**
- * 次のゲームの準備
- */
 function prepareNextGame() {
   gameState = 'BETTING';
   hand = [null, null, null, null, null];
@@ -278,9 +266,6 @@ function prepareNextGame() {
   updateCashDisplay();
 }
 
-/**
- * 初期化
- */
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof loadData === 'function') loadData();
   updateCashDisplay();
