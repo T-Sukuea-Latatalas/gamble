@@ -207,14 +207,45 @@
         break;
 
       case 'max':
-        const maxAttr = activeTarget.getAttribute('data-max');
-        if (maxAttr) {
-          currentValueStr = maxAttr;
-        } else if (window.playerData && window.playerData.cash) {
-          currentValueStr = window.playerData.cash.toString();
+        // ★ スマートMax入力化ロジック ★
+        const cash = (window.playerData && typeof window.playerData.cash === 'number') ? Math.max(0, window.playerData.cash) : 0;
+        const bank = (window.playerData && typeof window.playerData.bank === 'number') ? Math.max(0, window.playerData.bank) : 0;
+        const debt = (window.playerData && typeof window.playerData.debt === 'number') ? Math.max(0, window.playerData.debt) : 0;
+
+        const isAtmTarget = activeTarget && (activeTarget.id === 'atm-amount-btn' || activeTarget.classList.contains('atm-amount-btn'));
+        const mode = window.selectedAtmMode || null;
+
+        let maxVal = cash;
+
+        if (isAtmTarget) {
+          // ATMコンテキスト
+          if (mode === 'deposit') {
+            maxVal = cash;
+          } else if (mode === 'withdraw') {
+            maxVal = bank;
+          } else if (mode === 'repay') {
+            maxVal = Math.min(debt, cash);
+          } else if (mode === 'borrow') {
+            maxVal = 999999999;
+          } else {
+            maxVal = cash;
+          }
         } else {
-          currentValueStr = '999999999';
+          // ゲームのベット額選択などのコンテキスト
+          const maxAttr = activeTarget.getAttribute('data-max');
+          if (maxAttr) {
+            const parsedMax = parseInt(maxAttr, 10);
+            if (!isNaN(parsedMax)) {
+              maxVal = Math.min(cash, parsedMax);
+            } else {
+              maxVal = cash;
+            }
+          } else {
+            maxVal = cash;
+          }
         }
+
+        currentValueStr = Math.max(0, maxVal).toString();
         updateDisplay();
         break;
     }
