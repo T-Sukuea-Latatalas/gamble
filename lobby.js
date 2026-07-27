@@ -1,30 +1,66 @@
 /**
  * ==========================================
  * Fever Casino - データ管理＆ロビー・全ゲーム共通制御スクリプト (lobby.js)
+ * BigInt (超巨大数値) 完全対応版
  * ==========================================
  */
 
 const STORAGE_KEY = 'fever_casino_player_data';
 const VIEW_MODE_KEY = 'fever_casino_view_mode';
 
-// プレイヤーデータ構造
+/**
+ * どんな型からでも安全に BigInt へ変換する万能ヘルパー関数
+ * @param {any} val - 変換対象 (BigInt, Number, String, undefined, null等)
+ * @param {bigint} defaultValue - 変換失敗時のデフォルト値
+ * @returns {bigint}
+ */
+function toBigInt(val, defaultValue = 0n) {
+  if (val === null || val === undefined) return defaultValue;
+  if (typeof val === 'bigint') return val < 0n ? 0n : val;
+  if (typeof val === 'number') {
+    if (isNaN(val) || !isFinite(val)) return defaultValue;
+    const intVal = Math.floor(val);
+    return intVal < 0 ? 0n : BigInt(intVal);
+  }
+  if (typeof val === 'string') {
+    // カンマやドルマーク、空白をすべて除外
+    const cleanStr = val.replace(/[\$,\s]/g, '').trim();
+    if (cleanStr === '' || cleanStr === '-') return defaultValue;
+    try {
+      const dotIndex = cleanStr.indexOf('.');
+      const strToParse = dotIndex !== -1 ? cleanStr.substring(0, dotIndex) : cleanStr;
+      const parsed = BigInt(strToParse);
+      return parsed < 0n ? 0n : parsed;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+  return defaultValue;
+}
+
+// グローバル公開
+window.toBigInt = toBigInt;
+
+// プレイヤーデータ構造 (内部数値はすべて BigInt)
 let playerData = {
   userId: '',
   userName: 'ゲストプレイヤー',
-  cash: 1000,
-  bank: 0,
-  debt: 0,
-  debtPlayCount: 0,
+  cash: 1000n,
+  bank: 0n,
+  debt: 0n,
+  debtPlayCount: 0, // カウント数は通常の Number
   highScores: {
-    blackjack: 0,
-    slots: 0,
-    roulette: 0,
-    poker: 0
+    blackjack: 0n,
+    slots: 0n,
+    roulette: 0n,
+    poker: 0n
   }
 };
 
+window.playerData = playerData;
+
 /**
- * プレイヤー名を生成
+ * プレイヤーID生成
  */
 function generateUserId() {
   if (window.crypto && window.crypto.randomUUID) {
@@ -34,13 +70,24 @@ function generateUserId() {
 }
 
 /**
- * ★ LocalStorage に保存 ＆ 画面表示を即座に自動同期
+ * ★ LocalStorage 保存（BigInt を String に安全シリアライズ）
  */
 function saveData() {
   try {
-    const jsonString = JSON.stringify(playerData);
-    localStorage.setItem(STORAGE_KEY, jsonString);
-    // データ保存時に自動で画面上のUI（所持金・借金など）を更新
+    const serializedData = {
+      ...playerData,
+      cash: (playerData.cash || 0n).toString(),
+      bank: (playerData.bank || 0n).toString(),
+      debt: (playerData.debt || 0n).toString(),
+      debtPlayCount: Number(playerData.debtPlayCount) || 0,
+      highScores: {
+        blackjack: (playerData.highScores?.blackjack || 0n).toString(),
+        slots: (playerData.highScores?.slots || 0n).toString(),
+        roulette: (playerData.highScores?.roulette || 0n).toString(),
+        poker: (playerData.highScores?.poker || 0n).toString()
+      }
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializedData));
     updateUI();
   } catch (error) {
     console.error('データの保存に失敗しました:', error);
@@ -48,14 +95,27 @@ function saveData() {
 }
 
 /**
- * LocalStorage からロード
+ * ★ LocalStorage ロード（String から safe に BigInt 復元）
  */
 function loadData() {
   try {
     const savedData = localStorage.getItem(STORAGE_KEY);
     if (savedData) {
-      const parsedData = JSON.parse(savedData);
-      playerData = { ...playerData, ...parsedData };
+      const parsed = JSON.parse(savedData);
+      playerData.userId = parsed.userId || generateUserId();
+      playerData.userName = parsed.userName || 'ゲストプレイヤー';
+      playerData.cash = toBigInt(parsed.cash, 1000n);
+      playerData.bank = toBigInt(parsed.bank, 0n);
+      playerData.debt = toBigInt(parsed.debt, 0n);
+      playerData.debtPlayCount = Number(parsed.debtPlayCount) || 0;
+
+      const hs = parsed.highScores || {};
+      playerData.highScores = {
+        blackjack: toBigInt(hs.blackjack, 0n),
+        slots: toBigInt(hs.slots, 0n),
+        roulette: toBigInt(hs.roulette, 0n),
+        poker: toBigInt(hs.poker, 0n)
+      };
     } else {
       playerData.userId = generateUserId();
       saveData();
@@ -68,21 +128,35 @@ function loadData() {
 }
 
 /**
- * 数値を通貨形式に整形
+ * BigInt対応 通貨整形表示関数
  */
 function formatCurrency(num) {
-  return '$' + (Number(num) || 0).toLocaleString();
+  const bigNum = toBigInt(num, 0n);
+  return '$' + bigNum.toLocaleString();
 }
 
+window.formatCurrency = formatCurrency;
+
 /**
- * ★ 重要: 全画面のステータス表示をリアルタイム同期
+ * ★ 重要: 全画面のステータス表示をリアルタイム同期（BigInt演算）
  */
 function updateUI() {
-  const cash = Number(playerData.cash) || 0;
-  const bank = Number(playerData.bank) || 0;
-  const debt = Number(playerData.debt) || 0;
-  const netWorth = cash + bank - debt;
+  playerData.cash = toBigInt(playerData.cash, 0n);
+  playerData.bank = toBigInt(playerData.bank, 0n);
+  playerData.debt = toBigInt(playerData.debt, 0n);
+
+  const cash = playerData.cash;
+  const bank = playerData.bank;
+  const debt = playerData.debt;
+  const netWorth = cash + bank - debt; // BigIntによる純資産計算
   const userName = playerData.userName || 'ゲストプレイヤー';
+
+  const formatNetWorth = (val) => {
+    if (val < 0n) {
+      return '-$' + (-val).toLocaleString();
+    }
+    return '$' + val.toLocaleString();
+  };
 
   // ロビー用要素
   const lobbyCashEl = document.getElementById('cash-amount');
@@ -94,7 +168,7 @@ function updateUI() {
   if (lobbyCashEl) lobbyCashEl.textContent = formatCurrency(cash);
   if (lobbyBankEl) lobbyBankEl.textContent = formatCurrency(bank);
   if (lobbyDebtEl) lobbyDebtEl.textContent = formatCurrency(debt);
-  if (lobbyNetWorthEl) lobbyNetWorthEl.textContent = formatCurrency(netWorth);
+  if (lobbyNetWorthEl) lobbyNetWorthEl.textContent = formatNetWorth(netWorth);
   if (lobbyUsernameInputEl && document.activeElement !== lobbyUsernameInputEl) {
     lobbyUsernameInputEl.value = userName;
   }
@@ -109,28 +183,31 @@ function updateUI() {
   if (gameNameEl) gameNameEl.textContent = userName;
 }
 
-// 互換性のためのエイリアス
 window.updateCashDisplay = updateUI;
 
 /**
- * 借金利子システム
+ * 借金利子システム (BigInt対応)
  */
 function applyDebtInterest() {
-  if (!playerData.debt || playerData.debt <= 0) {
-    playerData.debt = 0;
+  playerData.debt = toBigInt(playerData.debt, 0n);
+  if (playerData.debt <= 0n) {
+    playerData.debt = 0n;
     playerData.debtPlayCount = 0;
     return;
   }
-  playerData.debtPlayCount = (playerData.debtPlayCount || 0) + 1;
-  const currentRate = 1 + Math.floor(playerData.debtPlayCount / 5);
-  const interestAmount = Math.ceil(playerData.debt * (currentRate / 100));
+
+  playerData.debtPlayCount = (Number(playerData.debtPlayCount) || 0) + 1;
+  const currentRate = BigInt(1 + Math.floor(playerData.debtPlayCount / 5));
+
+  // 端数切り上げ利子計算 (debt * rate + 99n) / 100n
+  const interestAmount = (playerData.debt * currentRate + 99n) / 100n;
   playerData.debt += interestAmount;
 
-  saveData(); // saveData() 内で updateUI() が呼ばれるため画面も即座に同期される
+  saveData();
 }
 
 /**
- * ユーザー名変更イベントの設定
+ * ユーザー名変更
  */
 function setupUsernameChange() {
   const changeBtn = document.getElementById('change-username-btn');
@@ -147,21 +224,17 @@ function setupUsernameChange() {
 }
 
 /**
- * 画面表示モード（自動・PC・スマホ）の適用・UI同期関数
- * @param {string} mode - 'auto' | 'desktop' | 'mobile'
+ * 画面表示モード設定
  */
 function applyViewMode(mode) {
   const targetMode = mode || 'auto';
 
-  // 1. body タグの表示切り替えクラス制御
   document.body.classList.remove('force-desktop', 'force-mobile');
   if (targetMode === 'desktop') document.body.classList.add('force-desktop');
   else if (targetMode === 'mobile') document.body.classList.add('force-mobile');
 
-  // 2. LocalStorage に保存
   localStorage.setItem(VIEW_MODE_KEY, targetMode);
 
-  // 3. ボタンの .active クラス切り替え（UI同期）
   const viewBtns = document.querySelectorAll('.view-mode-toggle .view-btn');
   viewBtns.forEach(btn => {
     if (btn.getAttribute('data-mode') === targetMode) {
@@ -172,15 +245,10 @@ function applyViewMode(mode) {
   });
 }
 
-/**
- * 表示モード切替ボタンのイベントリスナー登録＆初期適用
- */
 function setupViewModeToggle() {
-  // 保存された表示モードを読み込み（未設定時は 'auto'）
   const savedMode = localStorage.getItem(VIEW_MODE_KEY) || 'auto';
   applyViewMode(savedMode);
 
-  // 切替ボタン群へのイベントリスナー登録
   const viewBtns = document.querySelectorAll('.view-mode-toggle .view-btn');
   viewBtns.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -191,13 +259,13 @@ function setupViewModeToggle() {
 }
 
 /**
- * ロビーおよび全画面共通初期化関数
+ * 初期化
  */
 function initLobby() {
   loadData();
   updateUI();
   setupUsernameChange();
-  setupViewModeToggle(); // 表示モード切替機能の初期化
+  setupViewModeToggle();
 }
 
 document.addEventListener('DOMContentLoaded', initLobby);
