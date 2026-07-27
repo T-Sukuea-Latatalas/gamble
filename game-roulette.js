@@ -19,7 +19,7 @@ let wheelRotation = 0; // ホイール角度
 let ballRotation = 0;  // ボール角度
 
 /**
- * ★ 画面の所持金・借金表示を完全同期 (lobby.js の共通 updateUI を安全呼び出し) ★
+ * ★ 画面の所持金・借金表示を完全同期 ★
  */
 function updateCashDisplay() {
   if (typeof updateUI === 'function') {
@@ -47,7 +47,6 @@ function initWheelGraphic() {
     const endDeg = ((index + 1) * step).toFixed(2);
     gradientStops.push(`${color} ${startDeg}deg ${endDeg}deg`);
 
-    // 数字ラベルの配置
     const label = document.createElement('div');
     label.className = 'wheel-num-label';
     label.textContent = num;
@@ -84,7 +83,6 @@ function initBetTable() {
     container.appendChild(btn);
   }
 
-  // テンキー連携設定
   document.querySelectorAll('.bet-spot').forEach(spot => {
     spot.classList.add('amount-select-btn');
 
@@ -162,7 +160,7 @@ function clearAllBets() {
 }
 
 /**
- * 3. スピン処理 (ボールの真ん中ぴったり停止計算)
+ * 3. スピン処理
  */
 function startSpin() {
   if (isSpinning) return;
@@ -179,24 +177,22 @@ function startSpin() {
     return;
   }
 
-  // 賭け金引き落とし
+  // ベット額引き落とし＆即時画面反映
   playerData.cash -= totalBet;
   saveData();
 
   isSpinning = true;
   document.getElementById('spin-btn').disabled = true;
-  document.getElementById('open-atm-btn').disabled = true; // ATMボタン無効化
+  document.getElementById('open-atm-btn').disabled = true;
   document.getElementById('result-display').textContent = '🎡 ルーレット回転中...';
   hideOverlays();
 
-  // 当選数字のランダム決定
   const winningIndex = Math.floor(Math.random() * WHEEL_NUMBERS.length);
   const winningNumber = WHEEL_NUMBERS[winningIndex];
 
-  // ボール停止位置の精度補正計算
   const step = 360 / WHEEL_NUMBERS.length;
 
-  wheelRotation += 1800; // 時計回りに5周
+  wheelRotation += 1800;
 
   const sectorCenterDeg = winningIndex * step + (step / 2);
   const targetSectorWorldDeg = (wheelRotation + sectorCenterDeg) % 360;
@@ -211,22 +207,19 @@ function startSpin() {
   const ballTrackEl = document.getElementById('ball-track');
   const ballEl = document.getElementById('roulette-ball');
 
-  // アニメーション実行
   ballEl.classList.remove('in-pocket');
   wheelEl.style.transform = `rotate(${wheelRotation}deg)`;
   ballTrackEl.style.transform = `rotate(${ballRotation}deg)`;
 
-  // ボールをポケットへ落とす
   setTimeout(() => {
     ballEl.classList.add('in-pocket');
   }, 3800);
 
-  // 回転終了 ＆ 勝敗判定
   setTimeout(() => {
     evaluateResults(winningNumber, totalBet);
     isSpinning = false;
     document.getElementById('spin-btn').disabled = false;
-    document.getElementById('open-atm-btn').disabled = false; // ATM再有効化
+    document.getElementById('open-atm-btn').disabled = false;
   }, 5000);
 }
 
@@ -267,12 +260,12 @@ function evaluateResults(winningNumber, totalBet) {
     showLoseEffect();
   }
 
-  // ★ 借金利子の適用 ★
+  // ★ 借金利子の適用 ＆ 保存（saveData内で即時UI更新） ★
   if (typeof applyDebtInterest === 'function') {
     applyDebtInterest();
+  } else {
+    saveData();
   }
-
-  saveData();
 }
 
 function showWinEffect() {
