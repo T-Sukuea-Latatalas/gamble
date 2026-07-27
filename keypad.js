@@ -1,27 +1,36 @@
 /**
  * ==========================================
  * Fever Casino - 共通バーチャルテンキー制御スクリプト (keypad.js)
+ * BigInt & 省略表記対応版
  * ==========================================
  */
 
 (function () {
-  let activeTarget = null; // 現在入力中の要素 (button または input)
-  let currentValueStr = "0"; // 現在入力中の数値文字列
+  let activeTarget = null;
+  let currentValueStr = "0";
   let keypadOverlay = null;
   let keypadContainer = null;
   let displayElement = null;
 
-  /**
-   * 1. テンキーのHTML構造（ディスプレイ含む）を画面内に自動生成する関数
-   */
+  function safeToBigInt(v) {
+    if (typeof window.toBigInt === 'function') return window.toBigInt(v);
+    try { return BigInt(v || 0); } catch (e) { return 0n; }
+  }
+
+  function getFormatted(val) {
+    if (typeof window.formatCurrency === 'function') {
+      return window.formatCurrency(val);
+    }
+    const b = safeToBigInt(val);
+    return '$' + b.toLocaleString();
+  }
+
   function createKeypadDOM() {
     if (document.getElementById('virtual-keypad')) return;
 
-    // オーバーレイ背景の生成
     keypadOverlay = document.createElement('div');
     keypadOverlay.className = 'keypad-overlay';
 
-    // テンキー本体の生成
     keypadContainer = document.createElement('div');
     keypadContainer.id = 'virtual-keypad';
     keypadContainer.className = 'virtual-keypad';
@@ -32,7 +41,6 @@
         <button type="button" class="keypad-close-btn" id="keypad-close">&times;</button>
       </div>
 
-      <!-- 入力中金額ディスプレイ -->
       <div class="keypad-display-wrapper">
         <span class="keypad-display-label">選択金額:</span>
         <div id="keypad-display" class="keypad-display">$0</div>
@@ -74,33 +82,26 @@
     setupKeypadEvents();
   }
 
-  /**
-   * 2. ディスプレイ表示のリアルタイム更新（3桁カンマ区切り）
-   */
   function updateDisplay() {
-    const num = parseInt(currentValueStr, 10) || 0;
+    const bigNum = safeToBigInt(currentValueStr);
     if (displayElement) {
-      displayElement.textContent = '$' + num.toLocaleString();
+      displayElement.textContent = getFormatted(bigNum);
     }
   }
 
-  /**
-   * 3. テンキーを開く処理
-   */
   function openKeypad(targetElement) {
     activeTarget = targetElement;
 
-    // 現在のターゲットの初期値を取得
     let initVal = "0";
     if (activeTarget.tagName === 'BUTTON') {
       initVal = activeTarget.getAttribute('data-amount') || "0";
     } else if (activeTarget.tagName === 'INPUT') {
       initVal = activeTarget.value || "0";
-      activeTarget.setAttribute('inputmode', 'none'); // スマホキーボード無効化
+      activeTarget.setAttribute('inputmode', 'none');
     }
 
-    currentValueStr = parseInt(initVal, 10).toString();
-    if (isNaN(currentValueStr)) currentValueStr = "0";
+    const bigVal = safeToBigInt(initVal);
+    currentValueStr = bigVal.toString();
 
     updateDisplay();
 
@@ -108,9 +109,6 @@
     keypadContainer.classList.add('show');
   }
 
-  /**
-   * 4. テンキーを閉じる処理
-   */
   function closeKeypad() {
     if (keypadOverlay) keypadOverlay.classList.remove('show');
     if (keypadContainer) keypadContainer.classList.remove('show');
@@ -121,51 +119,39 @@
     }
   }
 
-  /**
-   * 5. 値の確定 ＆ 他のスクリプト（ATMやゲーム）へ通知
-   */
   function confirmValue() {
     if (!activeTarget) return;
 
-    const numVal = parseInt(currentValueStr, 10) || 0;
+    const bigVal = safeToBigInt(currentValueStr);
+    const strVal = bigVal.toString();
 
     if (activeTarget.tagName === 'BUTTON') {
-      // ボタンの場合：data-amount 属性を更新し、見た目のラベルも変更
-      activeTarget.setAttribute('data-amount', numVal.toString());
+      activeTarget.setAttribute('data-amount', strVal);
 
-      // プレフィックス（「賭け金: 」など）を維持しながら金額を書き換える
       const prefix = activeTarget.getAttribute('data-label') || "金額を入力: ";
-      activeTarget.textContent = `${prefix}$${numVal.toLocaleString()}`;
+      activeTarget.textContent = `${prefix}${getFormatted(bigVal)}`;
 
-      // inputと同等の .value プロパティを持たせる
-      activeTarget.value = numVal;
-
+      activeTarget.value = strVal;
     } else if (activeTarget.tagName === 'INPUT') {
-      activeTarget.value = numVal.toString();
+      activeTarget.value = strVal;
     }
 
-    // イベントを発火して他スクリプトに金額変更を知らせる
     activeTarget.dispatchEvent(new Event('input', { bubbles: true }));
     activeTarget.dispatchEvent(new Event('change', { bubbles: true }));
 
     closeKeypad();
   }
 
-  /**
-   * 6. ボタンクリック時の数字・アクション制御
-   */
   function handleButtonClick(e) {
     const btn = e.target.closest('button');
     if (!btn || !activeTarget) return;
 
-    // ① 数字ボタン
     if (btn.classList.contains('num-btn')) {
       const num = btn.getAttribute('data-val');
       if (currentValueStr === '0') {
         currentValueStr = (num === '00') ? '0' : num;
       } else {
-        // 桁数オーバー防止（最大9桁 $999,999,999 まで）
-        if (currentValueStr.length < 9) {
+        if (currentValueStr.length < 30) {
           currentValueStr += num;
         }
       }
@@ -173,7 +159,6 @@
       return;
     }
 
-    // ② アクションボタン
     const action = btn.getAttribute('data-action');
 
     switch (action) {
@@ -200,17 +185,16 @@
         break;
 
       case 'add':
-        const addVal = parseInt(btn.getAttribute('data-val'), 10) || 0;
-        const currentNum = parseInt(currentValueStr, 10) || 0;
-        currentValueStr = (currentNum + addVal).toString();
+        const addVal = safeToBigInt(btn.getAttribute('data-val'));
+        const currentBig = safeToBigInt(currentValueStr);
+        currentValueStr = (currentBig + addVal).toString();
         updateDisplay();
         break;
 
       case 'max':
-        // ★ スマートMax入力化ロジック ★
-        const cash = (window.playerData && typeof window.playerData.cash === 'number') ? Math.max(0, window.playerData.cash) : 0;
-        const bank = (window.playerData && typeof window.playerData.bank === 'number') ? Math.max(0, window.playerData.bank) : 0;
-        const debt = (window.playerData && typeof window.playerData.debt === 'number') ? Math.max(0, window.playerData.debt) : 0;
+        const cash = safeToBigInt(window.playerData?.cash);
+        const bank = safeToBigInt(window.playerData?.bank);
+        const debt = safeToBigInt(window.playerData?.debt);
 
         const isAtmTarget = activeTarget && (activeTarget.id === 'atm-amount-btn' || activeTarget.classList.contains('atm-amount-btn'));
         const mode = window.selectedAtmMode || null;
@@ -218,49 +202,39 @@
         let maxVal = cash;
 
         if (isAtmTarget) {
-          // ATMコンテキスト
           if (mode === 'deposit') {
             maxVal = cash;
           } else if (mode === 'withdraw') {
             maxVal = bank;
           } else if (mode === 'repay') {
-            maxVal = Math.min(debt, cash);
+            maxVal = debt < cash ? debt : cash;
           } else if (mode === 'borrow') {
-            maxVal = 999999999;
+            maxVal = 999999999999999999999999999n;
           } else {
             maxVal = cash;
           }
         } else {
-          // ゲームのベット額選択などのコンテキスト
           const maxAttr = activeTarget.getAttribute('data-max');
           if (maxAttr) {
-            const parsedMax = parseInt(maxAttr, 10);
-            if (!isNaN(parsedMax)) {
-              maxVal = Math.min(cash, parsedMax);
-            } else {
-              maxVal = cash;
-            }
+            const parsedMax = safeToBigInt(maxAttr);
+            maxVal = cash < parsedMax ? cash : parsedMax;
           } else {
             maxVal = cash;
           }
         }
 
-        currentValueStr = Math.max(0, maxVal).toString();
+        currentValueStr = (maxVal < 0n ? 0n : maxVal).toString();
         updateDisplay();
         break;
     }
   }
 
-  /**
-   * 7. イベントリスナー登録（ボタン・INPUTのクリック監視）
-   */
   function setupKeypadEvents() {
     document.getElementById('keypad-close').addEventListener('click', closeKeypad);
     keypadOverlay.addEventListener('click', closeKeypad);
 
     keypadContainer.addEventListener('click', handleButtonClick);
 
-    // 画面内の「金額選択ボタン」または「INPUT」のクリックを監視
     document.body.addEventListener('click', (e) => {
       const target = e.target.closest('.amount-select-btn, .use-keypad');
       if (target) {
