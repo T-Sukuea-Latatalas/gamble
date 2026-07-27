@@ -5,6 +5,7 @@
  */
 
 let selectedMode = null; // 'deposit', 'withdraw', 'repay', 'borrow'
+window.selectedAtmMode = null; // keypad.js 連携用グローバル参照
 
 /**
  * ゲームが現在プレイ中（進行中）かどうかを自動判定する関数
@@ -23,6 +24,46 @@ function isGameInProgress() {
 }
 
 /**
+ * ATMモーダル内のステータス表示（所持金・銀行貯金・借金）をリアルタイム更新する関数
+ */
+function updateAtmStatusDisplay() {
+  const atmModal = document.getElementById('atm-modal');
+  if (!atmModal) return;
+
+  let summaryEl = document.getElementById('atm-status-summary');
+  if (!summaryEl) {
+    const modalBody = atmModal.querySelector('.modal-body');
+    if (!modalBody) return;
+
+    summaryEl = document.createElement('div');
+    summaryEl.id = 'atm-status-summary';
+    summaryEl.className = 'atm-status-summary';
+    modalBody.insertBefore(summaryEl, modalBody.firstChild);
+  }
+
+  const cash = (window.playerData && typeof window.playerData.cash === 'number') ? window.playerData.cash : 0;
+  const bank = (window.playerData && typeof window.playerData.bank === 'number') ? window.playerData.bank : 0;
+  const debt = (window.playerData && typeof window.playerData.debt === 'number') ? window.playerData.debt : 0;
+
+  const format = (num) => '$' + (Number(num) || 0).toLocaleString();
+
+  summaryEl.innerHTML = `
+    <div class="atm-status-item">
+      <span class="label">所持金</span>
+      <span class="val">${format(cash)}</span>
+    </div>
+    <div class="atm-status-item">
+      <span class="label">銀行貯金</span>
+      <span class="val">${format(bank)}</span>
+    </div>
+    <div class="atm-status-item">
+      <span class="label">借金</span>
+      <span class="val debt-value">${format(debt)}</span>
+    </div>
+  `;
+}
+
+/**
  * 画面全体のUI（所持金・貯金・借金額など）を確実に更新・同期する関数
  */
 function refreshAllUI() {
@@ -34,6 +75,8 @@ function refreshAllUI() {
   if (typeof updateCashDisplay === 'function') {
     updateCashDisplay();
   }
+  // ATMモーダル内のステータス表示を更新
+  updateAtmStatusDisplay();
 }
 
 /**
@@ -58,6 +101,7 @@ function setupAtmModal() {
       }
 
       resetAtmUI();
+      updateAtmStatusDisplay(); // 開いた時にモーダル内ステータスを同期
       atmModal.classList.remove('hidden');
     });
   });
@@ -76,6 +120,7 @@ function setupAtmModal() {
  */
 function resetAtmUI() {
   selectedMode = null;
+  window.selectedAtmMode = null;
   document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
 
   const actionPanel = document.getElementById('atm-action-panel');
@@ -109,6 +154,8 @@ function setupModeSelection() {
       btn.classList.add('active');
 
       selectedMode = btn.getAttribute('data-mode');
+      window.selectedAtmMode = selectedMode; // キーパッド用連携参照を更新
+
       if (labelEl) {
         labelEl.textContent = MODE_NAMES[selectedMode] || '-';
       }
@@ -198,7 +245,7 @@ function handleExecuteTransaction() {
     saveData();
   }
 
-  // ★ 2. ロビー ＆ ゲーム画面の所持金表示を即座に完全同期
+  // ★ 2. ロビー ＆ ゲーム画面 ＆ ATM内の所持金表示を即座に完全同期
   refreshAllUI();
 
   // ★ 3. ATM表示のリセット ＆ モーダルを閉じる
