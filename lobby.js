@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - データ管理＆ロビー・全ゲーム共通制御スクリプト (lobby.js)
- * BigInt & クッキークリッカー風フォーマッター対応版
+ * BigInt & 超巨大数値完全防護版
  * ==========================================
  */
 
@@ -9,23 +9,32 @@ const STORAGE_KEY = 'fever_casino_player_data';
 const VIEW_MODE_KEY = 'fever_casino_view_mode';
 
 /**
- * どんな型からでも安全に BigInt へ変換する万能ヘルパー関数
+ * どんな超巨大文字列・数値・型からでも安全に BigInt へ変換する万能ヘルパー関数
  */
 function toBigInt(val, defaultValue = 0n) {
   if (val === null || val === undefined) return defaultValue;
   if (typeof val === 'bigint') return val < 0n ? 0n : val;
   if (typeof val === 'number') {
     if (isNaN(val) || !isFinite(val)) return defaultValue;
-    const intVal = Math.floor(val);
-    return intVal < 0 ? 0n : BigInt(intVal);
+    try {
+      const intVal = Math.floor(val);
+      return intVal < 0 ? 0n : BigInt(intVal);
+    } catch (e) {
+      return defaultValue;
+    }
   }
   if (typeof val === 'string') {
-    // カンマ、ドル、記号、単位表記や空白を除外
     const cleanStr = val.replace(/[\$,\s]/g, '').trim();
     if (cleanStr === '' || cleanStr === '-') return defaultValue;
     try {
       const dotIndex = cleanStr.indexOf('.');
       const strToParse = dotIndex !== -1 ? cleanStr.substring(0, dotIndex) : cleanStr;
+      if (strToParse.includes('e') || strToParse.includes('E')) {
+        const numVal = Number(strToParse);
+        if (!isNaN(numVal) && isFinite(numVal)) {
+          return BigInt(Math.floor(numVal));
+        }
+      }
       const parsed = BigInt(strToParse);
       return parsed < 0n ? 0n : parsed;
     } catch (e) {
@@ -119,7 +128,7 @@ function formatCurrency(num) {
 window.formatCurrency = formatCurrency;
 window.formatBigIntShort = formatBigIntShort;
 
-// プレイヤーデータ構造 (内部数値はすべて BigInt)
+// プレイヤーデータ構造
 let playerData = {
   userId: '',
   userName: 'ゲストプレイヤー',
@@ -158,7 +167,7 @@ function saveData() {
       cash: playerData.cash.toString(),
       bank: playerData.bank.toString(),
       debt: playerData.debt.toString(),
-      debtPlayCount: Number(playerData.debtPlayCount) || 0,
+      debtPlayCount: typeof playerData.debtPlayCount === 'number' ? playerData.debtPlayCount : 0,
       highScores: {
         blackjack: toBigInt(playerData.highScores?.blackjack, 0n).toString(),
         slots: toBigInt(playerData.highScores?.slots, 0n).toString(),
@@ -174,19 +183,19 @@ function saveData() {
 }
 
 /**
- * LocalStorage ロード
+ * LocalStorage ロード（データ損失を完璧に防護）
  */
 function loadData() {
   try {
     const savedData = localStorage.getItem(STORAGE_KEY);
     if (savedData) {
       const parsed = JSON.parse(savedData);
-      playerData.userId = parsed.userId || generateUserId();
-      playerData.userName = parsed.userName || 'ゲストプレイヤー';
+      playerData.userId = parsed.userId || playerData.userId || generateUserId();
+      playerData.userName = parsed.userName || playerData.userName || 'ゲストプレイヤー';
       playerData.cash = toBigInt(parsed.cash, 1000n);
       playerData.bank = toBigInt(parsed.bank, 0n);
       playerData.debt = toBigInt(parsed.debt, 0n);
-      playerData.debtPlayCount = Number(parsed.debtPlayCount) || 0;
+      playerData.debtPlayCount = typeof parsed.debtPlayCount === 'number' ? parsed.debtPlayCount : 0;
 
       const hs = parsed.highScores || {};
       playerData.highScores = {
@@ -196,18 +205,17 @@ function loadData() {
         poker: toBigInt(hs.poker, 0n)
       };
     } else {
-      playerData.userId = generateUserId();
+      if (!playerData.userId) playerData.userId = generateUserId();
       saveData();
     }
   } catch (error) {
-    console.error('データの読み込みに失敗しました:', error);
-    playerData.userId = generateUserId();
-    saveData();
+    console.error('データの読み込み中にエラーが発生しましたが、既存データの強制リセットを回避します:', error);
+    if (!playerData.userId) playerData.userId = generateUserId();
   }
 }
 
 /**
- * 全画面ステータス表示のリアルタイム自動同期
+ * UIリアルタイム自動同期
  */
 function updateUI() {
   playerData.cash = toBigInt(playerData.cash, 0n);
@@ -248,7 +256,7 @@ function updateUI() {
 window.updateCashDisplay = updateUI;
 
 /**
- * 借金利子システム (BigInt対応)
+ * 借金利子システム (BigInt完全対応)
  */
 function applyDebtInterest() {
   playerData.debt = toBigInt(playerData.debt, 0n);
@@ -258,7 +266,7 @@ function applyDebtInterest() {
     return;
   }
 
-  playerData.debtPlayCount = (Number(playerData.debtPlayCount) || 0) + 1;
+  playerData.debtPlayCount = (typeof playerData.debtPlayCount === 'number' ? playerData.debtPlayCount : 0) + 1;
   const currentRate = BigInt(1 + Math.floor(playerData.debtPlayCount / 5));
 
   const interestAmount = (playerData.debt * currentRate + 99n) / 100n;
