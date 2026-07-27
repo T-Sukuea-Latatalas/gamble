@@ -1,12 +1,13 @@
 /**
  * ==========================================
  * Fever Casino - ブラックジャックPRO制御スクリプト (game-blackjack.js)
+ * BigInt & 超巨大数値完全対応版
  * ==========================================
  */
 
 let deck = [];
 let dealerHand = [];
-let playerHands = []; // [{ cards: [], bet: 100, isDone: false }]
+let playerHands = []; // [{ cards: [], bet: 100n, isDone: false }]
 let activeHandIndex = 0;
 let isDealing = false;
 
@@ -20,9 +21,11 @@ const VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-/**
- * ★ 画面の所持金・借金・プレイヤー名を完全同期 ★
- */
+function safeToBigInt(v) {
+  if (typeof window.toBigInt === 'function') return window.toBigInt(v);
+  try { return BigInt(v || 0); } catch (e) { return 0n; }
+}
+
 function updateCashDisplay() {
   if (typeof updateUI === 'function') {
     updateUI();
@@ -69,9 +72,6 @@ function calculateScore(cards) {
   return score;
 }
 
-/**
- * カードエレメントの作成
- */
 function createCardElement(card, isHidden = false, isNew = false) {
   const cardDiv = document.createElement('div');
   
@@ -93,13 +93,9 @@ function createCardElement(card, isHidden = false, isNew = false) {
   return cardDiv;
 }
 
-/**
- * UIの全体更新 ＆ 画面の所持金・借金表示を完全同期
- */
 function updateGameUI(hideDealerCard = true) {
   updateCashDisplay();
 
-  // 1. ディーラー描画
   const dealerContainer = document.getElementById('dealer-cards');
   dealerHand.forEach((card, index) => {
     const isHidden = (index === 1 && hideDealerCard);
@@ -119,7 +115,6 @@ function updateGameUI(hideDealerCard = true) {
   const dScore = hideDealerCard ? (dealerHand[0] ? dealerHand[0].numVal : '?') : calculateScore(dealerHand);
   document.getElementById('dealer-score').textContent = dScore;
 
-  // 2. プレイヤー手札描画
   const handsContainer = document.getElementById('player-hands-container');
 
   playerHands.forEach((handObj, index) => {
@@ -131,7 +126,7 @@ function updateGameUI(hideDealerCard = true) {
       handBox.className = 'hand-box';
       handBox.innerHTML = `
         <div class="hand-header">
-          ${playerHands.length > 1 ? `ハンド ${index + 1} - ` : ''}ベット: $<span class="bet-val">${handObj.bet}</span>
+          ${playerHands.length > 1 ? `ハンド ${index + 1} - ` : ''}ベット: $<span class="bet-val">0</span>
           <span class="score-badge">0</span>
         </div>
         <div class="cards-container"></div>
@@ -147,7 +142,9 @@ function updateGameUI(hideDealerCard = true) {
 
     const score = calculateScore(handObj.cards);
     handBox.querySelector('.score-badge').textContent = score;
-    handBox.querySelector('.bet-val').textContent = handObj.bet;
+
+    const betValFormatted = (typeof window.formatCurrency === 'function') ? window.formatCurrency(handObj.bet).replace('$', '') : handObj.bet.toLocaleString();
+    handBox.querySelector('.bet-val').textContent = betValFormatted;
 
     const cardsComp = handBox.querySelector('.cards-container');
 
@@ -159,38 +156,34 @@ function updateGameUI(hideDealerCard = true) {
     });
   });
 
-  // ボタンの有効化状態チェック
   const activeHand = playerHands[activeHandIndex];
   if (activeHand && !activeHand.isDone && !isDealing) {
     const doubleBtn = document.getElementById('double-btn');
     const splitBtn = document.getElementById('split-btn');
 
-    doubleBtn.disabled = !(activeHand.cards.length === 2 && playerData.cash >= activeHand.bet);
-    splitBtn.disabled = !(activeHand.cards.length === 2 && playerHands.length === 1 && activeHand.cards[0].value === activeHand.cards[1].value && playerData.cash >= activeHand.bet);
+    const cash = safeToBigInt(playerData.cash);
+    doubleBtn.disabled = !(activeHand.cards.length === 2 && cash >= activeHand.bet);
+    splitBtn.disabled = !(activeHand.cards.length === 2 && playerHands.length === 1 && activeHand.cards[0].value === activeHand.cards[1].value && cash >= activeHand.bet);
   }
 }
 
-/**
- * ゲーム開始 (ディール)
- */
 async function startDeal() {
   if (isDealing) return;
 
   const betBtn = document.getElementById('bet-select-btn');
-  const betVal = parseInt(betBtn.getAttribute('data-amount'), 10) || 0;
+  const betVal = safeToBigInt(betBtn ? betBtn.getAttribute('data-amount') : '0');
 
-  if (betVal <= 0) {
+  if (betVal <= 0n) {
     alert('1以上の賭け金を選択してください。');
     return;
   }
 
-  if (betVal > playerData.cash) {
+  if (betVal > safeToBigInt(playerData.cash)) {
     alert('所持金が足りません！');
     return;
   }
 
-  // ベット額引き落とし＆即時同期
-  playerData.cash -= betVal;
+  playerData.cash = safeToBigInt(playerData.cash) - betVal;
   saveData();
 
   hideOverlays();
@@ -209,7 +202,6 @@ async function startDeal() {
   document.getElementById('next-controls').classList.add('hidden');
   document.getElementById('message-display').textContent = 'カードを配っています...';
 
-  // 時間差配付
   playerHands[0].cards.push(deck.pop());
   updateGameUI(true);
   await delay(300);
@@ -230,7 +222,6 @@ async function startDeal() {
 
   updateGameUI(true);
 
-  // 21自動スタンド
   if (calculateScore(playerHands[0].cards) === 21) {
     document.getElementById('message-display').textContent = '21達成！自動スタンドします。';
     await delay(500);
@@ -238,9 +229,6 @@ async function startDeal() {
   }
 }
 
-/**
- * ヒット
- */
 async function handleHit() {
   const hand = playerHands[activeHandIndex];
   if (!hand || hand.isDone || isDealing) return;
@@ -263,9 +251,6 @@ async function handleHit() {
   }
 }
 
-/**
- * スタンド
- */
 function handleStand() {
   const hand = playerHands[activeHandIndex];
   if (!hand || hand.isDone || isDealing) return;
@@ -274,21 +259,18 @@ function handleStand() {
   proceedNextHandOrDealer();
 }
 
-/**
- * ダブルダウン
- */
 async function handleDoubleDown() {
   const hand = playerHands[activeHandIndex];
   if (!hand || hand.isDone || isDealing) return;
 
-  if (playerData.cash < hand.bet) {
+  if (safeToBigInt(playerData.cash) < hand.bet) {
     alert('ダブルダウンに必要な所持金が足りません！');
     return;
   }
 
-  playerData.cash -= hand.bet;
-  hand.bet *= 2;
-  saveData(); // 即座に所持金減額を反映
+  playerData.cash = safeToBigInt(playerData.cash) - hand.bet;
+  hand.bet *= 2n;
+  saveData();
 
   document.getElementById('message-display').textContent = 'ダブルダウン！';
 
@@ -300,20 +282,17 @@ async function handleDoubleDown() {
   proceedNextHandOrDealer();
 }
 
-/**
- * スプリット
- */
 async function handleSplit() {
   const hand = playerHands[0];
   if (!hand || hand.cards.length !== 2 || isDealing) return;
 
-  if (playerData.cash < hand.bet) {
+  if (safeToBigInt(playerData.cash) < hand.bet) {
     alert('スプリットに必要な所持金が足りません！');
     return;
   }
 
-  playerData.cash -= hand.bet;
-  saveData(); // 即座に所持金減額を反映
+  playerData.cash = safeToBigInt(playerData.cash) - hand.bet;
+  saveData();
 
   isDealing = true;
   document.getElementById('message-display').textContent = '手札をスプリットしました！';
@@ -352,9 +331,6 @@ async function handleSplit() {
   }
 }
 
-/**
- * 次のハンドまたはディーラーのターンへ
- */
 function proceedNextHandOrDealer() {
   const nextUnfinished = playerHands.findIndex(h => !h.isDone);
 
@@ -367,9 +343,6 @@ function proceedNextHandOrDealer() {
   }
 }
 
-/**
- * ディーラーの自動ターン
- */
 async function playDealerTurn() {
   isDealing = true;
   document.getElementById('game-controls').classList.add('hidden');
@@ -377,7 +350,6 @@ async function playDealerTurn() {
 
   const allBusted = playerHands.every(h => calculateScore(h.cards) > 21);
 
-  // 伏せカードオープン
   updateGameUI(false);
   await delay(600);
 
@@ -393,13 +365,10 @@ async function playDealerTurn() {
   evaluateAllResults();
 }
 
-/**
- * 勝敗判定 ＆ 配当計算
- */
 function evaluateAllResults() {
   const dScore = calculateScore(dealerHand);
-  let totalPayout = 0;
-  let totalBet = 0;
+  let totalPayout = 0n;
+  let totalBet = 0n;
   let winCount = 0;
   let loseCount = 0;
 
@@ -410,13 +379,13 @@ function evaluateAllResults() {
     if (pScore > 21) {
       loseCount++;
     } else if (dScore > 21) {
-      totalPayout += hand.bet * 2;
+      totalPayout += hand.bet * 2n;
       winCount++;
     } else if (pScore > dScore) {
       if (pScore === 21 && hand.cards.length === 2 && playerHands.length === 1) {
-        totalPayout += Math.floor(hand.bet * 2.5);
+        totalPayout += (hand.bet * 5n) / 2n;
       } else {
-        totalPayout += hand.bet * 2;
+        totalPayout += hand.bet * 2n;
       }
       winCount++;
     } else if (pScore < dScore) {
@@ -426,16 +395,18 @@ function evaluateAllResults() {
     }
   });
 
-  if (totalPayout > 0) {
-    playerData.cash += totalPayout;
+  if (totalPayout > 0n) {
+    playerData.cash = safeToBigInt(playerData.cash) + totalPayout;
 
-    const profit = totalPayout - totalBet;
-    if (profit > (playerData.highScores.blackjack || 0)) {
+    const profit = totalPayout > totalBet ? totalPayout - totalBet : 0n;
+    const currentHigh = safeToBigInt(playerData.highScores?.blackjack);
+
+    if (profit > currentHigh) {
+      if (!playerData.highScores) playerData.highScores = {};
       playerData.highScores.blackjack = profit;
     }
   }
 
-  // 借金利子の適用 ＆ 保存（saveData内で即時UI更新）
   if (typeof applyDebtInterest === 'function') {
     applyDebtInterest();
   } else {
@@ -443,14 +414,16 @@ function evaluateAllResults() {
   }
 
   const msgEl = document.getElementById('message-display');
+  const formattedPayout = (typeof window.formatCurrency === 'function') ? window.formatCurrency(totalPayout) : '$' + totalPayout.toLocaleString();
+
   if (winCount > 0 && loseCount === 0) {
-    msgEl.textContent = `🎉 勝利！ 配当 $${totalPayout.toLocaleString()} を獲得！`;
+    msgEl.textContent = `🎉 勝利！ 配当 ${formattedPayout} を獲得！`;
     showWinEffect();
   } else if (winCount === 0 && loseCount > 0) {
     msgEl.textContent = `ディーラーの勝ちです。`;
     showLoseEffect();
   } else {
-    msgEl.textContent = `ゲーム終了 （配当: $${totalPayout.toLocaleString()}）`;
+    msgEl.textContent = `ゲーム終了 （配当: ${formattedPayout}）`;
   }
 
   document.getElementById('next-controls').classList.remove('hidden');
@@ -460,6 +433,8 @@ function showWinEffect() {
   document.getElementById('win-overlay').classList.remove('hidden');
 
   const container = document.getElementById('particle-container');
+  if (!container) return;
+
   container.innerHTML = '';
   const items = ['🎉', '🪙', '✨', '💎'];
 
@@ -487,9 +462,6 @@ function hideOverlays() {
   document.getElementById('lose-overlay').classList.add('hidden');
 }
 
-/**
- * 次のゲームの準備
- */
 function prepareNextGame() {
   hideOverlays();
   document.getElementById('open-atm-btn').disabled = false;
@@ -504,9 +476,6 @@ function prepareNextGame() {
   updateCashDisplay();
 }
 
-/**
- * 初期化
- */
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof loadData === 'function') loadData();
   updateCashDisplay();
