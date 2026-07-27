@@ -21,7 +21,7 @@ const VALUES = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * ★ 画面の所持金・借金・プレイヤー名を完全同期（lobby.js の共通 updateUI を呼び出し） ★
+ * ★ 画面の所持金・借金・プレイヤー名を完全同期 ★
  */
 function updateCashDisplay() {
   if (typeof updateUI === 'function') {
@@ -70,7 +70,7 @@ function calculateScore(cards) {
 }
 
 /**
- * カードエレメントの作成（新規カードのみ deal-animate を付与）
+ * カードエレメントの作成
  */
 function createCardElement(card, isHidden = false, isNew = false) {
   const cardDiv = document.createElement('div');
@@ -97,7 +97,6 @@ function createCardElement(card, isHidden = false, isNew = false) {
  * UIの全体更新 ＆ 画面の所持金・借金表示を完全同期
  */
 function updateGameUI(hideDealerCard = true) {
-  // 画面の金額・名前表示を同期
   updateCashDisplay();
 
   // 1. ディーラー描画
@@ -190,7 +189,7 @@ async function startDeal() {
     return;
   }
 
-  // ベット額引き落とし
+  // ベット額引き落とし＆即時同期
   playerData.cash -= betVal;
   saveData();
 
@@ -204,7 +203,7 @@ async function startDeal() {
   document.getElementById('dealer-cards').innerHTML = '';
   document.getElementById('player-hands-container').innerHTML = '';
 
-  document.getElementById('open-atm-btn').disabled = true; // ATM無効化
+  document.getElementById('open-atm-btn').disabled = true;
   document.getElementById('bet-controls').classList.add('hidden');
   document.getElementById('game-controls').classList.remove('hidden');
   document.getElementById('next-controls').classList.add('hidden');
@@ -289,7 +288,7 @@ async function handleDoubleDown() {
 
   playerData.cash -= hand.bet;
   hand.bet *= 2;
-  saveData();
+  saveData(); // 即座に所持金減額を反映
 
   document.getElementById('message-display').textContent = 'ダブルダウン！';
 
@@ -314,7 +313,7 @@ async function handleSplit() {
   }
 
   playerData.cash -= hand.bet;
-  saveData();
+  saveData(); // 即座に所持金減額を反映
 
   isDealing = true;
   document.getElementById('message-display').textContent = '手札をスプリットしました！';
@@ -436,12 +435,12 @@ function evaluateAllResults() {
     }
   }
 
-  // 借金利子の適用
+  // 借金利子の適用 ＆ 保存（saveData内で即時UI更新）
   if (typeof applyDebtInterest === 'function') {
     applyDebtInterest();
+  } else {
+    saveData();
   }
-
-  saveData();
 
   const msgEl = document.getElementById('message-display');
   if (winCount > 0 && loseCount === 0) {
@@ -493,7 +492,7 @@ function hideOverlays() {
  */
 function prepareNextGame() {
   hideOverlays();
-  document.getElementById('open-atm-btn').disabled = false; // ATMボタン有効化
+  document.getElementById('open-atm-btn').disabled = false;
   document.getElementById('next-controls').classList.add('hidden');
   document.getElementById('bet-controls').classList.remove('hidden');
   document.getElementById('message-display').textContent = '賭け金を選択して「ディール開始」を押してください';
