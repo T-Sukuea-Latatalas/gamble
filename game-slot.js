@@ -6,7 +6,7 @@
  */
 
 /**
- * ★ 完全固定の3つのリール絵柄配列 (リール帯) ★
+ * 完全固定の3つのリール絵柄配列 (リール帯)
  */
 const REEL_STRIPS = [
   // リール1 (左)
@@ -50,12 +50,8 @@ const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
  * 所持金 ＆ 借金表示の同期
  */
 function updateCashDisplay() {
-  const cashEl = document.getElementById('cash-display');
-  const debtEl = document.getElementById('debt-display');
-
-  if (window.playerData) {
-    if (cashEl) cashEl.textContent = '$' + (playerData.cash || 0).toLocaleString();
-    if (debtEl) debtEl.textContent = '$' + (playerData.debt || 0).toLocaleString();
+  if (typeof updateUI === 'function') {
+    updateUI();
   }
 }
 
@@ -81,7 +77,7 @@ function initReels() {
 }
 
 /**
- * ★ スピン処理 (確変制御ロジック搭載) ★
+ * ★ スピン処理 (ベット即時反映 ＆ 確変制御ロジック搭載) ★
  */
 async function startSpin() {
   if (isSpinning) return;
@@ -101,7 +97,7 @@ async function startSpin() {
       return;
     }
     playerData.cash -= betVal;
-    saveData();
+    saveData(); // ★ ベット額引き落とし後、即座に保存・画面表示更新
   } else {
     // 確変中: 賭け金 $0、回数消化
     feverSpinsLeft--;
@@ -120,10 +116,8 @@ async function startSpin() {
 
   // 【確変ロジック】確変中は一定確率で「当たり」を予約する
   if (isFeverNow && Math.random() < 0.45) {
-    // 45%の確率で強制当選
     targetIndices = getForcedWinIndices();
   } else {
-    // 通常時、または確変中の抽選漏れは完全ランダム
     for (let i = 0; i < 3; i++) {
       targetIndices.push(Math.floor(Math.random() * REEL_STRIPS[i].length));
     }
@@ -151,7 +145,6 @@ async function startSpin() {
  * 強制当たり用のインデックスを取得する
  */
 function getForcedWinIndices() {
-  // 当てたい絵柄を重み付け抽選
   const weights = [
     { sym: '🍒', weight: 40 },
     { sym: '🍋', weight: 25 },
@@ -173,17 +166,14 @@ function getForcedWinIndices() {
   }
 
   const results = [];
-  // 各リール、selectedSymbolが「中段(index+1)」に来るようなtargetIndexを探す
   for (let i = 0; i < 3; i++) {
     const strip = REEL_STRIPS[i];
     const possibleIndices = [];
     for (let j = 0; j < strip.length; j++) {
-      // 中段(j)に絵柄を置きたい場合、targetIndex(上段)は j-1
       if (strip[j] === selectedSymbol) {
         possibleIndices.push((j - 1 + strip.length) % strip.length);
       }
     }
-    // 該当する位置からランダムに選択
     const chosen = possibleIndices[Math.floor(Math.random() * possibleIndices.length)];
     results.push(chosen !== undefined ? chosen : Math.floor(Math.random() * strip.length));
   }
@@ -220,7 +210,7 @@ function spinSingleReel(colIndex, targetIndex, stopDelay, gridResults) {
   });
 
   setTimeout(() => {
-    const moveDistance = totalSteps * 80; // 1コマ80px想定
+    const moveDistance = totalSteps * 80;
     strip.style.transition = `transform ${stopDelay / 1000}s cubic-bezier(0.1, 0.9, 0.2, 1)`;
     strip.style.transform = `translateY(-${moveDistance}px)`;
   }, 20);
@@ -266,7 +256,6 @@ function checkResults(gridResults, betVal, isFeverNow) {
       const symChar = gridResults[a];
       const payoutMult = SYMBOL_PAYOUTS[symChar] || 2;
       const linePayout = (isFeverNow ? betVal || 100 : betVal) * payoutMult * multiplier;
-      // ※確変中はbetValが0で渡ってくる可能性があるため、計算用ベース値を考慮
       
       totalPayout += linePayout;
       winningLinesCount++;
@@ -275,7 +264,6 @@ function checkResults(gridResults, betVal, isFeverNow) {
       document.getElementById(`cell-${b}`).classList.add('win-line');
       document.getElementById(`cell-${c}`).classList.add('win-line');
 
-      // 🗜️ (最高配当) が揃ったら確変突入/継続
       if (symChar === '🗜️') {
         triggeredFever = true;
       }
@@ -288,7 +276,7 @@ function checkResults(gridResults, betVal, isFeverNow) {
     showFeverUI(true);
   }
 
-  // 収支加算 ＆ セーブ
+  // 収支加算
   if (totalPayout > 0) {
     playerData.cash += totalPayout;
     const profit = totalPayout;
@@ -298,13 +286,14 @@ function checkResults(gridResults, betVal, isFeverNow) {
     triggerWinEffects();
   }
 
+  // 利子適用＆データ保存（saveData内で即座にUI更新）
   if (typeof applyDebtInterest === 'function') {
     applyDebtInterest();
+  } else {
+    saveData();
   }
 
-  saveData();
   updateFeverUI();
-  updateCashDisplay();
 
   const msgEl = document.getElementById('slot-message');
   if (triggeredFever) {
