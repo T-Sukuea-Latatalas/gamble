@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - Googleスプレッドシート連携 (spreadsheet.js)
- * BigInt JSONシリアライズ対応版
+ * BigInt JSONシリアライズ完全安全対応版
  * ==========================================
  */
 
@@ -35,7 +35,7 @@ function ensurePlayerDataInitialized() {
       window.playerData.cash = safeToBigInt(parsed.cash);
       window.playerData.bank = safeToBigInt(parsed.bank);
       window.playerData.debt = safeToBigInt(parsed.debt);
-      window.playerData.debtPlayCount = Number(parsed.debtPlayCount) || 0;
+      window.playerData.debtPlayCount = typeof parsed.debtPlayCount === 'number' ? parsed.debtPlayCount : 0;
 
       const hs = parsed.highScores || {};
       window.playerData.highScores = {
@@ -58,9 +58,6 @@ function ensurePlayerDataInitialized() {
   }
 }
 
-/**
- * 1. スプレッドシートへ送信 (BigIntを安全な文字列表現に変換)
- */
 async function sendDataToSpreadsheet(isManualTest = false) {
   if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("ここに") || GAS_API_URL.includes("YOUR_GAS")) {
     const msg = "【スプレッドシート未連携】GAS_API_URL が設定されていないため通信をスキップします。";
@@ -79,7 +76,6 @@ async function sendDataToSpreadsheet(isManualTest = false) {
 
     const hs = window.playerData.highScores || {};
 
-    // JSON.stringify エラー防止のため BigInt を文字列にシリアライズ
     const payload = {
       userId: window.playerData.userId,
       userName: window.playerData.userName || "ゲスト",
@@ -121,9 +117,6 @@ async function sendDataToSpreadsheet(isManualTest = false) {
   }
 }
 
-/**
- * 2. 最新ランキングの取得 ＆ 描画
- */
 async function fetchRankingFromSpreadsheet() {
   if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("ここに") || GAS_API_URL.includes("YOUR_GAS")) {
     return;
@@ -167,9 +160,6 @@ function showErrorStatus() {
   });
 }
 
-/**
- * 3. ランキング描画 (formatCurrency対応)
- */
 function updateRankingList(elementId, listData, valueKey) {
   const olElement = document.getElementById(elementId);
   if (!olElement) return;
@@ -208,9 +198,6 @@ function updateRankingList(elementId, listData, valueKey) {
   });
 }
 
-/**
- * 4. セーブフック
- */
 let isSaveDataHooked = false;
 
 function applySaveDataHook() {
