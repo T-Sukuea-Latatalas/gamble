@@ -1,63 +1,52 @@
 /**
  * ==========================================
  * Fever Casino - リアルリールスロット 3x3 制御スクリプト (game-slot.js)
- * 確変時アルゴリズム強化版
+ * BigInt & 超巨大数値完全対応版
  * ==========================================
  */
 
-/**
- * 完全固定の3つのリール絵柄配列 (リール帯)
- */
 const REEL_STRIPS = [
-  // リール1 (左)
   ['🍒', '🍋', '🔔', '🫚', '🗜️', '🍒', '🍋', '🔞', '🔔', '🚮', '🍒', '🍋', '🎎', '🫚'],
-  // リール2 (中)
   ['🍋', '🍒', '🫚', '🎎', '🔔', '🍋', '🍒', '🔞', '🚮', '🔔', '🫚', '🍒', '🗜️', '🍋'],
-  // リール3 (右)
   ['🔔', '🫚', '🍒', '🍋', '🎎', '🔞', '🍒', '🚮', '🗜️', '🔔', '🫚', '🍋', '🍒', '🔔']
 ];
 
-// 各絵柄の配当倍率
 const SYMBOL_PAYOUTS = {
-  '🍒': 2,
-  '🍋': 3,
-  '🔔': 5,
-  '🫚': 10,
-  '🔞': 25,
-  '🎎': 50,
-  '🗜️': 777,
-  '🚮': 0
+  '🍒': 2n,
+  '🍋': 3n,
+  '🔔': 5n,
+  '🫚': 10n,
+  '🔞': 25n,
+  '🎎': 50n,
+  '🗜️': 777n,
+  '🚮': 0n
 };
 
-// 5つのペイライン定義 (3x3の9マス: 0〜8)
 const PAYLINES = [
-  [0, 1, 2], // 横上段
-  [3, 4, 5], // 横中段
-  [6, 7, 8], // 横下段
-  [0, 4, 8], // 斜め(左上 ➔ 右下)
-  [2, 4, 6]  // 斜め(右上 ➔ 左下)
+  [0, 1, 2],
+  [3, 4, 5],
+  [6, 7, 8],
+  [0, 4, 8],
+  [2, 4, 6]
 ];
 
 let isSpinning = false;
-let feverSpinsLeft = 0; // 残り確変回数
-
-// 現在の各リールの停止インデックス位置 (初期値: 0)
+let feverSpinsLeft = 0;
 let currentIndices = [0, 0, 0];
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-/**
- * 所持金 ＆ 借金表示の同期
- */
+function safeToBigInt(v) {
+  if (typeof window.toBigInt === 'function') return window.toBigInt(v);
+  try { return BigInt(v || 0); } catch (e) { return 0n; }
+}
+
 function updateCashDisplay() {
   if (typeof updateUI === 'function') {
     updateUI();
   }
 }
 
-/**
- * 初期状態のリール帯DOM描画
- */
 function initReels() {
   for (let i = 0; i < 3; i++) {
     const strip = document.getElementById(`strip-${i}`);
@@ -76,30 +65,26 @@ function initReels() {
   }
 }
 
-/**
- * ★ スピン処理 (ベット即時反映 ＆ 確変制御ロジック搭載) ★
- */
 async function startSpin() {
   if (isSpinning) return;
 
   const betBtn = document.getElementById('bet-select-btn');
-  const betVal = parseInt(betBtn.getAttribute('data-amount'), 10) || 0;
+  const betVal = safeToBigInt(betBtn ? betBtn.getAttribute('data-amount') : '0');
 
   const isFeverNow = feverSpinsLeft > 0;
 
   if (!isFeverNow) {
-    if (betVal <= 0) {
+    if (betVal <= 0n) {
       alert('1以上の賭け金を選択してください。');
       return;
     }
-    if (betVal > playerData.cash) {
+    if (betVal > safeToBigInt(playerData.cash)) {
       alert('所持金が足りません！');
       return;
     }
-    playerData.cash -= betVal;
-    saveData(); // ★ ベット額引き落とし後、即座に保存・画面表示更新
+    playerData.cash = safeToBigInt(playerData.cash) - betVal;
+    saveData();
   } else {
-    // 確変中: 賭け金 $0、回数消化
     feverSpinsLeft--;
   }
 
@@ -108,13 +93,10 @@ async function startSpin() {
   document.getElementById('open-atm-btn').disabled = true; 
   document.getElementById('slot-message').textContent = isFeverNow ? '🔥 FEVER SPIN...!' : '🎰 スピン中...!';
 
-  // 前回の発光をリセット
   document.querySelectorAll('.symbol-cell').forEach(c => c.classList.remove('win-line'));
 
-  // 1. 各リールの次のストップ位置（インデックス）を決定
   let targetIndices = [];
 
-  // 【確変ロジック】確変中は一定確率で「当たり」を予約する
   if (isFeverNow && Math.random() < 0.45) {
     targetIndices = getForcedWinIndices();
   } else {
@@ -123,7 +105,6 @@ async function startSpin() {
     }
   }
 
-  // 2. アニメーション実行
   const stopDelays = [1000, 1500, 2000];
   const gridResults = new Array(9);
 
@@ -133,7 +114,6 @@ async function startSpin() {
 
   await delay(2200);
 
-  // 3. 当たり判定
   checkResults(gridResults, betVal, isFeverNow);
 
   isSpinning = false;
@@ -141,9 +121,6 @@ async function startSpin() {
   document.getElementById('open-atm-btn').disabled = false;
 }
 
-/**
- * 強制当たり用のインデックスを取得する
- */
 function getForcedWinIndices() {
   const weights = [
     { sym: '🍒', weight: 40 },
@@ -180,9 +157,6 @@ function getForcedWinIndices() {
   return results;
 }
 
-/**
- * 1つのリール列を縦スクロール回転させる
- */
 function spinSingleReel(colIndex, targetIndex, stopDelay, gridResults) {
   const strip = document.getElementById(`strip-${colIndex}`);
   const arr = REEL_STRIPS[colIndex];
@@ -236,15 +210,13 @@ function spinSingleReel(colIndex, targetIndex, stopDelay, gridResults) {
   }, stopDelay + 50);
 }
 
-/**
- * 5ライン判定 ＆ 配当処理
- */
 function checkResults(gridResults, betVal, isFeverNow) {
-  let totalPayout = 0;
+  let totalPayout = 0n;
   let winningLinesCount = 0;
   let triggeredFever = false;
 
-  const multiplier = isFeverNow ? 2 : 1;
+  const multiplier = isFeverNow ? 2n : 1n;
+  const effBet = isFeverNow ? (betVal || 100n) : betVal;
 
   PAYLINES.forEach(line => {
     const [a, b, c] = line;
@@ -254,8 +226,8 @@ function checkResults(gridResults, betVal, isFeverNow) {
       gridResults[b] === gridResults[c]
     ) {
       const symChar = gridResults[a];
-      const payoutMult = SYMBOL_PAYOUTS[symChar] || 2;
-      const linePayout = (isFeverNow ? betVal || 100 : betVal) * payoutMult * multiplier;
+      const payoutMult = SYMBOL_PAYOUTS[symChar] || 2n;
+      const linePayout = effBet * payoutMult * multiplier;
       
       totalPayout += linePayout;
       winningLinesCount++;
@@ -270,23 +242,21 @@ function checkResults(gridResults, betVal, isFeverNow) {
     }
   });
 
-  // 確変突入判定
   if (triggeredFever) {
     feverSpinsLeft = 10;
     showFeverUI(true);
   }
 
-  // 収支加算
-  if (totalPayout > 0) {
-    playerData.cash += totalPayout;
-    const profit = totalPayout;
-    if (profit > (playerData.highScores.slots || 0)) {
-      playerData.highScores.slots = profit;
+  if (totalPayout > 0n) {
+    playerData.cash = safeToBigInt(playerData.cash) + totalPayout;
+    const currentHigh = safeToBigInt(playerData.highScores?.slots);
+    if (totalPayout > currentHigh) {
+      if (!playerData.highScores) playerData.highScores = {};
+      playerData.highScores.slots = totalPayout;
     }
     triggerWinEffects();
   }
 
-  // 利子適用＆データ保存（saveData内で即座にUI更新）
   if (typeof applyDebtInterest === 'function') {
     applyDebtInterest();
   } else {
@@ -296,10 +266,12 @@ function checkResults(gridResults, betVal, isFeverNow) {
   updateFeverUI();
 
   const msgEl = document.getElementById('slot-message');
+  const formattedPayout = (typeof window.formatCurrency === 'function') ? window.formatCurrency(totalPayout) : '$' + totalPayout.toLocaleString();
+
   if (triggeredFever) {
     msgEl.textContent = `🔥 確変モード突入/継続！ 777揃いでフリースピン獲得！`;
   } else if (winningLinesCount > 0) {
-    msgEl.textContent = `🎉 【${winningLinesCount}ライン当選】 $${totalPayout.toLocaleString()} 獲得！ ${isFeverNow ? '(確変2倍!)' : ''}`;
+    msgEl.textContent = `🎉 【${winningLinesCount}ライン当選】 ${formattedPayout} 獲得！ ${isFeverNow ? '(確変2倍!)' : ''}`;
   } else {
     msgEl.textContent = isFeverNow ? '確変中... 次に期待！' : 'ハズレ！もう一度挑戦しよう！';
   }
@@ -345,9 +317,6 @@ function triggerWinEffects() {
   }
 }
 
-/**
- * 初期化
- */
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof loadData === 'function') loadData();
   updateCashDisplay();
