@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - 新・ATM制御スクリプト (atm.js)
- * BigInt & formatCurrency 完全対応版
+ * BigInt & 超巨大数値完全防護版
  * ==========================================
  */
 
@@ -22,7 +22,7 @@ function isGameInProgress() {
 }
 
 /**
- * ATMモーダル内のステータス表示（所持金・銀行貯金・借金）をリアルタイム更新する関数
+ * ATMモーダル内のステータス表示をリアルタイム更新する関数
  */
 function updateAtmStatusDisplay() {
   const atmModal = document.getElementById('atm-modal');
