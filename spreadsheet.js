@@ -1,65 +1,67 @@
 /**
  * ==========================================
  * Fever Casino - Googleスプレッドシート連携 (spreadsheet.js)
+ * BigInt JSONシリアライズ対応版
  * ==========================================
  */
 
-// LocalStorageの共通キー名
 const SPREADSHEET_STORAGE_KEY = 'fever_casino_player_data';
-
-// ★デプロイ後に発行された「Web アプリの URL」を貼り付けます
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzUjFUO4ZqCHsxcgsMNow_jUzkgUz-Tj7zvzv4_NNHccXQ5w2rTZ53puhnvNHi36qFJLw/exec";
 
-/**
- * プレイヤーデータが存在しない場合に自動生成・復旧する安全関数
- */
+function safeToBigInt(v) {
+  if (typeof window.toBigInt === 'function') return window.toBigInt(v);
+  try { return BigInt(v || 0); } catch (e) { return 0n; }
+}
+
 function ensurePlayerDataInitialized() {
   if (!window.playerData) {
     window.playerData = {
       userId: '',
       userName: 'ゲストプレイヤー',
-      cash: 1000,
-      bank: 0,
-      debt: 0,
+      cash: 1000n,
+      bank: 0n,
+      debt: 0n,
       debtPlayCount: 0,
-      highScores: { blackjack: 0, slots: 0, roulette: 0, poker: 0 }
+      highScores: { blackjack: 0n, slots: 0n, roulette: 0n, poker: 0n }
     };
   }
 
-  // LocalStorageからの読み込みを試みる
   try {
     const saved = localStorage.getItem(SPREADSHEET_STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved);
-      window.playerData = { ...window.playerData, ...parsed };
+      window.playerData.userId = parsed.userId || window.playerData.userId;
+      window.playerData.userName = parsed.userName || window.playerData.userName;
+      window.playerData.cash = safeToBigInt(parsed.cash);
+      window.playerData.bank = safeToBigInt(parsed.bank);
+      window.playerData.debt = safeToBigInt(parsed.debt);
+      window.playerData.debtPlayCount = Number(parsed.debtPlayCount) || 0;
+
+      const hs = parsed.highScores || {};
+      window.playerData.highScores = {
+        blackjack: safeToBigInt(hs.blackjack),
+        slots: safeToBigInt(hs.slots),
+        roulette: safeToBigInt(hs.roulette),
+        poker: safeToBigInt(hs.poker)
+      };
     }
   } catch (e) {
     console.error("セーブデータの復元に失敗しました:", e);
   }
 
-  // それでも userId が空の場合は、自動で一意のユーザーIDを生成して保存（自動修復）
   if (!window.playerData.userId || String(window.playerData.userId).trim() === '') {
     if (window.crypto && window.crypto.randomUUID) {
       window.playerData.userId = window.crypto.randomUUID();
     } else {
       window.playerData.userId = 'user_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9);
     }
-
-    try {
-      localStorage.setItem(SPREADSHEET_STORAGE_KEY, JSON.stringify(window.playerData));
-      console.log("【自動初期化完了】新しいユーザーIDを発行・保存しました:", window.playerData.userId);
-    } catch (e) {
-      console.error("初期化データの保存に失敗しました:", e);
-    }
   }
 }
 
 /**
- * 1. 現在のプレイヤーデータをスプレッドシートへ送信（送信後に最新ランキングも取得）
- * @param {boolean} isManualTest 手動テストボタンからの呼び出しかどうか
+ * 1. スプレッドシートへ送信 (BigIntを安全な文字列表現に変換)
  */
 async function sendDataToSpreadsheet(isManualTest = false) {
-  // URLが未設定、またはダミー表示用の文字が入っている場合のみ通信をスキップ
   if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("ここに") || GAS_API_URL.includes("YOUR_GAS")) {
     const msg = "【スプレッドシート未連携】GAS_API_URL が設定されていないため通信をスキップします。";
     console.log(msg);
@@ -68,22 +70,33 @@ async function sendDataToSpreadsheet(isManualTest = false) {
   }
 
   try {
-    // ★ プレイヤーデータの自動初期化・チェックを実行 ★
     ensurePlayerDataInitialized();
 
-    const netWorth = (Number(playerData.cash) || 0) + (Number(playerData.bank) || 0) - (Number(playerData.debt) || 0);
+    const cash = safeToBigInt(window.playerData.cash);
+    const bank = safeToBigInt(window.playerData.bank);
+    const debt = safeToBigInt(window.playerData.debt);
+    const netWorth = cash + bank - debt;
+
+    const hs = window.playerData.highScores || {};
+
+    // JSON.stringify エラー防止のため BigInt を文字列にシリアライズ
     const payload = {
-      userId: playerData.userId,
-      userName: playerData.userName || "ゲスト",
-      netWorth: netWorth,
-      highScores: playerData.highScores || { blackjack: 0, slots: 0, roulette: 0, poker: 0 }
+      userId: window.playerData.userId,
+      userName: window.playerData.userName || "ゲスト",
+      netWorth: netWorth.toString(),
+      highScores: {
+        blackjack: safeToBigInt(hs.blackjack).toString(),
+        slots: safeToBigInt(hs.slots).toString(),
+        roulette: safeToBigInt(hs.roulette).toString(),
+        poker: safeToBigInt(hs.poker).toString()
+      }
     };
 
     console.log("【スプレッドシートへ送信中データ】", payload);
 
     const response = await fetch(GAS_API_URL, {
       method: "POST",
-      headers: { "Content-Type": "text/plain" }, // GASの仕様に合わせた通信設定
+      headers: { "Content-Type": "text/plain" },
       body: JSON.stringify(payload)
     });
 
@@ -98,7 +111,6 @@ async function sendDataToSpreadsheet(isManualTest = false) {
       alert(`⚡ スプレッドシート通信成功！\n\nレスポンス: ${result.status}\nメッセージ: ${result.message || 'データが正しく反映されました。'}`);
     }
 
-    // 送信成功後、最新ランキングを取得して画面を再描画
     fetchRankingFromSpreadsheet();
 
   } catch (error) {
@@ -110,15 +122,13 @@ async function sendDataToSpreadsheet(isManualTest = false) {
 }
 
 /**
- * 2. スプレッドシートから最新のランキングデータを取得して画面に反映
+ * 2. 最新ランキングの取得 ＆ 描画
  */
 async function fetchRankingFromSpreadsheet() {
   if (!GAS_API_URL || GAS_API_URL.trim() === "" || GAS_API_URL.includes("ここに") || GAS_API_URL.includes("YOUR_GAS")) {
-    console.log("【スプレッドシート未連携】GAS_API_URL が設定されていないため、処理をスキップします。");
     return;
   }
 
-  // 通信開始時に「データを読み込み中...」を表示
   showLoadingStatus();
 
   try {
@@ -128,9 +138,7 @@ async function fetchRankingFromSpreadsheet() {
     }
 
     const rankings = await response.json();
-    console.log("最新ランキングデータ取得成功:", rankings);
 
-    // 各ランキングの描画
     updateRankingList('ranking-net-worth', rankings.netWorth, 'netWorth');
     updateRankingList('ranking-blackjack', rankings.blackjack, 'blackjack');
     updateRankingList('ranking-slots', rankings.slots, 'slots');
@@ -143,48 +151,24 @@ async function fetchRankingFromSpreadsheet() {
   }
 }
 
-/**
- * ランキングエリアに「読み込み中...」の仮表示を行う関数
- */
 function showLoadingStatus() {
-  const rankingIds = [
-    'ranking-net-worth',
-    'ranking-blackjack',
-    'ranking-slots',
-    'ranking-roulette',
-    'ranking-poker'
-  ];
-
+  const rankingIds = ['ranking-net-worth', 'ranking-blackjack', 'ranking-slots', 'ranking-roulette', 'ranking-poker'];
   rankingIds.forEach(id => {
     const el = document.getElementById(id);
-    if (el) {
-      el.innerHTML = '<li class="loading-text">データを読み込み中... 🏆</li>';
-    }
+    if (el) el.innerHTML = '<li class="loading-text">データを読み込み中... 🏆</li>';
   });
 }
 
-/**
- * 通信失敗時のエラー表示関数
- */
 function showErrorStatus() {
-  const rankingIds = [
-    'ranking-net-worth',
-    'ranking-blackjack',
-    'ranking-slots',
-    'ranking-roulette',
-    'ranking-poker'
-  ];
-
+  const rankingIds = ['ranking-net-worth', 'ranking-blackjack', 'ranking-slots', 'ranking-roulette', 'ranking-poker'];
   rankingIds.forEach(id => {
     const el = document.getElementById(id);
-    if (el) {
-      el.innerHTML = '<li>ランキングの読み込みに失敗しました</li>';
-    }
+    if (el) el.innerHTML = '<li>ランキングの読み込みに失敗しました</li>';
   });
 }
 
 /**
- * 3. HTMLの <ol> タグ内にランキング要素（<li>）を動的生成して書き換える関数
+ * 3. ランキング描画 (formatCurrency対応)
  */
 function updateRankingList(elementId, listData, valueKey) {
   const olElement = document.getElementById(elementId);
@@ -200,22 +184,22 @@ function updateRankingList(elementId, listData, valueKey) {
   listData.forEach((player, index) => {
     const li = document.createElement('li');
     const rank = index + 1;
-    const value = Number(player[valueKey]) || 0;
+    const rawVal = player[valueKey];
+    const bigVal = safeToBigInt(rawVal);
 
-    // 自分自身かどうかを判定（IDの比較）
-    const isMe = (window.playerData && playerData.userId && String(player.userId) === String(playerData.userId));
-    
-    // 自分自身の場合は名前の後ろに「(あなた)」と明記
+    const formattedVal = (typeof window.formatCurrency === 'function') 
+      ? window.formatCurrency(bigVal) 
+      : '$' + bigVal.toLocaleString();
+
+    const isMe = (window.playerData && window.playerData.userId && String(player.userId) === String(window.playerData.userId));
     const displayName = isMe ? `${player.userName} (あなた)` : player.userName;
 
-    li.textContent = `${rank}位: ${displayName} ($${value.toLocaleString()})`;
+    li.textContent = `${rank}位: ${displayName} (${formattedVal})`;
 
-    // 1位の色付け
     if (rank === 1) {
       li.style.color = 'var(--gold)';
     }
 
-    // 自分自身である場合、CSSの強調用クラス 'my-rank' を付与
     if (isMe) {
       li.classList.add('my-rank');
     }
@@ -225,7 +209,7 @@ function updateRankingList(elementId, listData, valueKey) {
 }
 
 /**
- * 4. セーブ処理 (saveData) が実行されたら自動でスプレッドシートにも送信するフック処理
+ * 4. セーブフック
  */
 let isSaveDataHooked = false;
 
@@ -236,32 +220,28 @@ function applySaveDataHook() {
     const originalSaveData = saveData;
 
     saveData = function() {
-      originalSaveData();       // ローカルストレージに保存
-      sendDataToSpreadsheet();  // スプレッドシートへ自動送信
+      originalSaveData();
+      sendDataToSpreadsheet();
     };
 
     isSaveDataHooked = true;
-    console.log("【スプレッドシート連携】セーブフックを完了しました。");
   }
 }
 
-// テストボタンのイベント登録
 function setupTestButton() {
   const testBtn = document.getElementById('test-spreadsheet-btn');
   if (testBtn) {
     testBtn.addEventListener('click', () => {
-      sendDataToSpreadsheet(true); // 手動テスト実行（alert表示ON）
+      sendDataToSpreadsheet(true);
     });
   }
 }
 
-// 画面読み込み完了時に実行
 window.addEventListener('load', () => {
   ensurePlayerDataInitialized();
   applySaveDataHook();
   setupTestButton();
 
-  // ランキングを初回取得
   setTimeout(() => {
     fetchRankingFromSpreadsheet();
   }, 100);
