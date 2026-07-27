@@ -129,6 +129,9 @@ function applyDebtInterest() {
   saveData(); // saveData() 内で updateUI() が呼ばれるため画面も即座に同期される
 }
 
+/**
+ * ユーザー名変更イベントの設定
+ */
 function setupUsernameChange() {
   const changeBtn = document.getElementById('change-username-btn');
   const usernameInput = document.getElementById('username-input');
@@ -143,17 +146,58 @@ function setupUsernameChange() {
   });
 }
 
+/**
+ * 画面表示モード（自動・PC・スマホ）の適用・UI同期関数
+ * @param {string} mode - 'auto' | 'desktop' | 'mobile'
+ */
 function applyViewMode(mode) {
+  const targetMode = mode || 'auto';
+
+  // 1. body タグの表示切り替えクラス制御
   document.body.classList.remove('force-desktop', 'force-mobile');
-  if (mode === 'desktop') document.body.classList.add('force-desktop');
-  else if (mode === 'mobile') document.body.classList.add('force-mobile');
-  localStorage.setItem(VIEW_MODE_KEY, mode);
+  if (targetMode === 'desktop') document.body.classList.add('force-desktop');
+  else if (targetMode === 'mobile') document.body.classList.add('force-mobile');
+
+  // 2. LocalStorage に保存
+  localStorage.setItem(VIEW_MODE_KEY, targetMode);
+
+  // 3. ボタンの .active クラス切り替え（UI同期）
+  const viewBtns = document.querySelectorAll('.view-mode-toggle .view-btn');
+  viewBtns.forEach(btn => {
+    if (btn.getAttribute('data-mode') === targetMode) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
 }
 
+/**
+ * 表示モード切替ボタンのイベントリスナー登録＆初期適用
+ */
+function setupViewModeToggle() {
+  // 保存された表示モードを読み込み（未設定時は 'auto'）
+  const savedMode = localStorage.getItem(VIEW_MODE_KEY) || 'auto';
+  applyViewMode(savedMode);
+
+  // 切替ボタン群へのイベントリスナー登録
+  const viewBtns = document.querySelectorAll('.view-mode-toggle .view-btn');
+  viewBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const selectedMode = btn.getAttribute('data-mode') || 'auto';
+      applyViewMode(selectedMode);
+    });
+  });
+}
+
+/**
+ * ロビーおよび全画面共通初期化関数
+ */
 function initLobby() {
   loadData();
   updateUI();
   setupUsernameChange();
+  setupViewModeToggle(); // 表示モード切替機能の初期化
 }
 
 document.addEventListener('DOMContentLoaded', initLobby);
