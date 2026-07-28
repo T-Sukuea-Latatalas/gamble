@@ -6,6 +6,7 @@
   <title>Fever Casino Fever</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="keypad.css">
+  <link rel="stylesheet" href="debt-challenge.css">
   <!-- Three.js (3D空間描画用CDN) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -130,9 +131,7 @@
 
   </div>
 
-  <!-- ==========================================
-       ATMモーダルウィンドウ
-       ========================================== -->
+  <!-- ATMモーダルウィンドウ -->
   <div id="atm-modal" class="modal hidden">
     <div class="modal-overlay"></div>
     <div class="modal-content">
@@ -168,7 +167,7 @@
           </div>
         </div>
 
-        <!-- ★ 借金相殺チャンス起動ボタンコンテナ ★ -->
+        <!-- 借金相殺チャンス起動ボタンコンテナ -->
         <div class="debt-challenge-widget-container">
           <button type="button" class="debt-challenge-btn" disabled>
             🔒 借金相殺チャンス (条件未達成)
@@ -180,9 +179,7 @@
     </div>
   </div>
 
-  <!-- ==========================================
-       ★ 借金相殺チャンス（断崖絶壁3Dコイントス）専用モーダル ★
-       ========================================== -->
+  <!-- ★ 借金相殺チャンス（3Dコイントス）専用モーダル ★ -->
   <div id="debt-challenge-modal" class="modal hidden">
     <div class="modal-overlay"></div>
     <div class="modal-content challenge-modal-content cliff-modal-content">
@@ -197,14 +194,14 @@
       <!-- UIレイヤー（3Dシーン上に前面表示） -->
       <div class="challenge-ui-overlay">
         <div class="modal-header">
-          <h2>🔥 借金相殺チャンス（断崖絶壁）</h2>
+          <h2>🔥 借金相殺チャンス</h2>
           <button id="close-debt-challenge-btn" class="close-btn" type="button">&times;</button>
         </div>
 
         <div class="modal-body">
           <p class="challenge-desc">
-            断崖絶壁でコインを3回投げ、<b style="color:var(--gold);">3回連続「表」</b>が出れば<b>借金全額帳消し</b>！<br>
-            <span class="warning-text">※ 1回でも「裏」が出るとコインは海へ転落し、借金と金利が2倍に増大します！</span>
+            コインを3回投げ、<b style="color:var(--gold);">3回連続「表」</b>が出れば<b>借金全額帳消し</b>！<br>
+            <span class="warning-text">※ 1回でも「裏」が出ると失敗となり、借金と金利が2倍に増大します！</span>
           </p>
 
           <!-- 3回分のステップインジケーター -->
