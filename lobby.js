@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - データ管理＆ロビー・全ゲーム共通制御スクリプト (lobby.js)
- * BigInt & 超巨大数値完全防護版
+ * BigInt & シンプルカンマ区切り整数表記版
  * ==========================================
  */
 
@@ -47,63 +47,7 @@ function toBigInt(val, defaultValue = 0n) {
 window.toBigInt = toBigInt;
 
 /**
- * クッキークリッカー風単位付きフォーマッター
- */
-function formatBigIntShort(bigVal) {
-  if (bigVal < 100000n) {
-    return bigVal.toLocaleString();
-  }
-
-  const SUFFIXES = [
-    '', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 
-    'Dc', 'UnD', 'DuD', 'TreD', 'QaD', 'QiD', 'SxD', 'SpD', 'OcD', 'NoD', 'Vig'
-  ];
-
-  const str = bigVal.toString();
-  const len = str.length;
-  let unitIndex = Math.floor((len - 1) / 3);
-
-  if (unitIndex >= SUFFIXES.length) {
-    unitIndex = SUFFIXES.length - 1;
-  }
-
-  const shift = unitIndex * 3;
-  const rem = len - shift;
-
-  let intPartStr = str.slice(0, rem);
-  let decPartStr = str.slice(rem, rem + 3);
-
-  while (decPartStr.length < 3) {
-    decPartStr += '0';
-  }
-
-  let decNum = Math.round(parseInt(decPartStr, 10) / 10);
-  let intNum = BigInt(intPartStr);
-
-  if (decNum >= 100) {
-    intNum += 1n;
-    decNum = 0;
-    if (intNum.toString().length > rem) {
-      if (unitIndex < SUFFIXES.length - 1) {
-        unitIndex += 1;
-        intPartStr = "1";
-        decNum = 0;
-      } else {
-        intPartStr = intNum.toString();
-      }
-    } else {
-      intPartStr = intNum.toString();
-    }
-  }
-
-  const decFormatted = String(decNum).padStart(2, '0');
-  const suffix = SUFFIXES[unitIndex] || '';
-
-  return `${intPartStr}.${decFormatted}${suffix}`;
-}
-
-/**
- * 通貨表記用メイン関数 (例: $100.00K, -$50.00M, $9,999)
+ * シンプルな3桁カンマ区切りドル表記関数 (例: $1,000, $10,000,000,000)
  */
 function formatCurrency(num) {
   let isNegative = false;
@@ -121,14 +65,13 @@ function formatCurrency(num) {
     bigVal = b;
   }
 
-  const formattedStr = formatBigIntShort(bigVal);
+  const formattedStr = bigVal.toLocaleString('en-US');
   return (isNegative ? '-$' : '$') + formattedStr;
 }
 
 window.formatCurrency = formatCurrency;
-window.formatBigIntShort = formatBigIntShort;
 
-// プレイヤーデータ構造
+// プレイヤーデータ構造 (内部数値はすべて BigInt)
 let playerData = {
   userId: '',
   userName: 'ゲストプレイヤー',
@@ -183,7 +126,7 @@ function saveData() {
 }
 
 /**
- * LocalStorage ロード（データ損失を完璧に防護）
+ * LocalStorage ロード
  */
 function loadData() {
   try {
@@ -256,7 +199,7 @@ function updateUI() {
 window.updateCashDisplay = updateUI;
 
 /**
- * 借金利子システム (BigInt完全対応)
+ * 借金利子システム
  */
 function applyDebtInterest() {
   playerData.debt = toBigInt(playerData.debt, 0n);
