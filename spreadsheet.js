@@ -179,7 +179,7 @@ function updateRankingList(elementId, listData, valueKey) {
 
     const formattedVal = (typeof window.formatCurrency === 'function') 
       ? window.formatCurrency(bigVal) 
-      : '$' + bigVal.toLocaleString();
+      : '$' + bigVal.toLocaleString('en-US');
 
     const isMe = (window.playerData && window.playerData.userId && String(player.userId) === String(window.playerData.userId));
     const displayName = isMe ? `${player.userName} (あなた)` : player.userName;
