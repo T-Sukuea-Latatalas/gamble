@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - 共通バーチャルテンキー制御スクリプト (keypad.js)
- * BigInt & 超巨大数値対応版
+ * シンプル整数表記 ＆ ベット上限解除・Maxボタン所持金全額対応版
  * ==========================================
  */
 
@@ -22,7 +22,7 @@
       return window.formatCurrency(val);
     }
     const b = safeToBigInt(val);
-    return '$' + b.toLocaleString();
+    return '$' + b.toLocaleString('en-US');
   }
 
   function createKeypadDOM() {
@@ -151,7 +151,6 @@
       if (currentValueStr === '0') {
         currentValueStr = (num === '00') ? '0' : num;
       } else {
-        // ★ 最大50桁まで対応
         if (currentValueStr.length < 50) {
           currentValueStr += num;
         }
@@ -215,13 +214,8 @@
             maxVal = cash;
           }
         } else {
-          const maxAttr = activeTarget.getAttribute('data-max');
-          if (maxAttr) {
-            const parsedMax = safeToBigInt(maxAttr);
-            maxVal = cash < parsedMax ? cash : parsedMax;
-          } else {
-            maxVal = cash;
-          }
+          // ベット入力時は上限（data-max）を無視して所持金全額（cash）を設定
+          maxVal = cash;
         }
 
         currentValueStr = (maxVal < 0n ? 0n : maxVal).toString();
