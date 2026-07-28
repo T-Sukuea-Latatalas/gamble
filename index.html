@@ -6,6 +6,8 @@
   <title>Fever Casino Fever</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="keypad.css">
+  <!-- Three.js (3D空間描画用CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
 
@@ -179,51 +181,51 @@
   </div>
 
   <!-- ==========================================
-       ★ 借金相殺チャンス（3Dコイントス）専用モーダル ★
+       ★ 借金相殺チャンス（断崖絶壁3Dコイントス）専用モーダル ★
        ========================================== -->
   <div id="debt-challenge-modal" class="modal hidden">
     <div class="modal-overlay"></div>
-    <div class="modal-content challenge-modal-content">
-      <div class="modal-header">
-        <h2>🔥 借金相殺チャンス</h2>
-        <button id="close-debt-challenge-btn" class="close-btn" type="button">&times;</button>
-      </div>
+    <div class="modal-content challenge-modal-content cliff-modal-content">
 
-      <div class="modal-body">
-        <p class="challenge-desc">
-          コインを3回投げて<b style="color:var(--gold);">3回連続「表」</b>が出れば、<b>借金が全額帳消し</b>になります！<br>
-          <span class="warning-text">※ 1回でも「裏」が出ると、ペナルティとして借金と金利が2倍になります！</span>
-        </p>
+      <!-- 3Dキャンバス描画コンテナ -->
+      <div id="debt-challenge-3d-canvas" class="debt-challenge-3d-canvas"></div>
 
-        <!-- 3回分のステップインジケーター -->
-        <div class="coins-history">
-          <div id="coin-step-1" class="coin-step-badge">第1投: 未挑戦</div>
-          <div id="coin-step-2" class="coin-step-badge">第2投: 未挑戦</div>
-          <div id="coin-step-3" class="coin-step-badge">第3投: 未挑戦</div>
+      <!-- 水飛沫・暗転・視覚エフェクト用オーバーレイ -->
+      <div id="cliff-water-splash" class="cliff-effect-overlay splash-effect hidden"></div>
+      <div id="cliff-dark-overlay" class="cliff-effect-overlay dark-effect hidden"></div>
+
+      <!-- UIレイヤー（3Dシーン上に前面表示） -->
+      <div class="challenge-ui-overlay">
+        <div class="modal-header">
+          <h2>🔥 借金相殺チャンス（断崖絶壁）</h2>
+          <button id="close-debt-challenge-btn" class="close-btn" type="button">&times;</button>
         </div>
 
-        <!-- ★ 3Dコイントスアニメーションステージ ★ -->
-        <div class="coin-stage">
-          <div id="challenge-coin-3d" class="coin-3d">
-            <div class="coin-face coin-front">
-              👑
-              <span class="face-label">表</span>
-            </div>
-            <div class="coin-face coin-back">
-              💀
-              <span class="face-label">裏</span>
-            </div>
+        <div class="modal-body">
+          <p class="challenge-desc">
+            断崖絶壁でコインを3回投げ、<b style="color:var(--gold);">3回連続「表」</b>が出れば<b>借金全額帳消し</b>！<br>
+            <span class="warning-text">※ 1回でも「裏」が出るとコインは海へ転落し、借金と金利が2倍に増大します！</span>
+          </p>
+
+          <!-- 3回分のステップインジケーター -->
+          <div class="coins-history">
+            <div id="coin-step-1" class="coin-step-badge">第1投: 未挑戦</div>
+            <div id="coin-step-2" class="coin-step-badge">第2投: 未挑戦</div>
+            <div id="coin-step-3" class="coin-step-badge">第3投: 未挑戦</div>
           </div>
-        </div>
 
-        <div id="challenge-status-msg" class="challenge-status-msg">
-          「コイントス開始」を押して運命の3連勝を目指せ！
-        </div>
+          <!-- 状況アナウンスメッセージ -->
+          <div id="challenge-status-msg" class="challenge-status-msg">
+            「コイントス開始」を押して運命の3連勝を目指せ！
+          </div>
 
-        <button id="start-toss-btn" class="start-toss-btn" type="button">
-          🪙 コイントス開始
-        </button>
+          <!-- チャレンジ開始ボタン -->
+          <button id="start-toss-btn" class="start-toss-btn" type="button">
+            🪙 コイントス開始
+          </button>
+        </div>
       </div>
+
     </div>
   </div>
 
@@ -231,7 +233,7 @@
   <script src="atm.js"></script>
   <script src="spreadsheet.js"></script>
   <script src="keypad.js"></script>
-  <script src="debt-challenge.js"></script> <!-- ★ 新規組み込み -->
+  <script src="debt-challenge.js"></script>
 
 </body>
 </html>
