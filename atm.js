@@ -1,7 +1,6 @@
 /**
  * ==========================================
- * Fever Casino - 新・ATM制御スクリプト (atm.js)
- * BigInt & 超巨大数値完全防護版
+ * Fever Casino - ATM制御スクリプト (atm.js)
  * ==========================================
  */
 
@@ -21,9 +20,6 @@ function isGameInProgress() {
   return false;
 }
 
-/**
- * ATMモーダル内のステータス表示をリアルタイム更新する関数
- */
 function updateAtmStatusDisplay() {
   const atmModal = document.getElementById('atm-modal');
   if (!atmModal) return;
@@ -59,15 +55,16 @@ function updateAtmStatusDisplay() {
       <span class="val debt-value">${format(debt)}</span>
     </div>
   `;
+
+  // 借金相殺ボタン状態の更新
+  if (typeof window.updateDebtChallengeButtons === 'function') {
+    window.updateDebtChallengeButtons();
+  }
 }
 
 function refreshAllUI() {
-  if (typeof updateUI === 'function') {
-    updateUI();
-  }
-  if (typeof updateCashDisplay === 'function') {
-    updateCashDisplay();
-  }
+  if (typeof updateUI === 'function') updateUI();
+  if (typeof updateCashDisplay === 'function') updateCashDisplay();
   updateAtmStatusDisplay();
 }
 
@@ -146,9 +143,6 @@ function setupModeSelection() {
   });
 }
 
-/**
- * 取引確定ボタン押下処理 (BigInt完全統一)
- */
 function handleExecuteTransaction() {
   if (!selectedMode) {
     alert('最初に取引メニューを選択してください。');
@@ -170,7 +164,6 @@ function handleExecuteTransaction() {
   playerData.bank = safeToBigInt(playerData.bank);
   playerData.debt = safeToBigInt(playerData.debt);
 
-  // ① 預け入れ (Deposit)
   if (selectedMode === 'deposit') {
     if (playerData.cash < amount) {
       alert('所持金が足りません！');
@@ -179,10 +172,7 @@ function handleExecuteTransaction() {
     playerData.cash -= amount;
     playerData.bank += amount;
     alert(`${format(amount)} を銀行に預け入れました。`);
-  }
-
-  // ② 引き出し (Withdraw)
-  else if (selectedMode === 'withdraw') {
+  } else if (selectedMode === 'withdraw') {
     if (playerData.bank < amount) {
       alert('銀行貯金額が足りません！');
       return;
@@ -190,10 +180,7 @@ function handleExecuteTransaction() {
     playerData.bank -= amount;
     playerData.cash += amount;
     alert(`${format(amount)} を銀行から引き出しました。`);
-  }
-
-  // ③ 借金返済 (Repay)
-  else if (selectedMode === 'repay') {
+  } else if (selectedMode === 'repay') {
     if (playerData.debt <= 0n) {
       alert('現在、返済すべき借金はありません。');
       return;
@@ -216,26 +203,19 @@ function handleExecuteTransaction() {
     } else {
       alert(`${format(amount)} の借金を返済しました。残りの借金: ${format(playerData.debt)}`);
     }
-  }
-
-  // ④ 借金 (Borrow)
-  else if (selectedMode === 'borrow') {
+  } else if (selectedMode === 'borrow') {
     playerData.debt += amount;
     playerData.cash += amount;
     alert(`${format(amount)} を借入れました。現在の借金: ${format(playerData.debt)}`);
   }
 
-  if (typeof saveData === 'function') {
-    saveData();
-  }
+  if (typeof saveData === 'function') saveData();
 
   refreshAllUI();
   resetAtmUI();
 
   const atmModal = document.getElementById('atm-modal');
-  if (atmModal) {
-    atmModal.classList.add('hidden');
-  }
+  if (atmModal) atmModal.classList.add('hidden');
 }
 
 document.addEventListener('DOMContentLoaded', () => {
