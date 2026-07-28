@@ -14,7 +14,7 @@ const VIEW_MODE_KEY = 'fever_casino_view_mode';
  */
 function toBigInt(val, defaultValue = 0n) {
   if (val === null || val === undefined) return defaultValue;
-  if (typeof val === 'bigint') return val;
+  if (typeof val === 'bigint') return val;a
   if (typeof val === 'number') {
     if (isNaN(val) || !isFinite(val)) return defaultValue;
     try {
@@ -62,14 +62,16 @@ function formatCurrency(num) {
 
 window.formatCurrency = formatCurrency;
 
-// プレイヤーデータ構造 (内部数値はすべて BigInt)
+// playerData の初期化に追加
 let playerData = {
   userId: '',
-  userName: 'ゲストプレイヤー',
+  userName: 'ユーザー名を設定しましょう',
   cash: 1000n,
   bank: 0n,
   debt: 0n,
   debtPlayCount: 0,
+  debtChallengeFailCount: 0, // ★追加: 連続失敗回数
+  nextDebtChallengeTime: 0,   // ★追加: 次回挑戦可能タイムスタンプ(ms)
   highScores: {
     blackjack: 0n,
     slots: 0n,
@@ -77,6 +79,27 @@ let playerData = {
     poker: 0n
   }
 };
+
+// saveData() 内のシリアライズオブジェクトに追加
+const serializedData = {
+  ...playerData,
+  cash: playerData.cash.toString(),
+  bank: playerData.bank.toString(),
+  debt: playerData.debt.toString(),
+  debtPlayCount: typeof playerData.debtPlayCount === 'number' ? playerData.debtPlayCount : 0,
+  debtChallengeFailCount: typeof playerData.debtChallengeFailCount === 'number' ? playerData.debtChallengeFailCount : 0, // ★追加
+  nextDebtChallengeTime: typeof playerData.nextDebtChallengeTime === 'number' ? playerData.nextDebtChallengeTime : 0,     // ★追加
+  highScores: { ... }
+};
+
+// loadData() 内のデシリアライズ処理に追加
+playerData.debtChallengeFailCount = typeof parsed.debtChallengeFailCount === 'number' ? parsed.debtChallengeFailCount : 0;
+playerData.nextDebtChallengeTime = typeof parsed.nextDebtChallengeTime === 'number' ? parsed.nextDebtChallengeTime : 0;
+
+// updateUI() の最後に追加呼び出し
+if (typeof window.updateDebtChallengeButtons === 'function') {
+  window.updateDebtChallengeButtons();
+}
 
 window.playerData = playerData;
 
