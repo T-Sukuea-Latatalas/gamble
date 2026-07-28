@@ -53,7 +53,7 @@ window.formatCurrency = formatCurrency;
 // プレイヤーデータオブジェクト定義
 let playerData = {
   userId: '',
-  userName: 'ゲスト',
+  userName: '新規ユーザー',
   cash: 1000n,
   bank: 0n,
   debt: 0n,
