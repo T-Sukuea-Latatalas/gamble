@@ -1,31 +1,24 @@
 /**
  * ==========================================
- * Fever Casino - データ管理＆ロビー・全ゲーム共通制御スクリプト (lobby.js)
- * マイナス（純資産赤字）表記完全対応版
+ * Fever Casino - データ管理＆全共通制御スクリプト (lobby.js)
  * ==========================================
  */
 
 const STORAGE_KEY = 'fever_casino_player_data';
 const VIEW_MODE_KEY = 'fever_casino_view_mode';
 
-/**
- * どんな超巨大文字列・数値・型からでも安全に BigInt へ変換する万能ヘルパー関数
- * （負の数・マイナス値にも完全対応）
- */
 function toBigInt(val, defaultValue = 0n) {
   if (val === null || val === undefined) return defaultValue;
-  if (typeof val === 'bigint') return val;a
+  if (typeof val === 'bigint') return val;
   if (typeof val === 'number') {
     if (isNaN(val) || !isFinite(val)) return defaultValue;
     try {
-      const intVal = Math.trunc(val);
-      return BigInt(intVal);
+      return BigInt(Math.trunc(val));
     } catch (e) {
       return defaultValue;
     }
   }
   if (typeof val === 'string') {
-    // ドルマーク、カンマ、空白を除去（マイナス符号 '-' は保持）
     const cleanStr = val.replace(/[\$,\s]/g, '').trim();
     if (cleanStr === '' || cleanStr === '-') return defaultValue;
     try {
@@ -47,13 +40,8 @@ function toBigInt(val, defaultValue = 0n) {
 
 window.toBigInt = toBigInt;
 
-/**
- * 通貨表記用メイン関数 (例: $1,000, -$50,000)
- * マイナス値の場合は -$X,XXX 形式で出力
- */
 function formatCurrency(num) {
   const bigVal = toBigInt(num, 0n);
-
   if (bigVal < 0n) {
     return '-$' + (-bigVal).toLocaleString('en-US');
   }
@@ -62,16 +50,16 @@ function formatCurrency(num) {
 
 window.formatCurrency = formatCurrency;
 
-// playerData の初期化に追加
+// プレイヤーデータオブジェクト定義
 let playerData = {
   userId: '',
-  userName: 'ユーザー名を設定しましょう',
+  userName: 'ゲスト',
   cash: 1000n,
   bank: 0n,
   debt: 0n,
   debtPlayCount: 0,
-  debtChallengeFailCount: 0, // ★追加: 連続失敗回数
-  nextDebtChallengeTime: 0,   // ★追加: 次回挑戦可能タイムスタンプ(ms)
+  debtChallengeFailCount: 0, // ★追加: 借金相殺チャンス連続失敗回数
+  nextDebtChallengeTime: 0,  // ★追加: 次回挑戦可能タイムスタンプ(ms)
   highScores: {
     blackjack: 0n,
     slots: 0n,
@@ -79,27 +67,6 @@ let playerData = {
     poker: 0n
   }
 };
-
-// saveData() 内のシリアライズオブジェクトに追加
-const serializedData = {
-  ...playerData,
-  cash: playerData.cash.toString(),
-  bank: playerData.bank.toString(),
-  debt: playerData.debt.toString(),
-  debtPlayCount: typeof playerData.debtPlayCount === 'number' ? playerData.debtPlayCount : 0,
-  debtChallengeFailCount: typeof playerData.debtChallengeFailCount === 'number' ? playerData.debtChallengeFailCount : 0, // ★追加
-  nextDebtChallengeTime: typeof playerData.nextDebtChallengeTime === 'number' ? playerData.nextDebtChallengeTime : 0,     // ★追加
-  highScores: { ... }
-};
-
-// loadData() 内のデシリアライズ処理に追加
-playerData.debtChallengeFailCount = typeof parsed.debtChallengeFailCount === 'number' ? parsed.debtChallengeFailCount : 0;
-playerData.nextDebtChallengeTime = typeof parsed.nextDebtChallengeTime === 'number' ? parsed.nextDebtChallengeTime : 0;
-
-// updateUI() の最後に追加呼び出し
-if (typeof window.updateDebtChallengeButtons === 'function') {
-  window.updateDebtChallengeButtons();
-}
 
 window.playerData = playerData;
 
@@ -110,12 +77,8 @@ function generateUserId() {
   return 'user_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9);
 }
 
-/**
- * LocalStorage 保存
- */
 function saveData() {
   try {
-    // 所持金・貯金・借金自体は 0n 以上にガード
     playerData.cash = toBigInt(playerData.cash, 0n);
     if (playerData.cash < 0n) playerData.cash = 0n;
 
@@ -131,6 +94,8 @@ function saveData() {
       bank: playerData.bank.toString(),
       debt: playerData.debt.toString(),
       debtPlayCount: typeof playerData.debtPlayCount === 'number' ? playerData.debtPlayCount : 0,
+      debtChallengeFailCount: typeof playerData.debtChallengeFailCount === 'number' ? playerData.debtChallengeFailCount : 0,
+      nextDebtChallengeTime: typeof playerData.nextDebtChallengeTime === 'number' ? playerData.nextDebtChallengeTime : 0,
       highScores: {
         blackjack: toBigInt(playerData.highScores?.blackjack, 0n).toString(),
         slots: toBigInt(playerData.highScores?.slots, 0n).toString(),
@@ -145,20 +110,19 @@ function saveData() {
   }
 }
 
-/**
- * LocalStorage ロード
- */
 function loadData() {
   try {
     const savedData = localStorage.getItem(STORAGE_KEY);
     if (savedData) {
       const parsed = JSON.parse(savedData);
       playerData.userId = parsed.userId || playerData.userId || generateUserId();
-      playerData.userName = parsed.userName || playerData.userName || 'ゲストプレイヤー';
+      playerData.userName = parsed.userName || playerData.userName || 'ゲスト';
       playerData.cash = toBigInt(parsed.cash, 1000n);
       playerData.bank = toBigInt(parsed.bank, 0n);
       playerData.debt = toBigInt(parsed.debt, 0n);
       playerData.debtPlayCount = typeof parsed.debtPlayCount === 'number' ? parsed.debtPlayCount : 0;
+      playerData.debtChallengeFailCount = typeof parsed.debtChallengeFailCount === 'number' ? parsed.debtChallengeFailCount : 0;
+      playerData.nextDebtChallengeTime = typeof parsed.nextDebtChallengeTime === 'number' ? parsed.nextDebtChallengeTime : 0;
 
       const hs = parsed.highScores || {};
       playerData.highScores = {
@@ -172,14 +136,11 @@ function loadData() {
       saveData();
     }
   } catch (error) {
-    console.error('データの読み込み中にエラーが発生しましたが、既存データの強制リセットを回避します:', error);
+    console.error('データの読み込み中にエラーが発生しました:', error);
     if (!playerData.userId) playerData.userId = generateUserId();
   }
 }
 
-/**
- * UIリアルタイム自動同期（マイナス純資産の正確な計算＆描画）
- */
 function updateUI() {
   playerData.cash = toBigInt(playerData.cash, 0n);
   if (playerData.cash < 0n) playerData.cash = 0n;
@@ -193,12 +154,9 @@ function updateUI() {
   const cash = playerData.cash;
   const bank = playerData.bank;
   const debt = playerData.debt;
-  
-  // 純資産 (所持金 + 貯金 - 借金)
   const netWorth = cash + bank - debt;
-  const userName = playerData.userName || 'ゲストプレイヤー';
+  const userName = playerData.userName || 'ゲスト';
 
-  // ロビー用要素
   const lobbyCashEl = document.getElementById('cash-amount');
   const lobbyBankEl = document.getElementById('bank-amount');
   const lobbyDebtEl = document.getElementById('debt-amount');
@@ -213,7 +171,6 @@ function updateUI() {
     lobbyUsernameInputEl.value = userName;
   }
 
-  // ゲーム画面用要素
   const gameCashEl = document.getElementById('cash-display');
   const gameDebtEl = document.getElementById('debt-display');
   const gameNameEl = document.getElementById('player-name');
@@ -221,18 +178,20 @@ function updateUI() {
   if (gameCashEl) gameCashEl.textContent = formatCurrency(cash);
   if (gameDebtEl) gameDebtEl.textContent = formatCurrency(debt);
   if (gameNameEl) gameNameEl.textContent = userName;
+
+  if (typeof window.updateDebtChallengeButtons === 'function') {
+    window.updateDebtChallengeButtons();
+  }
 }
 
 window.updateCashDisplay = updateUI;
 
-/**
- * 借金利子システム
- */
 function applyDebtInterest() {
   playerData.debt = toBigInt(playerData.debt, 0n);
   if (playerData.debt <= 0n) {
     playerData.debt = 0n;
     playerData.debtPlayCount = 0;
+    saveData();
     return;
   }
 
@@ -254,7 +213,7 @@ function setupUsernameChange() {
     if (newName) {
       playerData.userName = newName;
       saveData();
-      alert(`プレイヤー名を変更しました！`);
+      alert('プレイヤー名を変更しました！');
     }
   });
 }
