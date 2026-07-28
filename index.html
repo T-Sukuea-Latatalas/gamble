@@ -4,25 +4,17 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fever Casino Fever</title>
-  <!-- ① デザイン（CSS）ファイルの読み込み -->
   <link rel="stylesheet" href="style.css">
-  <!-- 共通テンキー用CSS -->
   <link rel="stylesheet" href="keypad.css">
 </head>
 <body>
 
-  <!-- ==========================================
-       画面全体のコンテナ（左右2カラムレイアウト用）
-       ========================================== -->
   <div class="lobby-wrapper">
 
-    <!-- ------------------------------------------
-         1. 左側：ランキングエリア (スワイプ型UI)
-         ------------------------------------------ -->
+    <!-- 左側：ランキングエリア -->
     <aside class="ranking-sidebar">
       <h2>🏆 ランキング</h2>
 
-      <!-- ユーザー名入力・変更欄 -->
       <div class="user-profile">
         <label for="username-input">プレイヤー名:</label>
         <div class="input-group">
@@ -30,13 +22,11 @@
           <button id="change-username-btn" type="button">変更</button>
         </div>
         
-        <!-- ★ デバッグ用：通信テストボタン ★ -->
         <button id="test-spreadsheet-btn" class="test-spreadsheet-btn" type="button" style="margin-top: 8px; width: 100%; padding: 6px; background: #25352c; color: #dfb15b; border: 1px solid #dfb15b; border-radius: 4px; font-weight: bold; cursor: pointer;">
           ⚡ スプレッドシート通信テスト
         </button>
       </div>
 
-      <!-- ランキング項目インジケーター -->
       <div class="ranking-indicators-wrapper">
         <div class="ranking-indicators" id="ranking-indicators">
           <button class="indicator-btn active" data-index="0" type="button">純資産</button>
@@ -47,62 +37,36 @@
         </div>
       </div>
 
-      <!-- スワイプ可能なランキングスライダーコンテナ -->
       <div class="ranking-slider-container">
         <div class="ranking-slider" id="ranking-slider">
-          
-          <!-- 0: 純資産 -->
           <div class="ranking-slide">
             <h3 class="slide-title">💰 純資産ランキング</h3>
-            <ol id="ranking-net-worth" class="ranking-list">
-              <li class="loading-text">データを読み込み中... 🏆</li>
-            </ol>
+            <ol id="ranking-net-worth" class="ranking-list"><li class="loading-text">データを読み込み中... 🏆</li></ol>
           </div>
-
-          <!-- 1: ブラックジャック -->
           <div class="ranking-slide">
             <h3 class="slide-title">🃏 ブラックジャック最高勝利</h3>
-            <ol id="ranking-blackjack" class="ranking-list">
-              <li class="loading-text">データを読み込み中... 🏆</li>
-            </ol>
+            <ol id="ranking-blackjack" class="ranking-list"><li class="loading-text">データを読み込み中... 🏆</li></ol>
           </div>
-
-          <!-- 2: スロット -->
           <div class="ranking-slide">
             <h3 class="slide-title">🎰 スロット最高勝利</h3>
-            <ol id="ranking-slots" class="ranking-list">
-              <li class="loading-text">データを読み込み中... 🏆</li>
-            </ol>
+            <ol id="ranking-slots" class="ranking-list"><li class="loading-text">データを読み込み中... 🏆</li></ol>
           </div>
-
-          <!-- 3: ルーレット -->
           <div class="ranking-slide">
             <h3 class="slide-title">🎡 ルーレット最高勝利</h3>
-            <ol id="ranking-roulette" class="ranking-list">
-              <li class="loading-text">データを読み込み中... 🏆</li>
-            </ol>
+            <ol id="ranking-roulette" class="ranking-list"><li class="loading-text">データを読み込み中... 🏆</li></ol>
           </div>
-
-          <!-- 4: ポーカー -->
           <div class="ranking-slide">
             <h3 class="slide-title">♠ ポーカー最高勝利</h3>
-            <ol id="ranking-poker" class="ranking-list">
-              <li class="loading-text">データを読み込み中... 🏆</li>
-            </ol>
+            <ol id="ranking-poker" class="ranking-list"><li class="loading-text">データを読み込み中... 🏆</li></ol>
           </div>
-
         </div>
       </div>
     </aside>
 
-    <!-- ------------------------------------------
-         2. 右側：メインロビーエリア
-         ------------------------------------------ -->
+    <!-- 右側：メインロビーエリア -->
     <main class="main-lobby">
 
       <header class="status-header">
-        
-        <!-- 表示切り替えコントローラー -->
         <div class="view-mode-toggle">
           <span class="toggle-label">画面表示:</span>
           <button class="view-btn active" data-mode="auto" type="button">自動</button>
@@ -129,41 +93,34 @@
           </div>
         </div>
 
-        <!-- ATMモーダルを開くボタン -->
         <button id="open-atm-btn" class="atm-open-btn" type="button">
           🏦 ATM（預入・引出・借入）を開く
         </button>
       </header>
 
-      <!-- 下部メインコンテンツ：ゲーム選択 -->
       <section class="game-selection">
         <h2>🎮 ゲームを選択</h2>
         <div class="game-grid">
-          
           <div class="game-card">
             <h3>🎰 スロット</h3>
             <p>一攫千金を狙おう！</p>
             <a href="game-slot.html" class="play-game-btn">ゲーム開始</a>
           </div>
-
           <div class="game-card">
             <h3>🃏 ブラックジャック</h3>
             <p>ディーラーとの真剣勝負！</p>
             <a href="game-blackjack.html" class="play-game-btn">ゲーム開始</a>
           </div>
-
           <div class="game-card">
             <h3>🎡 ルーレット</h3>
             <p>運命の数字に賭けよう！</p>
             <a href="game-roulette.html" class="play-game-btn">ゲーム開始</a>
           </div>
-
           <div class="game-card">
             <h3>♠ ポーカー</h3>
             <p>最強の手札を目指せ！</p>
             <a href="game-poker.html" class="play-game-btn">ゲーム開始</a>
           </div>
-
         </div>
       </section>
 
@@ -172,7 +129,7 @@
   </div>
 
   <!-- ==========================================
-       3. ATMモーダルウィンドウ
+       ATMモーダルウィンドウ
        ========================================== -->
   <div id="atm-modal" class="modal hidden">
     <div class="modal-overlay"></div>
@@ -200,18 +157,21 @@
 
           <p class="step-title">② 金額を指定して確定:</p>
           <div class="action-row">
-            <button type="button" 
-                    id="atm-amount-btn" 
-                    class="amount-select-btn" 
-                    data-amount="0" 
-                    data-label="取引額: ">
+            <button type="button" id="atm-amount-btn" class="amount-select-btn" data-amount="0" data-label="取引額: ">
               金額を入力: $0
             </button>
-
             <button id="atm-execute-btn" class="execute-btn" type="button">
               ✅ 取引を確定
             </button>
           </div>
+        </div>
+
+        <!-- ★ 借金相殺チャンス起動ボタンコンテナ ★ -->
+        <div class="debt-challenge-widget-container">
+          <button type="button" class="debt-challenge-btn" disabled>
+            🔒 借金相殺チャンス (条件未達成)
+          </button>
+          <span class="debt-challenge-timer"></span>
         </div>
 
       </div>
@@ -219,12 +179,59 @@
   </div>
 
   <!-- ==========================================
-       4. JavaScriptファイルの読み込み
+       ★ 借金相殺チャンス（3Dコイントス）専用モーダル ★
        ========================================== -->
+  <div id="debt-challenge-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content challenge-modal-content">
+      <div class="modal-header">
+        <h2>🔥 借金相殺チャンス</h2>
+        <button id="close-debt-challenge-btn" class="close-btn" type="button">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <p class="challenge-desc">
+          コインを3回投げて<b style="color:var(--gold);">3回連続「表」</b>が出れば、<b>借金が全額帳消し</b>になります！<br>
+          <span class="warning-text">※ 1回でも「裏」が出ると、ペナルティとして借金と金利が2倍になります！</span>
+        </p>
+
+        <!-- 3回分のステップインジケーター -->
+        <div class="coins-history">
+          <div id="coin-step-1" class="coin-step-badge">第1投: 未挑戦</div>
+          <div id="coin-step-2" class="coin-step-badge">第2投: 未挑戦</div>
+          <div id="coin-step-3" class="coin-step-badge">第3投: 未挑戦</div>
+        </div>
+
+        <!-- ★ 3Dコイントスアニメーションステージ ★ -->
+        <div class="coin-stage">
+          <div id="challenge-coin-3d" class="coin-3d">
+            <div class="coin-face coin-front">
+              👑
+              <span class="face-label">表</span>
+            </div>
+            <div class="coin-face coin-back">
+              💀
+              <span class="face-label">裏</span>
+            </div>
+          </div>
+        </div>
+
+        <div id="challenge-status-msg" class="challenge-status-msg">
+          「コイントス開始」を押して運命の3連勝を目指せ！
+        </div>
+
+        <button id="start-toss-btn" class="start-toss-btn" type="button">
+          🪙 コイントス開始
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="lobby.js"></script>
   <script src="atm.js"></script>
   <script src="spreadsheet.js"></script>
   <script src="keypad.js"></script>
+  <script src="debt-challenge.js"></script> <!-- ★ 新規組み込み -->
 
 </body>
 </html>
