@@ -116,7 +116,7 @@ function loadData() {
     if (savedData) {
       const parsed = JSON.parse(savedData);
       playerData.userId = parsed.userId || playerData.userId || generateUserId();
-      playerData.userName = parsed.userName || playerData.userName || 'ゲスト';
+      playerData.userName = parsed.userName || playerData.userName || '新規ユーザー';
       playerData.cash = toBigInt(parsed.cash, 1000n);
       playerData.bank = toBigInt(parsed.bank, 0n);
       playerData.debt = toBigInt(parsed.debt, 0n);
@@ -155,7 +155,7 @@ function updateUI() {
   const bank = playerData.bank;
   const debt = playerData.debt;
   const netWorth = cash + bank - debt;
-  const userName = playerData.userName || 'ゲスト';
+  const userName = playerData.userName || '新規ユーザー';
 
   const lobbyCashEl = document.getElementById('cash-amount');
   const lobbyBankEl = document.getElementById('bank-amount');
