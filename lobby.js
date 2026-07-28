@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - データ管理＆ロビー・全ゲーム共通制御スクリプト (lobby.js)
- * BigInt & シンプルカンマ区切り整数表記版
+ * マイナス（純資産赤字）表記完全対応版
  * ==========================================
  */
 
@@ -10,20 +10,22 @@ const VIEW_MODE_KEY = 'fever_casino_view_mode';
 
 /**
  * どんな超巨大文字列・数値・型からでも安全に BigInt へ変換する万能ヘルパー関数
+ * （負の数・マイナス値にも完全対応）
  */
 function toBigInt(val, defaultValue = 0n) {
   if (val === null || val === undefined) return defaultValue;
-  if (typeof val === 'bigint') return val < 0n ? 0n : val;
+  if (typeof val === 'bigint') return val;
   if (typeof val === 'number') {
     if (isNaN(val) || !isFinite(val)) return defaultValue;
     try {
-      const intVal = Math.floor(val);
-      return intVal < 0 ? 0n : BigInt(intVal);
+      const intVal = Math.trunc(val);
+      return BigInt(intVal);
     } catch (e) {
       return defaultValue;
     }
   }
   if (typeof val === 'string') {
+    // ドルマーク、カンマ、空白を除去（マイナス符号 '-' は保持）
     const cleanStr = val.replace(/[\$,\s]/g, '').trim();
     if (cleanStr === '' || cleanStr === '-') return defaultValue;
     try {
@@ -32,11 +34,10 @@ function toBigInt(val, defaultValue = 0n) {
       if (strToParse.includes('e') || strToParse.includes('E')) {
         const numVal = Number(strToParse);
         if (!isNaN(numVal) && isFinite(numVal)) {
-          return BigInt(Math.floor(numVal));
+          return BigInt(Math.trunc(numVal));
         }
       }
-      const parsed = BigInt(strToParse);
-      return parsed < 0n ? 0n : parsed;
+      return BigInt(strToParse);
     } catch (e) {
       return defaultValue;
     }
@@ -47,26 +48,16 @@ function toBigInt(val, defaultValue = 0n) {
 window.toBigInt = toBigInt;
 
 /**
- * シンプルな3桁カンマ区切りドル表記関数 (例: $1,000, $10,000,000,000)
+ * 通貨表記用メイン関数 (例: $1,000, -$50,000)
+ * マイナス値の場合は -$X,XXX 形式で出力
  */
 function formatCurrency(num) {
-  let isNegative = false;
-  let bigVal = 0n;
+  const bigVal = toBigInt(num, 0n);
 
-  if (typeof num === 'bigint') {
-    if (num < 0n) {
-      isNegative = true;
-      bigVal = -num;
-    } else {
-      bigVal = num;
-    }
-  } else {
-    const b = toBigInt(num, 0n);
-    bigVal = b;
+  if (bigVal < 0n) {
+    return '-$' + (-bigVal).toLocaleString('en-US');
   }
-
-  const formattedStr = bigVal.toLocaleString('en-US');
-  return (isNegative ? '-$' : '$') + formattedStr;
+  return '$' + bigVal.toLocaleString('en-US');
 }
 
 window.formatCurrency = formatCurrency;
@@ -101,9 +92,15 @@ function generateUserId() {
  */
 function saveData() {
   try {
+    // 所持金・貯金・借金自体は 0n 以上にガード
     playerData.cash = toBigInt(playerData.cash, 0n);
+    if (playerData.cash < 0n) playerData.cash = 0n;
+
     playerData.bank = toBigInt(playerData.bank, 0n);
+    if (playerData.bank < 0n) playerData.bank = 0n;
+
     playerData.debt = toBigInt(playerData.debt, 0n);
+    if (playerData.debt < 0n) playerData.debt = 0n;
 
     const serializedData = {
       ...playerData,
@@ -158,16 +155,23 @@ function loadData() {
 }
 
 /**
- * UIリアルタイム自動同期
+ * UIリアルタイム自動同期（マイナス純資産の正確な計算＆描画）
  */
 function updateUI() {
   playerData.cash = toBigInt(playerData.cash, 0n);
+  if (playerData.cash < 0n) playerData.cash = 0n;
+
   playerData.bank = toBigInt(playerData.bank, 0n);
+  if (playerData.bank < 0n) playerData.bank = 0n;
+
   playerData.debt = toBigInt(playerData.debt, 0n);
+  if (playerData.debt < 0n) playerData.debt = 0n;
 
   const cash = playerData.cash;
   const bank = playerData.bank;
   const debt = playerData.debt;
+  
+  // 純資産 (所持金 + 貯金 - 借金)
   const netWorth = cash + bank - debt;
   const userName = playerData.userName || 'ゲストプレイヤー';
 
