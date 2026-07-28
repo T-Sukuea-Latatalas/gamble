@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - 共通バーチャルテンキー制御スクリプト (keypad.js)
- * シンプル整数表記 ＆ ベット上限解除・Maxボタン所持金全額対応版
+ * ベット上限（10,000ドル等）完全廃止 ＆ MAXボタン所持金全額入力対応版
  * ==========================================
  */
 
@@ -91,6 +91,11 @@
 
   function openKeypad(targetElement) {
     activeTarget = targetElement;
+
+    // ★ HTML側に設定されている上限属性（data-max="10000"等）を即座に削除して無効化
+    if (activeTarget && activeTarget.hasAttribute('data-max')) {
+      activeTarget.removeAttribute('data-max');
+    }
 
     let initVal = "0";
     if (activeTarget.tagName === 'BUTTON') {
@@ -214,7 +219,7 @@
             maxVal = cash;
           }
         } else {
-          // ベット入力時は上限（data-max）を無視して所持金全額（cash）を設定
+          // ★ ベット入力時は10,000ドルなどの上限を一切無視し、所持金全額（cash）を無制限にセット
           maxVal = cash;
         }
 
