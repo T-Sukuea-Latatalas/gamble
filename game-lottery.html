@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ワールドロト - Fever Casino</title>
+  <!-- 共通デザイン・テンキー・宝くじ専用スタイルの読み込み -->
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="keypad.css">
+  <link rel="stylesheet" href="game-lottery.css">
+</head>
+<body>
+
+  <!-- 当選演出用オーバーレイ -->
+  <div id="win-overlay" class="result-overlay win-overlay hidden">
+    <div class="overlay-text">JACKPOT!! 🎟️</div>
+  </div>
+  <div id="lose-overlay" class="result-overlay lose-overlay hidden">
+    <div class="overlay-text">NOT WIN... 💀</div>
+  </div>
+
+  <!-- 粒子エフェクト（紙吹雪など）用コンテナ -->
+  <div id="particle-container"></div>
+
+  <div class="game-container">
+    
+    <!-- ヘッダーエリア：ロビー戻る、タイトル、ステータス、ATM -->
+    <header class="game-header">
+      <a href="index.html" class="header-btn">🏠 ロビーに戻る</a>
+      <h1 class="game-title">🎟️ WORLD LOTTERY</h1>
+      
+      <div class="player-status">
+        <div class="status-item">
+          <span class="status-label">所持金:</span>
+          <span id="cash-display" class="status-value">$0</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">借金:</span>
+          <span id="debt-display" class="status-value debt-value">$0</span>
+        </div>
+        <button type="button" id="open-atm-btn" class="open-atm-btn">🏦 ATM</button>
+      </div>
+    </header>
+
+    <!-- メイン領域 -->
+    <main class="lottery-main">
+
+      <!-- ① 次回抽選カウントダウンエリア -->
+      <section class="lottery-timer-section">
+        <div class="draw-info-card">
+          <div class="draw-round-label">第 <span id="current-draw-id">--</span> 回 抽選受付中</div>
+          <div class="timer-display">
+            <div class="timer-label">抽選（毎週金曜 08:15 JST）まで残り</div>
+            <div id="countdown-timer" class="timer-digits">00:00:00:00</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ② 宝くじ購入エリア -->
+      <section class="lottery-buy-section">
+        <div class="section-title">🎰 チケットを購入（1枚 $1,000）</div>
+        
+        <div class="buy-controls">
+          <!-- 番号選択ボタン（テンキー連動） -->
+          <div class="number-input-group">
+            <label>選択番号 (000-999):</label>
+            <button type="button" 
+                    id="lottery-num-btn" 
+                    class="amount-select-btn use-keypad" 
+                    data-amount="0" 
+                    data-label="" 
+                    data-max="999">
+              000
+            </button>
+          </div>
+
+          <div class="buy-action-btns">
+            <button id="quick-pick-btn" class="action-btn secondary-btn" type="button">🎲 クイックピック</button>
+            <button id="buy-ticket-btn" class="action-btn main-btn" type="button">🎟️ 購入を確定</button>
+          </div>
+        </div>
+
+        <div class="purchase-limit-info">
+          ※ 1人1回号につき最大 <b>10枚</b> まで購入可能です。<br>
+          現在の購入数: <b id="bought-count">0</b> / 10 枚
+        </div>
+
+        <!-- 現在の購入済み番号リスト -->
+        <div class="purchased-tickets-container">
+          <div class="ticket-list-label">あなたの今期のチケット:</div>
+          <div id="my-tickets-list" class="ticket-grid">
+            <!-- JSでチケット要素を追加 -->
+            <div class="empty-list-msg">チケットを購入していません</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ③ 当選確認・履歴エリア -->
+      <section class="lottery-history-section">
+        <div class="section-title">🏆 抽選結果 ＆ 履歴</div>
+
+        <!-- 最新結果照合ボタン -->
+        <div class="result-check-panel">
+          <p>最新の当選番号と照合して、配当を受け取りますか？</p>
+          <button id="check-results-btn" class="action-btn gold-btn" type="button">💎 当選確認 ＆ 配当受取</button>
+        </div>
+
+        <div class="history-table-wrapper">
+          <table class="lottery-history-table">
+            <thead>
+              <tr>
+                <th>回号</th>
+                <th>抽選日時</th>
+                <th>当選番号</th>
+              </tr>
+            </thead>
+            <tbody id="draw-history-body">
+              <!-- JSで履歴行を追加 -->
+              <tr><td colspan="3" class="loading-text">履歴を読み込み中...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ★ ATMモーダルウィンドウ ★ -->
+  <div id="atm-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🏦 カジノ銀行（ATM）</h2>
+        <button id="close-atm-btn" class="close-btn" type="button">&times;</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- ATMの現在の状況 -->
+        <div id="atm-status-summary" class="atm-status-summary">
+          <!-- JSで動的に構築 -->
+        </div>
+
+        <div class="atm-step-section">
+          <p class="step-title">① 取引メニューを選択:</p>
+          <div class="atm-mode-grid">
+            <button class="mode-btn deposit" type="button" data-mode="deposit">預ける</button>
+            <button class="mode-btn withdraw" type="button" data-mode="withdraw">引き出す</button>
+            <button class="mode-btn repay" type="button" data-mode="repay">返済する</button>
+            <button class="mode-btn borrow" type="button" data-mode="borrow">借金する</button>
+          </div>
+        </div>
+
+        <div id="atm-action-panel" class="atm-action-panel hidden">
+          <div class="selected-mode-badge">
+            選択中: <b id="selected-mode-text">-</b>
+          </div>
+
+          <p class="step-title">② 金額を指定して確定:</p>
+          <div class="action-row">
+            <button type="button" id="atm-amount-btn" class="amount-select-btn" data-amount="0" data-label="取引額: ">
+              金額を入力: $0
+            </button>
+            <button id="atm-execute-btn" class="execute-btn" type="button">
+              ✅ 取引を確定
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- スクリプトの読み込み順序に注意 -->
+  <script src="lobby.js"></script>
+  <script src="atm.js"></script>
+  <script src="spreadsheet.js"></script>
+  <script src="keypad.js"></script>
+  <script src="game-lottery.js"></script>
+
+</body>
+</html>
