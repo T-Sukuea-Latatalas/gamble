@@ -24,7 +24,7 @@
 }
 
 /* ==========================================
-   2. 全体リセット ＆ 基本スタイル（カジノ背景設定）
+   2. 全体リセット ＆ 基本スタイル（カジノ背景画像設定）
    ========================================== */
 * {
   box-sizing: border-box;
@@ -35,7 +35,7 @@
 body {
   font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", sans-serif;
   background-color: var(--bg-dark);
-  /* 透過度45%〜65%の絶妙な黒グラデーション ＋ カジノ画像で鮮やかに魅せる */
+  /* 透過度45%〜65%の絶妙な黒グラデーション ＋ 実画像 bg-casino.png で鮮やかに魅せる */
   background-image: linear-gradient(rgba(18, 22, 20, 0.45), rgba(18, 22, 20, 0.65)), url('bg-casino.png');
   background-size: cover;
   background-position: center;
@@ -394,7 +394,7 @@ a.play-game-btn:hover {
   color: #000;
 }
 
-/* モーダル */
+/* モーダル共通基本スタイル */
 .modal {
   position: fixed;
   top: 0;
@@ -444,6 +444,101 @@ a.play-game-btn:hover {
 .modal-header h2 {
   font-size: 1.3rem;
   color: var(--gold);
+}
+
+/* ==========================================
+   ユーザーネーム設定モーダル専用スタイル
+   ========================================== */
+.username-modal-content {
+  max-width: 460px !important;
+  text-align: center;
+}
+
+.username-modal-desc {
+  font-size: 0.9rem;
+  color: var(--text-main);
+  margin-bottom: 15px;
+  line-height: 1.5;
+}
+
+.username-modal-desc .sub-desc {
+  font-size: 0.78rem;
+  color: var(--text-sub);
+}
+
+.username-input-section {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 20px;
+  background: rgba(18, 22, 20, 0.85);
+  padding: 12px 15px;
+  border-radius: 8px;
+  border: 1px solid rgba(223, 177, 91, 0.3);
+}
+
+.username-input-section label {
+  font-size: 0.8rem;
+  color: var(--gold);
+  font-weight: bold;
+}
+
+.modal-input {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #3a4d41;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-size: 1rem;
+  font-weight: bold;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.modal-input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 8px var(--gold-shadow);
+}
+
+.username-modal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.username-action-btn {
+  width: 100%;
+  padding: 12px;
+  border-radius: 25px;
+  font-weight: bold;
+  font-size: 0.95rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.username-action-btn.primary {
+  background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%);
+  color: #000;
+  box-shadow: 0 4px 15px var(--gold-shadow);
+}
+
+.username-action-btn.primary:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
+.username-action-btn.secondary {
+  background: rgba(37, 53, 44, 0.8);
+  color: var(--text-sub);
+  border: 1px solid #3a4d41;
+}
+
+.username-action-btn.secondary:hover {
+  background: rgba(45, 65, 54, 1);
+  color: var(--text-main);
 }
 
 /* ==========================================

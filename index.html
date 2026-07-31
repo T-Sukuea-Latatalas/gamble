@@ -137,6 +137,36 @@
 
   </div>
 
+  <!-- ★ ユーザーネーム自動設定ポップアップモーダル ★ -->
+  <div id="username-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content username-modal-content">
+      <div class="modal-header">
+        <h2>👤 プレイヤー名（ユーザーネーム）の設定</h2>
+      </div>
+      <div class="modal-body">
+        <p class="username-modal-desc">
+          カジノ内で表示されるプレイヤー名を入力してください。<br>
+          <span class="sub-desc">（ランキング等に反映されます。初期名のままプレイすることも可能です）</span>
+        </p>
+        
+        <div class="username-input-section">
+          <label for="modal-username-input">プレイヤー名:</label>
+          <input type="text" id="modal-username-input" class="modal-input" maxlength="15" placeholder="名前を入力（例: カジノ王）">
+        </div>
+
+        <div class="username-modal-actions">
+          <button id="save-username-btn" class="username-action-btn primary" type="button">
+            ✅ この名前で決定する
+          </button>
+          <button id="skip-username-btn" class="username-action-btn secondary" type="button">
+            このまま進む（初期名のまま）
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ATMモーダルウィンドウ -->
   <div id="atm-modal" class="modal hidden">
     <div class="modal-overlay"></div>

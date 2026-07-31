@@ -54,12 +54,13 @@ window.formatCurrency = formatCurrency;
 let playerData = {
   userId: '',
   userName: '新規ユーザー',
+  isNameSet: false, // ★追加: プレイヤー名が確定・設定済みかのフラグ
   cash: 1000n,
   bank: 0n,
   debt: 0n,
   debtPlayCount: 0,
-  debtChallengeFailCount: 0, // ★追加: 借金相殺チャンス連続失敗回数
-  nextDebtChallengeTime: 0,  // ★追加: 次回挑戦可能タイムスタンプ(ms)
+  debtChallengeFailCount: 0, // 借金相殺チャンス連続失敗回数
+  nextDebtChallengeTime: 0,  // 次回挑戦可能タイムスタンプ(ms)
   highScores: {
     blackjack: 0n,
     slots: 0n,
@@ -90,6 +91,7 @@ function saveData() {
 
     const serializedData = {
       ...playerData,
+      isNameSet: !!playerData.isNameSet,
       cash: playerData.cash.toString(),
       bank: playerData.bank.toString(),
       debt: playerData.debt.toString(),
@@ -117,6 +119,7 @@ function loadData() {
       const parsed = JSON.parse(savedData);
       playerData.userId = parsed.userId || playerData.userId || generateUserId();
       playerData.userName = parsed.userName || playerData.userName || '新規ユーザー';
+      playerData.isNameSet = parsed.isNameSet !== undefined ? !!parsed.isNameSet : false;
       playerData.cash = toBigInt(parsed.cash, 1000n);
       playerData.bank = toBigInt(parsed.bank, 0n);
       playerData.debt = toBigInt(parsed.debt, 0n);
@@ -212,10 +215,65 @@ function setupUsernameChange() {
     const newName = usernameInput.value.trim();
     if (newName) {
       playerData.userName = newName;
+      playerData.isNameSet = true;
       saveData();
       alert('プレイヤー名を変更しました！');
     }
   });
+}
+
+/**
+ * ★ ユーザーネーム設定モーダルの制御 ＆ チェック機能 ★
+ */
+function checkUsernameSetup() {
+  const modal = document.getElementById('username-modal');
+  const input = document.getElementById('modal-username-input');
+  if (!modal) return;
+
+  const defaultNames = ['新規ユーザー', 'ゲスト', 'ゲストプレイヤー', 'Unknown', 'ゲストユーザー'];
+  const isDefaultName = defaultNames.includes(playerData.userName) || !playerData.userName || playerData.userName.trim() === '';
+
+  // 初期ネームかつまだ名前確定フラグが立っていない場合、ポップアップを表示
+  if (isDefaultName && !playerData.isNameSet) {
+    if (input) {
+      input.value = playerData.userName || '新規ユーザー';
+    }
+    modal.classList.remove('hidden');
+  }
+}
+
+function setupUsernameModalEvents() {
+  const modal = document.getElementById('username-modal');
+  const saveBtn = document.getElementById('save-username-btn');
+  const skipBtn = document.getElementById('skip-username-btn');
+  const input = document.getElementById('modal-username-input');
+
+  if (!modal) return;
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', () => {
+      const newName = input ? input.value.trim() : '';
+      if (!newName) {
+        alert('プレイヤー名を入力してください。');
+        return;
+      }
+      playerData.userName = newName;
+      playerData.isNameSet = true;
+      saveData();
+      modal.classList.add('hidden');
+    });
+  }
+
+  if (skipBtn) {
+    skipBtn.addEventListener('click', () => {
+      if (!playerData.userName || playerData.userName.trim() === '') {
+        playerData.userName = '新規ユーザー';
+      }
+      playerData.isNameSet = true;
+      saveData();
+      modal.classList.add('hidden');
+    });
+  }
 }
 
 function applyViewMode(mode) {
@@ -253,9 +311,13 @@ function initLobby() {
   loadData();
   updateUI();
   setupUsernameChange();
+  setupUsernameModalEvents();
   setupViewModeToggle();
+  
+  // 初期名前チェック＆ポップアップ表示
+  checkUsernameSetup();
 }
 
 document.addEventListener('DOMContentLoaded', initLobby);
-window.addEventListener('pageshow', () => { loadData(); updateUI(); });
+window.addEventListener('pageshow', () => { loadData(); updateUI(); checkUsernameSetup(); });
 window.addEventListener('storage', (e) => { if (e.key === STORAGE_KEY) { loadData(); updateUI(); } });
