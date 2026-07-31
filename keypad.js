@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - 共通バーチャルテンキー制御スクリプト (keypad.js)
- * ベット上限（10,000ドル等）完全廃止 ＆ MAXボタン所持金全額入力対応版
+ * 通貨入力 ＆ 宝くじ・固定桁数番号入力ハイブリッド対応版
  * ==========================================
  */
 
@@ -11,6 +11,11 @@
   let keypadOverlay = null;
   let keypadContainer = null;
   let displayElement = null;
+  let displayLabelElement = null;
+  let titleElement = null;
+  let quickRowElement = null;
+  let isLotteryMode = false;
+  let digitCount = 3;
 
   function safeToBigInt(v) {
     if (typeof window.toBigInt === 'function') return window.toBigInt(v);
@@ -37,17 +42,17 @@
 
     keypadContainer.innerHTML = `
       <div class="keypad-header">
-        <span class="keypad-title">🔢 金額入力キーパッド</span>
+        <span class="keypad-title" id="keypad-title">🔢 金額入力キーパッド</span>
         <button type="button" class="keypad-close-btn" id="keypad-close">&times;</button>
       </div>
 
       <div class="keypad-display-wrapper">
-        <span class="keypad-display-label">選択金額:</span>
+        <span class="keypad-display-label" id="keypad-display-label">選択金額:</span>
         <div id="keypad-display" class="keypad-display">$0</div>
       </div>
 
       <div class="keypad-body">
-        <div class="keypad-quick-row">
+        <div class="keypad-quick-row" id="keypad-quick-row">
           <button type="button" class="quick-btn" data-action="min">Min ($1)</button>
           <button type="button" class="quick-btn" data-action="add" data-val="100">+100</button>
           <button type="button" class="quick-btn" data-action="add" data-val="1000">+1,000</button>
@@ -79,12 +84,22 @@
     document.body.appendChild(keypadContainer);
 
     displayElement = document.getElementById('keypad-display');
+    displayLabelElement = document.getElementById('keypad-display-label');
+    titleElement = document.getElementById('keypad-title');
+    quickRowElement = document.getElementById('keypad-quick-row');
+
     setupKeypadEvents();
   }
 
   function updateDisplay() {
-    const bigNum = safeToBigInt(currentValueStr);
-    if (displayElement) {
+    if (!displayElement) return;
+
+    if (isLotteryMode) {
+      const bigNum = safeToBigInt(currentValueStr);
+      const formattedNum = bigNum.toString().padStart(digitCount, '0');
+      displayElement.textContent = formattedNum;
+    } else {
+      const bigNum = safeToBigInt(currentValueStr);
       displayElement.textContent = getFormatted(bigNum);
     }
   }
@@ -95,6 +110,30 @@
     // ★ HTML側に設定されている上限属性（data-max="10000"等）を即座に削除して無効化
     if (activeTarget && activeTarget.hasAttribute('data-max')) {
       activeTarget.removeAttribute('data-max');
+    }
+
+    const modeAttr = activeTarget.getAttribute('data-mode');
+    const digitsAttr = activeTarget.getAttribute('data-digits');
+    
+    isLotteryMode = (modeAttr === 'lottery' || activeTarget.hasAttribute('data-digits') || activeTarget.id === 'lottery-num-btn');
+
+    if (digitsAttr) {
+      digitCount = parseInt(digitsAttr, 10) || 3;
+    } else if (isLotteryMode) {
+      digitCount = 3;
+    } else {
+      digitCount = 3;
+    }
+
+    // UI切り替え（宝くじ/固定桁番号入力時はクイック行を非表示）
+    if (quickRowElement) {
+      quickRowElement.style.display = isLotteryMode ? 'none' : 'grid';
+    }
+    if (displayLabelElement) {
+      displayLabelElement.textContent = isLotteryMode ? '選択番号:' : '選択金額:';
+    }
+    if (titleElement) {
+      titleElement.textContent = isLotteryMode ? '🔢 番号入力キーパッド' : '🔢 金額入力キーパッド';
     }
 
     let initVal = "0";
@@ -127,14 +166,26 @@
   function confirmValue() {
     if (!activeTarget) return;
 
-    const bigVal = safeToBigInt(currentValueStr);
-    const strVal = bigVal.toString();
+    let strVal = "0";
+    if (isLotteryMode) {
+      const bigVal = safeToBigInt(currentValueStr);
+      strVal = bigVal.toString().padStart(digitCount, '0');
+    } else {
+      const bigVal = safeToBigInt(currentValueStr);
+      strVal = bigVal.toString();
+    }
 
     if (activeTarget.tagName === 'BUTTON') {
       activeTarget.setAttribute('data-amount', strVal);
 
-      const prefix = activeTarget.getAttribute('data-label') || "金額を入力: ";
-      activeTarget.textContent = `${prefix}${getFormatted(bigVal)}`;
+      if (isLotteryMode) {
+        const prefix = activeTarget.getAttribute('data-label') || "";
+        activeTarget.textContent = `${prefix}${strVal}`;
+      } else {
+        const bigVal = safeToBigInt(strVal);
+        const prefix = activeTarget.getAttribute('data-label') || "金額を入力: ";
+        activeTarget.textContent = `${prefix}${getFormatted(bigVal)}`;
+      }
 
       activeTarget.value = strVal;
     } else if (activeTarget.tagName === 'INPUT') {
@@ -153,11 +204,29 @@
 
     if (btn.classList.contains('num-btn')) {
       const num = btn.getAttribute('data-val');
-      if (currentValueStr === '0') {
-        currentValueStr = (num === '00') ? '0' : num;
+      if (isLotteryMode) {
+        if (currentValueStr === '0') {
+          currentValueStr = (num === '00') ? '0' : num;
+        } else {
+          if (currentValueStr.length < digitCount) {
+            if (num === '00') {
+              if (currentValueStr.length + 2 <= digitCount) {
+                currentValueStr += '00';
+              } else if (currentValueStr.length + 1 <= digitCount) {
+                currentValueStr += '0';
+              }
+            } else {
+              currentValueStr += num;
+            }
+          }
+        }
       } else {
-        if (currentValueStr.length < 50) {
-          currentValueStr += num;
+        if (currentValueStr === '0') {
+          currentValueStr = (num === '00') ? '0' : num;
+        } else {
+          if (currentValueStr.length < 50) {
+            currentValueStr += num;
+          }
         }
       }
       updateDisplay();
@@ -185,46 +254,51 @@
         break;
 
       case 'min':
-        currentValueStr = '1';
-        updateDisplay();
+        if (!isLotteryMode) {
+          currentValueStr = '1';
+          updateDisplay();
+        }
         break;
 
       case 'add':
-        const addVal = safeToBigInt(btn.getAttribute('data-val'));
-        const currentBig = safeToBigInt(currentValueStr);
-        currentValueStr = (currentBig + addVal).toString();
-        updateDisplay();
+        if (!isLotteryMode) {
+          const addVal = safeToBigInt(btn.getAttribute('data-val'));
+          const currentBig = safeToBigInt(currentValueStr);
+          currentValueStr = (currentBig + addVal).toString();
+          updateDisplay();
+        }
         break;
 
       case 'max':
-        const cash = safeToBigInt(window.playerData?.cash);
-        const bank = safeToBigInt(window.playerData?.bank);
-        const debt = safeToBigInt(window.playerData?.debt);
+        if (!isLotteryMode) {
+          const cash = safeToBigInt(window.playerData?.cash);
+          const bank = safeToBigInt(window.playerData?.bank);
+          const debt = safeToBigInt(window.playerData?.debt);
 
-        const isAtmTarget = activeTarget && (activeTarget.id === 'atm-amount-btn' || activeTarget.classList.contains('atm-amount-btn'));
-        const mode = window.selectedAtmMode || null;
+          const isAtmTarget = activeTarget && (activeTarget.id === 'atm-amount-btn' || activeTarget.classList.contains('atm-amount-btn'));
+          const mode = window.selectedAtmMode || null;
 
-        let maxVal = cash;
+          let maxVal = cash;
 
-        if (isAtmTarget) {
-          if (mode === 'deposit') {
-            maxVal = cash;
-          } else if (mode === 'withdraw') {
-            maxVal = bank;
-          } else if (mode === 'repay') {
-            maxVal = debt < cash ? debt : cash;
-          } else if (mode === 'borrow') {
-            maxVal = 99999999999999999999999999999999999999999999999999n;
+          if (isAtmTarget) {
+            if (mode === 'deposit') {
+              maxVal = cash;
+            } else if (mode === 'withdraw') {
+              maxVal = bank;
+            } else if (mode === 'repay') {
+              maxVal = debt < cash ? debt : cash;
+            } else if (mode === 'borrow') {
+              maxVal = 99999999999999999999999999999999999999999999999999n;
+            } else {
+              maxVal = cash;
+            }
           } else {
             maxVal = cash;
           }
-        } else {
-          // ★ ベット入力時は10,000ドルなどの上限を一切無視し、所持金全額（cash）を無制限にセット
-          maxVal = cash;
-        }
 
-        currentValueStr = (maxVal < 0n ? 0n : maxVal).toString();
-        updateDisplay();
+          currentValueStr = (maxVal < 0n ? 0n : maxVal).toString();
+          updateDisplay();
+        }
         break;
     }
   }

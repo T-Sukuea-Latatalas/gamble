@@ -1,20 +1,147 @@
 @charset "UTF-8";
 
 /* ==========================================
-   Fever Casino - ワールドロト専用スタイル
+   Fever Casino - ワールドロト専用スタイル (game-lottery.css)
    ========================================== */
 
+/* --- 1. カラー変数 ＆ 全体設定 --- */
 :root {
+  --bg-dark: #0f081d;
   --lottery-bg: #1a0b2e; /* 深みのあるパープル */
   --lottery-panel: #251347;
   --lottery-gold: #dfb15b;
   --lottery-gold-bright: #fcd581;
   --lottery-neon: #00f3ff; /* ネオンサイアン */
   --lottery-text: #f0f4f1;
+  --text-main: #f0f4f1;
+  --text-sub: #a0b0a6;
   --ticket-bg: linear-gradient(135deg, #fcd581 0%, #dfb15b 50%, #b8860b 100%);
+  --danger-red: #ff4d4d; /* 借金用ネオン赤 */
 }
 
-/* メインレイアウト */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  overflow-x: hidden;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ゲームコンテナ */
+.game-container {
+  width: 100%;
+  max-width: 800px;
+  background-color: var(--lottery-bg);
+  border: 2px solid var(--lottery-gold);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(223, 177, 91, 0.2);
+  position: relative;
+}
+
+/* --- 2. ヘッダーエリア --- */
+.game-header {
+  background: linear-gradient(180deg, #2a1545 0%, #150a28 100%);
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--lottery-gold);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.game-title {
+  font-size: 1.2rem;
+  color: var(--lottery-gold);
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px rgba(223, 177, 91, 0.5);
+}
+
+.header-btn {
+  color: var(--text-main);
+  text-decoration: none;
+  background-color: #2e1848;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  border: 1px solid var(--lottery-gold);
+  transition: all 0.2s;
+}
+
+.header-btn:hover {
+  background-color: var(--lottery-gold);
+  color: #000;
+}
+
+.player-status {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.status-label {
+  color: var(--text-sub);
+}
+
+.status-value {
+  color: var(--lottery-gold);
+  font-weight: bold;
+  font-size: 1.1rem;
+}
+
+/* 借金額（ネオン赤発光・強調） */
+.debt-value, #debt-display {
+  color: var(--danger-red) !important;
+  font-weight: bold;
+  font-size: 1.1rem;
+  text-shadow: 0 0 8px rgba(255, 77, 77, 0.6);
+}
+
+.open-atm-btn {
+  background: linear-gradient(135deg, var(--lottery-gold), #b8860b);
+  color: #000;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.open-atm-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+}
+
+.open-atm-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* --- 3. メインレイアウト --- */
 .lottery-main {
   padding: 20px;
   display: flex;
@@ -24,7 +151,7 @@
   min-height: 80vh;
 }
 
-/* --- ① カウントダウンタイマーエリア --- */
+/* --- 4. カウントダウンタイマーエリア --- */
 .lottery-timer-section {
   width: 100%;
 }
@@ -55,7 +182,7 @@
 
 .timer-label {
   font-size: 0.85rem;
-  color: #a0b0a6;
+  color: var(--text-sub);
   margin-bottom: 5px;
 }
 
@@ -72,7 +199,7 @@
   border: 1px solid rgba(0, 243, 255, 0.3);
 }
 
-/* --- ② チケット購入エリア --- */
+/* --- 5. チケット購入エリア --- */
 .section-title {
   font-size: 1.1rem;
   color: var(--lottery-gold);
@@ -144,20 +271,35 @@
   color: #fff;
 }
 
+.secondary-btn:hover {
+  background: #4a6356;
+}
+
 .main-btn {
   background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
   color: #fff;
   box-shadow: 0 4px 15px rgba(46, 204, 113, 0.3);
 }
 
+.main-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.1);
+}
+
 .action-btn:active {
   transform: translateY(2px);
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .purchase-limit-info {
   margin-top: 10px;
   font-size: 0.8rem;
-  color: #a0b0a6;
+  color: var(--text-sub);
   text-align: center;
 }
 
@@ -165,7 +307,7 @@
   color: var(--lottery-neon);
 }
 
-/* --- 宝くじチケット風デザイン --- */
+/* --- 6. 宝くじチケット風デザイン --- */
 .purchased-tickets-container {
   margin-top: 20px;
 }
@@ -219,12 +361,12 @@
   grid-column: 1 / -1;
   text-align: center;
   padding: 20px;
-  color: #555;
-  border: 2px dashed #333;
+  color: #777;
+  border: 2px dashed #444;
   border-radius: 8px;
 }
 
-/* --- ③ 結果 ＆ 履歴エリア --- */
+/* --- 7. 結果 ＆ 履歴エリア --- */
 .result-check-panel {
   background: linear-gradient(135deg, #251347 0%, #1a0b2e 100%);
   border: 1px solid var(--lottery-gold);
@@ -290,15 +432,87 @@
   box-shadow: 0 0 8px rgba(0, 243, 255, 0.4);
 }
 
-/* 勝敗オーバーレイのテキスト強調 */
+/* --- 8. 勝敗演出オーバーレイ ＆ エフェクト --- */
+.result-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  pointer-events: none;
+  animation: overlayFade 0.4s ease-out forwards;
+}
+
+@keyframes overlayFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.win-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+
 .win-overlay .overlay-text {
   color: var(--lottery-gold-bright) !important;
   text-shadow: 0 0 30px var(--lottery-gold) !important;
   font-size: 4rem;
+  font-weight: 900;
 }
 
-/* レスポンシブ対応 */
+.lose-overlay {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.lose-overlay .overlay-text {
+  font-size: 3rem;
+  font-weight: 900;
+  color: #7f8c8d;
+}
+
+.particle {
+  position: fixed;
+  top: -20px;
+  font-size: 1.5rem;
+  pointer-events: none;
+  animation: fall 2.5s linear forwards;
+  z-index: 3000;
+}
+
+@keyframes fall {
+  to {
+    transform: translateY(105vh) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.loading-text {
+  color: var(--text-sub);
+  font-style: italic;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* --- 9. レスポンシブ対応 --- */
 @media (max-width: 600px) {
+  .game-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    text-align: center;
+  }
+
+  .player-status {
+    justify-content: space-around;
+  }
+
   .timer-digits {
     font-size: 2rem;
     padding: 8px 15px;
@@ -317,16 +531,4 @@
   .lottery-ticket {
     font-size: 0.9rem;
   }
-}
-
-/* アニメーション */
-@keyframes neonPulse {
-  from { opacity: 1; text-shadow: 0 0 10px var(--lottery-neon); }
-  to { opacity: 0.8; text-shadow: 0 0 20px var(--lottery-neon), 0 0 30px var(--lottery-neon); }
-}
-
-.loading-text {
-  color: var(--text-sub);
-  font-style: italic;
-  animation: pulse 1.5s infinite;
 }

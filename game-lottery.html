@@ -4,9 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ワールドロト - Fever Casino</title>
-  <!-- 共通デザイン・テンキー・宝くじ専用スタイルの読み込み -->
+  <!-- ① 共通デザイン（ATMモーダル・基本スタイル）の読み込み -->
   <link rel="stylesheet" href="style.css">
+  <!-- ② 共通テンキー用CSS -->
   <link rel="stylesheet" href="keypad.css">
+  <!-- ③ 宝くじ専用デザインの読み込み -->
   <link rel="stylesheet" href="game-lottery.css">
 </head>
 <body>
@@ -38,6 +40,7 @@
           <span class="status-label">借金:</span>
           <span id="debt-display" class="status-value debt-value">$0</span>
         </div>
+        <!-- ATM起動ボタン -->
         <button type="button" id="open-atm-btn" class="open-atm-btn">🏦 ATM</button>
       </div>
     </header>
@@ -61,7 +64,7 @@
         <div class="section-title">🎰 チケットを購入（1枚 $1,000）</div>
         
         <div class="buy-controls">
-          <!-- 番号選択ボタン（テンキー連動） -->
+          <!-- 番号選択ボタン（宝くじ専用テンキーモード連動） -->
           <div class="number-input-group">
             <label>選択番号 (000-999):</label>
             <button type="button" 
@@ -69,7 +72,8 @@
                     class="amount-select-btn use-keypad" 
                     data-amount="0" 
                     data-label="" 
-                    data-max="999">
+                    data-mode="lottery" 
+                    data-digits="3">
               000
             </button>
           </div>
@@ -169,7 +173,7 @@
     </div>
   </div>
 
-  <!-- スクリプトの読み込み順序に注意 -->
+  <!-- JavaScriptファイルの読み込み -->
   <script src="lobby.js"></script>
   <script src="atm.js"></script>
   <script src="spreadsheet.js"></script>
