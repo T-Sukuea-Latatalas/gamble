@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - ワールドロト制御スクリプト (game-lottery.js)
- * BigInt & API / オフラインフォールバック完全対応版
+ * BigInt & API自動同期 / オフライン完全対応版
  * ==========================================
  */
 
@@ -20,7 +20,44 @@
     let timerInterval = null;
 
     /**
-     * 1. ユーティリティ: Safe BigInt 変換
+     * 1. ユーザーデータ・IDの確実な初期化
+     */
+    function ensurePlayerData() {
+        if (typeof window.loadData === 'function') {
+            window.loadData();
+        }
+
+        if (!window.playerData) {
+            window.playerData = { userId: '', userName: 'ゲスト', cash: 1000n, bank: 0n, debt: 0n };
+        }
+
+        // localStorageからの直接復元試行
+        if (!window.playerData.userId || String(window.playerData.userId).trim() === '' || window.playerData.userId === 'guest') {
+            try {
+                const saved = localStorage.getItem('fever_casino_player_data');
+                if (saved) {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.userId) window.playerData.userId = parsed.userId;
+                    if (parsed.userName) window.playerData.userName = parsed.userName;
+                }
+            } catch (e) {
+                console.error("プレイヤーデータ復元失敗:", e);
+            }
+        }
+
+        // ID未発行時の自動生成
+        if (!window.playerData.userId || String(window.playerData.userId).trim() === '') {
+            if (window.crypto && window.crypto.randomUUID) {
+                window.playerData.userId = window.crypto.randomUUID();
+            } else {
+                window.playerData.userId = 'user_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9);
+            }
+            if (typeof window.saveData === 'function') window.saveData();
+        }
+    }
+
+    /**
+     * 2. ユーティリティ: Safe BigInt 変換
      */
     function safeToBigInt(v) {
         if (typeof window.toBigInt === 'function') return window.toBigInt(v);
@@ -28,7 +65,7 @@
     }
 
     /**
-     * 2. 通貨フォーマットヘルパー
+     * 3. 通貨フォーマットヘルパー
      */
     function formatMoney(val) {
         const bigVal = safeToBigInt(val);
@@ -39,7 +76,7 @@
     }
 
     /**
-     * 3. UI更新: 所持金・借金表示
+     * 4. UI更新: 所持金・借金表示
      */
     function refreshCurrencyUI() {
         if (typeof window.updateUI === 'function') {
@@ -50,7 +87,7 @@
     }
 
     /**
-     * 4. オフライン/フォールバック用: 次回金曜日 08:15 (JST) のエポックミリ秒を計算
+     * 5. オフライン/フォールバック用: 次回金曜日 08:15 (JST) のエポックミリ秒を計算
      */
     function calculateNextFriday815JST() {
         const nowMs = Date.now();
@@ -79,7 +116,7 @@
     }
 
     /**
-     * 5. フォールバック用: 回号(DrawID)生成 (年 + 通算週番号)
+     * 6. フォールバック用: 回号(DrawID)生成 (年 + 通算週番号)
      */
     function generateFallbackDrawId() {
         const now = new Date();
@@ -90,7 +127,7 @@
     }
 
     /**
-     * 6. カウントダウンタイマーロジック
+     * 7. カウントダウンタイマーロジック
      */
     function startCountdown() {
         if (timerInterval) clearInterval(timerInterval);
@@ -121,25 +158,34 @@
     }
 
     /**
-     * 7. ロトステータス取得 (GET 通信 + フォールバック)
+     * 8. ロトステータス取得＆ユーザー購入履歴同期 (GET通信 + GAS同期)
      */
     async function fetchLotteryStatus() {
+        ensurePlayerData();
+        const userId = window.playerData.userId;
         let isSuccess = false;
 
         if (GAS_LOTTERY_API_URL && !GAS_LOTTERY_API_URL.includes("ここに") && !GAS_LOTTERY_API_URL.includes("YOUR_GAS")) {
             try {
-                const response = await fetch(GAS_LOTTERY_API_URL);
+                const url = `${GAS_LOTTERY_API_URL}${GAS_LOTTERY_API_URL.includes('?') ? '&' : '?'}userId=${encodeURIComponent(userId)}`;
+                const response = await fetch(url);
                 if (response.ok) {
                     const data = await response.json();
                     if (data && data.currentDrawId) {
                         currentDrawId = data.currentDrawId;
                         nextDrawTime = data.nextDrawTime;
-                        serverHistory = data.history || [];
+                        serverHistory = data.history || data.drawHistory || [];
+
+                        // サーバー側にある自分の購入済みチケットの復元・マージ
+                        const fetchedTickets = data.myTickets || data.userTickets || data.tickets || [];
+                        if (Array.isArray(fetchedTickets) && fetchedTickets.length > 0) {
+                            syncTicketsWithLocal(fetchedTickets);
+                        }
                         isSuccess = true;
                     }
                 }
             } catch (error) {
-                console.warn("GAS通信エラー。フォールバックタイマーを作動させます:", error);
+                console.warn("GAS通信エラー。ローカルキャッシュで動作します:", error);
             }
         }
 
@@ -159,7 +205,49 @@
     }
 
     /**
-     * 8. 番号選択ボタンからの数字正規化抽出 (000〜999)
+     * 9. サーバー取得チケットとローカルストレージのマージ（重複防止）
+     */
+    function syncTicketsWithLocal(serverTickets) {
+        const localTickets = getMyTicketsLocally();
+        const ticketMap = new Map();
+
+        // 既存ローカルデータの保持
+        localTickets.forEach(t => {
+            const key = `${t.drawId}_${t.number}`;
+            ticketMap.set(key, t);
+        });
+
+        // サーバーデータの同期マージ
+        serverTickets.forEach(st => {
+            const drawId = st.drawId || currentDrawId;
+            const numbers = Array.isArray(st.numbers) ? st.numbers : [st.number || st.num];
+
+            numbers.forEach(numRaw => {
+                if (!numRaw) return;
+                const numStr = String(numRaw).replace(/\D/g, '').padStart(3, '0').slice(-3);
+                const key = `${drawId}_${numStr}`;
+
+                if (ticketMap.has(key)) {
+                    const existing = ticketMap.get(key);
+                    if (st.checked !== undefined) existing.checked = st.checked;
+                    if (st.isWin !== undefined) existing.isWin = st.isWin;
+                } else {
+                    ticketMap.set(key, {
+                        drawId: drawId,
+                        number: numStr,
+                        checked: st.checked || false,
+                        isWin: st.isWin || false,
+                        timestamp: st.timestamp || Date.now()
+                    });
+                }
+            });
+        });
+
+        saveAllTicketsLocally(Array.from(ticketMap.values()));
+    }
+
+    /**
+     * 10. 番号選択ボタンからの数字正規化抽出 (000〜999)
      */
     function getSelectedNumber() {
         const numBtn = document.getElementById('lottery-num-btn');
@@ -172,10 +260,11 @@
     }
 
     /**
-     * 9. チケット購入処理 (POST 通信 + ローカル保存フォールバック)
+     * 11. チケット購入処理 (POST 通信 + ローカル保存)
      */
     async function buyTicket() {
         if (isProcessing) return;
+        ensurePlayerData();
 
         const selectedNum = getSelectedNumber();
         const cash = safeToBigInt(window.playerData?.cash);
@@ -210,12 +299,15 @@
             window.playerData.cash = cash - TICKET_PRICE;
             if (typeof window.saveData === 'function') window.saveData();
 
-            // 2. サーバー送信試行
+            // 2. ローカルストレージへ即時保存（リロード対策）
+            saveTicketLocally(currentDrawId, selectedNum);
+
+            // 3. サーバー送信試行
             let isServerSuccess = false;
             if (GAS_LOTTERY_API_URL && !GAS_LOTTERY_API_URL.includes("ここに") && !GAS_LOTTERY_API_URL.includes("YOUR_GAS")) {
                 try {
                     const payload = {
-                        userId: window.playerData.userId || "guest",
+                        userId: window.playerData.userId,
                         userName: window.playerData.userName || "ゲスト",
                         drawId: currentDrawId,
                         numbers: [selectedNum]
@@ -237,9 +329,6 @@
                     console.warn("GAS送信失敗。ローカル購入モードを適用します:", err);
                 }
             }
-
-            // 3. ローカルに保存
-            saveTicketLocally(currentDrawId, selectedNum);
 
             if (isServerSuccess) {
                 alert(`🎉 チケット #${selectedNum} を購入しました！`);
@@ -263,9 +352,10 @@
     }
 
     /**
-     * 10. 当選確認 & 配当受取
+     * 12. 当選確認 & 配当受取
      */
     async function checkResults() {
+        ensurePlayerData();
         const myTickets = getMyTicketsLocally();
         if (!myTickets || myTickets.length === 0) {
             alert("購入済みのチケットがありません。");
@@ -337,16 +427,18 @@
     }
 
     /**
-     * 11. ローカルストレージ操作（チケット保存・取得）
+     * 13. ローカルストレージ操作（確実に初期化されたユーザーIDキー）
      */
     function getStorageKey() {
-        const uid = window.playerData?.userId || "guest";
+        ensurePlayerData();
+        const uid = window.playerData && window.playerData.userId ? window.playerData.userId : "guest";
         return `lottery_tickets_${uid}`;
     }
 
     function getMyTicketsLocally() {
         try {
-            return JSON.parse(localStorage.getItem(getStorageKey()) || "[]");
+            const key = getStorageKey();
+            return JSON.parse(localStorage.getItem(key) || "[]");
         } catch (e) {
             return [];
         }
@@ -354,20 +446,24 @@
 
     function saveTicketLocally(drawId, number) {
         const tickets = getMyTicketsLocally();
-        tickets.push({ drawId, number, checked: false, isWin: false, timestamp: Date.now() });
-        saveAllTicketsLocally(tickets);
+        const exists = tickets.some(t => t.drawId === drawId && t.number === number);
+        if (!exists) {
+            tickets.push({ drawId, number, checked: false, isWin: false, timestamp: Date.now() });
+            saveAllTicketsLocally(tickets);
+        }
     }
 
     function saveAllTicketsLocally(tickets) {
         try {
-            localStorage.setItem(getStorageKey(), JSON.stringify(tickets));
+            const key = getStorageKey();
+            localStorage.setItem(key, JSON.stringify(tickets));
         } catch (e) {
             console.error("ローカルストレージ保存失敗:", e);
         }
     }
 
     /**
-     * 12. UI描画: 履歴テーブル
+     * 14. UI描画: 履歴テーブル
      */
     function updateHistoryTable() {
         const body = document.getElementById('draw-history-body');
@@ -392,9 +488,10 @@
     }
 
     /**
-     * 13. UI描画: マイチケットリスト
+     * 15. UI描画: マイチケットリスト
      */
     function updateMyTicketsList() {
+        ensurePlayerData();
         const listContainer = document.getElementById('my-tickets-list');
         const countEl = document.getElementById('bought-count');
         if (!listContainer) return;
@@ -423,7 +520,7 @@
     }
 
     /**
-     * 14. クイックピック (ランダム 3桁番号生成)
+     * 16. クイックピック (ランダム 3桁番号生成)
      */
     function quickPick() {
         const randomNum = Math.floor(Math.random() * 1000);
@@ -436,7 +533,7 @@
     }
 
     /**
-     * 15. 当選お祝い粒子エフェクト
+     * 17. 当選お祝い粒子エフェクト
      */
     function triggerWinEffects() {
         const container = document.getElementById('particle-container') || document.body;
@@ -456,10 +553,10 @@
     }
 
     /**
-     * 16. 初期化
+     * 18. 初期化処理
      */
     function initLottery() {
-        if (typeof window.loadData === 'function') window.loadData();
+        ensurePlayerData();
         refreshCurrencyUI();
 
         const buyBtn = document.getElementById('buy-ticket-btn');
@@ -470,11 +567,16 @@
         if (quickBtn) quickBtn.addEventListener('click', quickPick);
         if (checkBtn) checkBtn.addEventListener('click', checkResults);
 
-        // 初期ステータス取得＆タイマー始動
+        // ステータス取得・購入履歴の復元開始
         fetchLotteryStatus();
     }
 
-    // DOM構築完了後に初期化実行
+    // DOM構築完了時 ＆ ページ再表示（リロード・戻る等）時の同期・復元
     document.addEventListener('DOMContentLoaded', initLottery);
+    window.addEventListener('pageshow', () => {
+        ensurePlayerData();
+        refreshCurrencyUI();
+        updateMyTicketsList();
+    });
 
 })();

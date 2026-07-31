@@ -5,8 +5,8 @@
    ========================================== */
 :root {
   --bg-dark: #121614;
-  --bg-card: #1b2620;
-  --bg-card-light: #25352c;
+  --bg-card: rgba(27, 38, 32, 0.85);
+  --bg-card-light: rgba(37, 53, 44, 0.8);
 
   --gold: #dfb15b;
   --gold-hover: #fcd581;
@@ -24,7 +24,7 @@
 }
 
 /* ==========================================
-   2. 全体リセット ＆ 基本スタイル
+   2. 全体リセット ＆ 基本スタイル（カジノ背景設定）
    ========================================== */
 * {
   box-sizing: border-box;
@@ -35,6 +35,11 @@
 body {
   font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", sans-serif;
   background-color: var(--bg-dark);
+  /* 透過度45%〜65%の絶妙な黒グラデーション ＋ カジノ画像で鮮やかに魅せる */
+  background-image: linear-gradient(rgba(18, 22, 20, 0.45), rgba(18, 22, 20, 0.65)), url('bg-casino.png');
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
   color: var(--text-main);
   line-height: 1.6;
   min-height: 100vh;
@@ -55,11 +60,13 @@ body {
 }
 
 /* ------------------------------------------
-   左側：ランキングエリア (スワイプ型UI)
+   左側：ランキングエリア (グラスモーフィズムUI)
    ------------------------------------------ */
 .ranking-sidebar {
   width: 320px;
   background-color: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-right: 2px solid var(--gold);
   padding: 20px;
   display: flex;
@@ -76,8 +83,11 @@ body {
 
 .user-profile {
   background: var(--bg-card-light);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   padding: 10px;
   border-radius: 8px;
+  border: 1px solid rgba(223, 177, 91, 0.4);
 }
 
 .user-profile label {
@@ -97,7 +107,7 @@ body {
   padding: 6px 8px;
   border-radius: 4px;
   border: 1px solid #3a4d41;
-  background-color: var(--bg-dark);
+  background-color: rgba(18, 22, 20, 0.85);
   color: var(--text-main);
   font-size: 0.9rem;
 }
@@ -143,7 +153,7 @@ body {
   font-weight: bold;
   background-color: var(--bg-card-light);
   color: var(--text-sub);
-  border: 1px solid #3a4d41;
+  border: 1px solid rgba(223, 177, 91, 0.3);
   border-radius: 6px;
   cursor: pointer;
   text-align: center;
@@ -163,9 +173,11 @@ body {
 /* ★ スライダー構造（CSS Scroll Snap） ★ */
 .ranking-slider-container {
   flex: 1;
-  background-color: var(--bg-dark);
+  background-color: rgba(18, 22, 20, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-radius: 8px;
-  border: 1px solid #2a3a30;
+  border: 1px solid rgba(223, 177, 91, 0.4);
   overflow: hidden;
   position: relative;
 }
@@ -208,13 +220,13 @@ body {
 
 .ranking-list li {
   padding: 8px 10px;
-  border-bottom: 1px solid #2a3a30;
+  border-bottom: 1px solid rgba(42, 58, 48, 0.6);
   font-size: 0.85rem;
   border-radius: 4px;
 }
 
 .ranking-list li.my-rank {
-  background: linear-gradient(135deg, rgba(223, 177, 91, 0.25), rgba(37, 53, 44, 0.8));
+  background: linear-gradient(135deg, rgba(223, 177, 91, 0.35), rgba(37, 53, 44, 0.9));
   border: 2px solid var(--gold);
   color: #ffffff;
   font-weight: bold;
@@ -235,6 +247,8 @@ body {
 
 .status-header {
   background-color: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
   border-radius: 12px;
   padding: 20px;
   display: flex;
@@ -242,8 +256,8 @@ body {
   align-items: center;
   flex-wrap: wrap;
   gap: 20px;
-  border: 1px solid var(--gold-shadow);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(223, 177, 91, 0.4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
 }
 
 .view-mode-toggle {
@@ -252,7 +266,7 @@ body {
   align-items: center;
   gap: 8px;
   padding-bottom: 12px;
-  border-bottom: 1px solid rgba(223, 177, 91, 0.15);
+  border-bottom: 1px solid rgba(223, 177, 91, 0.2);
 }
 
 .toggle-label {
@@ -263,7 +277,7 @@ body {
 .view-btn {
   padding: 4px 12px;
   font-size: 0.75rem;
-  background-color: var(--bg-dark);
+  background-color: rgba(18, 22, 20, 0.85);
   color: var(--text-sub);
   border: 1px solid #3a4d41;
   border-radius: 12px;
@@ -301,7 +315,7 @@ body {
 .status-item .debt-value, #debt-amount {
   color: var(--danger-red) !important;
   font-weight: bold;
-  text-shadow: 0 0 8px rgba(255, 77, 77, 0.3);
+  text-shadow: 0 0 10px rgba(255, 77, 77, 0.5);
 }
 
 .status-item.highlight .value {
@@ -318,12 +332,13 @@ body {
   border: none;
   border-radius: 30px;
   cursor: pointer;
-  box-shadow: 0 4px 10px var(--gold-shadow);
+  box-shadow: 0 4px 15px var(--gold-shadow);
   transition: all 0.2s;
 }
 
 .atm-open-btn:hover {
   transform: translateY(-2px);
+  filter: brightness(1.1);
 }
 
 /* ゲーム選択エリア */
@@ -331,6 +346,7 @@ body {
   font-size: 1.5rem;
   margin-bottom: 20px;
   color: var(--gold);
+  text-shadow: 0 0 10px rgba(223, 177, 91, 0.3);
 }
 
 .game-grid {
@@ -341,7 +357,9 @@ body {
 
 .game-card {
   background-color: var(--bg-card);
-  border: 1px solid #2a3a30;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(223, 177, 91, 0.4);
   border-radius: 12px;
   padding: 20px;
   text-align: center;
@@ -349,12 +367,14 @@ body {
   flex-direction: column;
   justify-content: space-between;
   gap: 15px;
-  transition: transform 0.2s;
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
 }
 
 .game-card:hover {
   transform: translateY(-5px);
   border-color: var(--gold);
+  box-shadow: 0 10px 25px rgba(223, 177, 91, 0.4);
 }
 
 a.play-game-btn {
@@ -366,6 +386,7 @@ a.play-game-btn {
   padding: 10px;
   border-radius: 6px;
   font-weight: bold;
+  transition: all 0.2s;
 }
 
 a.play-game-btn:hover {
@@ -392,19 +413,22 @@ a.play-game-btn:hover {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.75);
-  backdrop-filter: blur(3px);
+  background-color: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 
 .modal-content {
   position: relative;
-  background-color: var(--bg-card);
+  background-color: rgba(27, 38, 32, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 2px solid var(--gold);
   border-radius: 16px;
   width: 90%;
   max-width: 500px;
   padding: 25px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9), 0 0 20px var(--gold-shadow);
   z-index: 1001;
 }
 
@@ -423,13 +447,13 @@ a.play-game-btn:hover {
 }
 
 /* ==========================================
-   ATMモーダル内ステータス表示（新設）
+   ATMモーダル内ステータス表示
    ========================================== */
 .atm-status-summary {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  background-color: var(--bg-dark);
+  background-color: rgba(18, 22, 20, 0.85);
   border: 1px solid rgba(223, 177, 91, 0.3);
   border-radius: 10px;
   padding: 10px 12px;
@@ -492,7 +516,7 @@ a.play-game-btn:hover {
 .mode-btn.borrow { background-color: var(--btn-purple); }
 
 .atm-action-panel {
-  background-color: var(--bg-dark);
+  background-color: rgba(18, 22, 20, 0.85);
   border: 1px solid #2a3a30;
   border-radius: 12px;
   padding: 15px;
@@ -515,182 +539,6 @@ a.play-game-btn:hover {
   border-radius: 8px;
   font-weight: bold;
   cursor: pointer;
-}
-
-/* ==========================================
-   借金相殺チャンス（3Dコイントス）専用CSS
-   ========================================== */
-
-.debt-challenge-widget-container {
-  width: 100%;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px dashed rgba(223, 177, 91, 0.3);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.debt-challenge-btn {
-  width: 100%;
-  background: linear-gradient(135deg, #ff2a6d 0%, #9b59b6 100%);
-  color: #ffffff;
-  font-weight: bold;
-  font-size: 0.95rem;
-  padding: 10px;
-  border: 2px solid #ff793f;
-  border-radius: 20px;
-  cursor: pointer;
-  box-shadow: 0 0 15px rgba(255, 42, 109, 0.5);
-  transition: all 0.2s;
-}
-
-.debt-challenge-btn:hover:not(:disabled) {
-  transform: scale(1.02);
-  box-shadow: 0 0 20px rgba(255, 42, 109, 0.8);
-}
-
-.debt-challenge-btn:disabled {
-  background: #333333;
-  border-color: #555555;
-  color: #888888;
-  box-shadow: none;
-  cursor: not-allowed;
-}
-
-.debt-challenge-timer {
-  font-size: 0.75rem;
-  color: #ff4d4d;
-  font-weight: bold;
-}
-
-/* 3D コインモーダル */
-.challenge-modal-content {
-  max-width: 440px !important;
-  text-align: center;
-}
-
-.challenge-desc {
-  font-size: 0.85rem;
-  color: var(--text-main);
-  margin-bottom: 12px;
-}
-
-.warning-text {
-  color: #ff4d4d;
-}
-
-.coins-history {
-  display: flex;
-  justify-content: space-around;
-  margin-bottom: 15px;
-}
-
-.coin-step-badge {
-  background: var(--bg-dark);
-  border: 1px solid #3a4d41;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  color: var(--text-sub);
-}
-
-.coin-step-badge.success {
-  border-color: var(--gold);
-  color: var(--gold);
-  font-weight: bold;
-}
-
-.coin-step-badge.fail {
-  border-color: #ff4d4d;
-  color: #ff4d4d;
-  font-weight: bold;
-}
-
-/* ★ 3D コイン回転ステージ ★ */
-.coin-stage {
-  perspective: 1000px;
-  width: 130px;
-  height: 130px;
-  margin: 15px auto;
-}
-
-.coin-3d {
-  width: 100%;
-  height: 100%;
-  position: relative;
-  transform-style: preserve-3d;
-}
-
-.coin-face {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  backface-visibility: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  font-size: 2.2rem;
-  font-weight: bold;
-  box-shadow: inset 0 0 15px rgba(255, 255, 255, 0.6), 0 8px 20px rgba(0, 0, 0, 0.8);
-  border: 4px solid var(--gold);
-}
-
-.face-label {
-  font-size: 0.9rem;
-  margin-top: -4px;
-}
-
-.coin-front {
-  background: radial-gradient(circle, #ffe082 0%, #ffb300 70%, #b8860b 100%);
-  color: #3e2723;
-  transform: rotateY(0deg);
-}
-
-.coin-back {
-  background: radial-gradient(circle, #546e7a 0%, #263238 70%, #102027 100%);
-  color: #ff5252;
-  border-color: #ff5252;
-  transform: rotateY(180deg);
-}
-
-.challenge-status-msg {
-  min-height: 48px;
-  background: var(--bg-dark);
-  border: 1px solid var(--gold);
-  border-radius: 8px;
-  padding: 8px;
-  font-size: 0.9rem;
-  font-weight: bold;
-  color: var(--gold);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 15px;
-}
-
-.win-msg { color: #2ecc71; font-size: 1rem; }
-.lose-msg { color: #ff4d4d; font-size: 0.9rem; }
-
-.start-toss-btn {
-  width: 100%;
-  background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%);
-  color: #000;
-  font-weight: bold;
-  font-size: 1.1rem;
-  padding: 12px;
-  border: none;
-  border-radius: 25px;
-  cursor: pointer;
-  box-shadow: 0 4px 15px rgba(223, 177, 91, 0.4);
-}
-
-.start-toss-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 /* ==========================================
@@ -767,7 +615,7 @@ a.play-game-btn:hover {
 }
 
 .coin-step-badge {
-  background: var(--bg-dark);
+  background: rgba(18, 22, 20, 0.85);
   border: 1px solid #3a4d41;
   padding: 6px 10px;
   border-radius: 6px;
@@ -842,7 +690,7 @@ a.play-game-btn:hover {
 
 .challenge-status-msg {
   min-height: 52px;
-  background: var(--bg-dark);
+  background: rgba(18, 22, 20, 0.85);
   border: 1px solid var(--gold);
   border-radius: 8px;
   padding: 8px 12px;
