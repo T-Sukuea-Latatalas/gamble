@@ -54,7 +54,7 @@ window.formatCurrency = formatCurrency;
 let playerData = {
   userId: '',
   userName: '新規ユーザー',
-  isNameSet: false, // ★追加: プレイヤー名が確定・設定済みかのフラグ
+  isNameSet: false, // プレイヤー名が確定・設定済みかのフラグ
   cash: 1000n,
   bank: 0n,
   debt: 0n,
@@ -65,7 +65,9 @@ let playerData = {
     blackjack: 0n,
     slots: 0n,
     roulette: 0n,
-    poker: 0n
+    poker: 0n,
+    lottery: 0n,
+    pachinko: 0n
   }
 };
 
@@ -102,7 +104,9 @@ function saveData() {
         blackjack: toBigInt(playerData.highScores?.blackjack, 0n).toString(),
         slots: toBigInt(playerData.highScores?.slots, 0n).toString(),
         roulette: toBigInt(playerData.highScores?.roulette, 0n).toString(),
-        poker: toBigInt(playerData.highScores?.poker, 0n).toString()
+        poker: toBigInt(playerData.highScores?.poker, 0n).toString(),
+        lottery: toBigInt(playerData.highScores?.lottery, 0n).toString(),
+        pachinko: toBigInt(playerData.highScores?.pachinko, 0n).toString()
       }
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(serializedData));
@@ -132,7 +136,9 @@ function loadData() {
         blackjack: toBigInt(hs.blackjack, 0n),
         slots: toBigInt(hs.slots, 0n),
         roulette: toBigInt(hs.roulette, 0n),
-        poker: toBigInt(hs.poker, 0n)
+        poker: toBigInt(hs.poker, 0n),
+        lottery: toBigInt(hs.lottery, 0n),
+        pachinko: toBigInt(hs.pachinko, 0n)
       };
     } else {
       if (!playerData.userId) playerData.userId = generateUserId();
@@ -223,7 +229,7 @@ function setupUsernameChange() {
 }
 
 /**
- * ★ ユーザーネーム設定モーダルの制御 ＆ チェック機能 ★
+ * ユーザーネーム設定モーダルの制御 ＆ チェック機能
  */
 function checkUsernameSetup() {
   const modal = document.getElementById('username-modal');
@@ -307,12 +313,72 @@ function setupViewModeToggle() {
   });
 }
 
+/**
+ * ランキングスライダー ＆ インジケーターボタンのクリック・スクロール追従制御
+ */
+function setupRankingSlider() {
+  const slider = document.getElementById('ranking-slider');
+  const indicatorWrapper = document.querySelector('.ranking-indicators-wrapper');
+  const indicatorBtns = document.querySelectorAll('.indicator-btn');
+
+  if (!slider || indicatorBtns.length === 0) return;
+
+  // 指定のインデックスのボタンを active にし、画面外にあればスクロール追従させる
+  function setActiveIndicator(index) {
+    indicatorBtns.forEach((btn, i) => {
+      if (i === index) {
+        btn.classList.add('active');
+        if (indicatorWrapper) {
+          const btnLeft = btn.offsetLeft;
+          const btnWidth = btn.offsetWidth;
+          const wrapperScrollLeft = indicatorWrapper.scrollLeft;
+          const wrapperWidth = indicatorWrapper.clientWidth;
+
+          if (btnLeft < wrapperScrollLeft) {
+            indicatorWrapper.scrollTo({ left: btnLeft, behavior: 'smooth' });
+          } else if (btnLeft + btnWidth > wrapperScrollLeft + wrapperWidth) {
+            indicatorWrapper.scrollTo({ left: btnLeft + btnWidth - wrapperWidth, behavior: 'smooth' });
+          }
+        }
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
+
+  // 1. インジケーターボタンのクリックイベント設定
+  indicatorBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const index = parseInt(btn.getAttribute('data-index'), 10);
+      if (isNaN(index)) return;
+
+      const slideWidth = slider.clientWidth;
+      slider.scrollTo({
+        left: slideWidth * index,
+        behavior: 'smooth'
+      });
+
+      setActiveIndicator(index);
+    });
+  });
+
+  // 2. スライダー手動スクロール時のボタンアクティブ状態連動
+  slider.addEventListener('scroll', () => {
+    const slideWidth = slider.clientWidth;
+    if (slideWidth <= 0) return;
+
+    const currentIndex = Math.round(slider.scrollLeft / slideWidth);
+    setActiveIndicator(currentIndex);
+  });
+}
+
 function initLobby() {
   loadData();
   updateUI();
   setupUsernameChange();
   setupUsernameModalEvents();
   setupViewModeToggle();
+  setupRankingSlider();
   
   // 初期名前チェック＆ポップアップ表示
   checkUsernameSetup();

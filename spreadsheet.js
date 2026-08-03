@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - Googleスプレッドシート連携 (spreadsheet.js)
- * BigInt JSONシリアライズ完全安全対応版
+ * BigInt JSONシリアライズ完全安全対応版 (宝くじ・パチンコ拡張)
  * ==========================================
  */
 
@@ -22,7 +22,7 @@ function ensurePlayerDataInitialized() {
       bank: 0n,
       debt: 0n,
       debtPlayCount: 0,
-      highScores: { blackjack: 0n, slots: 0n, roulette: 0n, poker: 0n }
+      highScores: { blackjack: 0n, slots: 0n, roulette: 0n, poker: 0n, lottery: 0n, pachinko: 0n }
     };
   }
 
@@ -42,7 +42,9 @@ function ensurePlayerDataInitialized() {
         blackjack: safeToBigInt(hs.blackjack),
         slots: safeToBigInt(hs.slots),
         roulette: safeToBigInt(hs.roulette),
-        poker: safeToBigInt(hs.poker)
+        poker: safeToBigInt(hs.poker),
+        lottery: safeToBigInt(hs.lottery),
+        pachinko: safeToBigInt(hs.pachinko)
       };
     }
   } catch (e) {
@@ -84,7 +86,9 @@ async function sendDataToSpreadsheet(isManualTest = false) {
         blackjack: safeToBigInt(hs.blackjack).toString(),
         slots: safeToBigInt(hs.slots).toString(),
         roulette: safeToBigInt(hs.roulette).toString(),
-        poker: safeToBigInt(hs.poker).toString()
+        poker: safeToBigInt(hs.poker).toString(),
+        lottery: safeToBigInt(hs.lottery).toString(),
+        pachinko: safeToBigInt(hs.pachinko).toString()
       }
     };
 
@@ -137,6 +141,8 @@ async function fetchRankingFromSpreadsheet() {
     updateRankingList('ranking-slots', rankings.slots, 'slots');
     updateRankingList('ranking-roulette', rankings.roulette, 'roulette');
     updateRankingList('ranking-poker', rankings.poker, 'poker');
+    updateRankingList('ranking-lottery', rankings.lottery, 'lottery');
+    updateRankingList('ranking-pachinko', rankings.pachinko, 'pachinko');
 
   } catch (error) {
     console.error("ランキングデータの取得に失敗しました:", error);
@@ -145,7 +151,7 @@ async function fetchRankingFromSpreadsheet() {
 }
 
 function showLoadingStatus() {
-  const rankingIds = ['ranking-net-worth', 'ranking-blackjack', 'ranking-slots', 'ranking-roulette', 'ranking-poker'];
+  const rankingIds = ['ranking-net-worth', 'ranking-blackjack', 'ranking-slots', 'ranking-roulette', 'ranking-poker', 'ranking-lottery', 'ranking-pachinko'];
   rankingIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '<li class="loading-text">データを読み込み中... 🏆</li>';
@@ -153,7 +159,7 @@ function showLoadingStatus() {
 }
 
 function showErrorStatus() {
-  const rankingIds = ['ranking-net-worth', 'ranking-blackjack', 'ranking-slots', 'ranking-roulette', 'ranking-poker'];
+  const rankingIds = ['ranking-net-worth', 'ranking-blackjack', 'ranking-slots', 'ranking-roulette', 'ranking-poker', 'ranking-lottery', 'ranking-pachinko'];
   rankingIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '<li>ランキングの読み込みに失敗しました</li>';

@@ -1,0 +1,253 @@
+game-pachinko.css@charset "UTF-8";
+
+/* ==========================================
+   CR FEVER CASINO パチンコ専用スタイル (game-pachinko.css)
+   ========================================== */
+
+:root {
+  --pachinko-gold: #dfb15b;
+  --pachinko-neon-pink: #ff2a6d;
+  --pachinko-neon-blue: #05d9e8;
+  --bg-dark: #0a0814;
+  --panel-bg: #151124;
+  --text-main: #f0f4f1;
+  --text-sub: #a0b0a6;
+  --danger-red: #ff4d4d;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  overflow-x: hidden;
+}
+
+.hidden { display: none !important; }
+
+.game-container {
+  width: 100%;
+  max-width: 480px;
+  background-color: var(--panel-bg);
+  border: 3px solid var(--pachinko-gold);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 0 30px rgba(223, 177, 91, 0.4), 0 0 15px rgba(255, 42, 109, 0.2);
+  position: relative;
+}
+
+/* ヘッダー */
+.game-header {
+  background: linear-gradient(180deg, #2a1b40 0%, #150e26 100%);
+  padding: 12px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--pachinko-gold);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.game-title {
+  font-size: 1.1rem;
+  color: var(--pachinko-gold);
+  text-shadow: 0 0 10px rgba(223, 177, 91, 0.6);
+}
+
+.header-btn {
+  color: var(--text-main);
+  text-decoration: none;
+  background-color: #2e1a47;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  border: 1px solid var(--pachinko-gold);
+}
+
+.player-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+}
+
+.status-value {
+  color: var(--pachinko-gold);
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.debt-value, #debt-display {
+  color: var(--danger-red) !important;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(255, 77, 77, 0.4);
+}
+
+.open-atm-btn {
+  background: linear-gradient(135deg, var(--pachinko-gold), #b8860b);
+  color: #000;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.open-atm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* 確変バナー */
+.fever-banner {
+  background: linear-gradient(90deg, #ff2a6d, #9b59b6, #ff2a6d);
+  color: #fff;
+  text-align: center;
+  padding: 8px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  box-shadow: 0 0 15px rgba(255, 42, 109, 0.8);
+  animation: feverPulse 0.8s infinite alternate;
+}
+
+@keyframes feverPulse {
+  from { opacity: 0.8; }
+  to { opacity: 1; transform: scale(1.01); }
+}
+
+/* メイン筐体エリア */
+.pachinko-main {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+}
+
+.pachinko-board-wrapper {
+  background: #000;
+  border: 4px solid var(--pachinko-gold);
+  border-radius: 16px;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9), 0 0 15px rgba(223, 177, 91, 0.3);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#pachinko-canvas {
+  display: block;
+  background-color: #050510;
+  width: 100%;
+  max-width: 400px;
+  height: auto;
+}
+
+/* アナウンスメッセージ */
+.pachinko-message {
+  width: 100%;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--pachinko-neon-blue);
+  background-color: #080612;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--pachinko-neon-blue);
+  box-shadow: 0 0 10px rgba(5, 217, 232, 0.3);
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* コントロールパネル */
+.control-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(223, 177, 91, 0.3);
+}
+
+.bet-input-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hold-indicator {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: var(--pachinko-gold);
+  background: #000;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--pachinko-gold);
+}
+
+.action-btn-group {
+  display: flex;
+  gap: 10px;
+}
+
+.shoot-btn {
+  flex: 2;
+  background: linear-gradient(135deg, #ff2a6d 0%, #c0392b 100%);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: bold;
+  padding: 12px;
+  border: 2px solid #ff793f;
+  border-radius: 30px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(255, 42, 109, 0.4);
+  transition: all 0.1s;
+}
+
+.shoot-btn:hover:not(:disabled) { transform: translateY(-2px); }
+.shoot-btn:active:not(:disabled) { transform: translateY(1px); }
+
+.auto-btn {
+  flex: 1;
+  background: #2e1a47;
+  color: var(--pachinko-gold);
+  font-size: 0.85rem;
+  font-weight: bold;
+  padding: 12px;
+  border: 1px solid var(--pachinko-gold);
+  border-radius: 30px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.auto-btn.active {
+  background: var(--pachinko-gold);
+  color: #000;
+  box-shadow: 0 0 10px var(--pachinko-gold);
+}
+
+/* 粒子エフェクト */
+.particle {
+  position: fixed; top: -20px; font-size: 1.5rem; pointer-events: none;
+  animation: fall 2.5s linear forwards; z-index: 3000;
+}
+
+@keyframes fall { to { transform: translateY(105vh) rotate(360deg); opacity: 0; } }
