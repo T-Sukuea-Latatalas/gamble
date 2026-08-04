@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - Googleスプレッドシート連携 (spreadsheet.js)
- * BigInt JSONシリアライズ完全安全対応版 (宝くじ・パチンコ拡張)
+ * ランキングデータ同期 ＆ お知らせ配信・取得API機能拡張版
  * ==========================================
  */
 
@@ -79,6 +79,7 @@ async function sendDataToSpreadsheet(isManualTest = false) {
     const hs = window.playerData.highScores || {};
 
     const payload = {
+      action: "savePlayerData",
       userId: window.playerData.userId,
       userName: window.playerData.userName || "ゲスト",
       netWorth: netWorth.toString(),
@@ -92,8 +93,6 @@ async function sendDataToSpreadsheet(isManualTest = false) {
       }
     };
 
-    console.log("【スプレッドシートへ送信中データ】", payload);
-
     const response = await fetch(GAS_API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain" },
@@ -105,7 +104,6 @@ async function sendDataToSpreadsheet(isManualTest = false) {
     }
 
     const result = await response.json();
-    console.log("スプレッドシート送信成功結果:", result);
 
     if (isManualTest) {
       alert(`⚡ スプレッドシート通信成功！\n\nレスポンス: ${result.status}\nメッセージ: ${result.message || 'データが正しく反映されました。'}`);
@@ -149,6 +147,103 @@ async function fetchRankingFromSpreadsheet() {
     showErrorStatus();
   }
 }
+
+/**
+ * ------------------------------------------
+ * お知らせ（通知）機能 API
+ * ------------------------------------------
+ */
+
+// 1. お知らせ一覧の取得
+async function fetchNoticesFromSpreadsheet() {
+  if (!GAS_API_URL || GAS_API_URL.includes("YOUR_GAS")) return;
+
+  try {
+    const url = `${GAS_API_URL}${GAS_API_URL.includes('?') ? '&' : '?'}action=getNotices`;
+    const response = await fetch(url);
+    if (!response.ok) return;
+
+    const notices = await response.json();
+    if (Array.isArray(notices)) {
+      renderNoticeList(notices);
+      if (typeof window.updateNoticeUnreadBadge === 'function') {
+        window.updateNoticeUnreadBadge(notices);
+      }
+    }
+  } catch (err) {
+    console.warn("お知らせの取得に失敗しました:", err);
+  }
+}
+
+// 2. お知らせ一覧のUI描画
+function renderNoticeList(notices) {
+  const container = document.getElementById('notice-list-container');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  if (!notices || notices.length === 0) {
+    container.innerHTML = '<div class="empty-notice-msg">現在配信されているお知らせはありません 🔔</div>';
+    return;
+  }
+
+  notices.forEach(notice => {
+    const card = document.createElement('div');
+    card.className = 'notice-item-card';
+
+    card.innerHTML = `
+      <div class="notice-item-header">
+        <span class="notice-item-title">${escapeHtml(notice.title || 'お知らせ')}</span>
+        <span class="notice-item-date">${escapeHtml(notice.createdAt || '')}</span>
+      </div>
+      <div class="notice-item-body">${escapeHtml(notice.message || '')}</div>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+// 3. 管理者からお知らせの配信送信
+async function sendNoticeToSpreadsheet(title, message, passHash) {
+  if (!GAS_API_URL || GAS_API_URL.includes("YOUR_GAS")) {
+    throw new Error("GAS API URLが正しく設定されていません。");
+  }
+
+  const payload = {
+    action: "sendNotice",
+    passHash: passHash,
+    title: title,
+    message: message
+  };
+
+  const response = await fetch(GAS_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain" },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(`送信失敗 HTTP Status: ${response.status}`);
+  }
+
+  const result = await response.json();
+  if (result.status === "success") {
+    fetchNoticesFromSpreadsheet();
+  }
+  return result;
+}
+
+window.fetchNoticesFromSpreadsheet = fetchNoticesFromSpreadsheet;
+window.sendNoticeToSpreadsheet = sendNoticeToSpreadsheet;
 
 function showLoadingStatus() {
   const rankingIds = ['ranking-net-worth', 'ranking-blackjack', 'ranking-slots', 'ranking-roulette', 'ranking-poker', 'ranking-lottery', 'ranking-pachinko'];
@@ -237,5 +332,6 @@ window.addEventListener('load', () => {
 
   setTimeout(() => {
     fetchRankingFromSpreadsheet();
+    fetchNoticesFromSpreadsheet();
   }, 100);
 });

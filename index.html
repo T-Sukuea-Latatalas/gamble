@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="keypad.css">
   <link rel="stylesheet" href="debt-challenge.css">
+  <link rel="stylesheet" href="devtools.css">
   <!-- Three.js (3D空間描画用CDN) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
@@ -85,6 +86,13 @@
           <button class="view-btn active" data-mode="auto" type="button">自動</button>
           <button class="view-btn" data-mode="desktop" type="button">PC</button>
           <button class="view-btn" data-mode="mobile" type="button">スマホ</button>
+          
+          <!-- ★ お知らせベルボタン（未読赤丸バッジ付） ★ -->
+          <div class="notice-btn-wrapper" style="margin-left: auto;">
+            <button type="button" id="open-notice-btn" class="notice-bell-btn">
+              🔔 お知らせ <span id="notice-unread-badge" class="notice-badge hidden"></span>
+            </button>
+          </div>
         </div>
 
         <div class="status-container">
@@ -112,7 +120,7 @@
       </header>
 
       <section class="game-selection">
-        <h2>🎮 ゲームを選択</h2>
+        <h2 class="game-title">🎮 ゲームを選択</h2>
         <div class="game-grid">
           <div class="game-card">
             <h3>🎰 スロット</h3>
@@ -139,7 +147,6 @@
             <p>毎週金曜8:15抽選！一攫千金を目指せ！</p>
             <a href="game-lottery.html" class="play-game-btn">ゲーム開始</a>
           </div>
-          <!-- 🎰 パチンコカード追加 -->
           <div class="game-card">
             <h3>🎰 パチンコ (PACHINKO)</h3>
             <p>フィーバー乱舞！一撃大量出玉を狙え！</p>
@@ -150,6 +157,22 @@
 
     </main>
 
+  </div>
+
+  <!-- ★ お知らせ（通知）一覧モーダル ★ -->
+  <div id="notice-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content notice-modal-content">
+      <div class="modal-header">
+        <h2>📢 カジノ運営からのお知らせ</h2>
+        <button id="close-notice-btn" class="close-btn" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="notice-list-container" class="notice-list-container">
+          <div class="empty-notice-msg">お知らせを読み込み中... 🔔</div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ★ ユーザーネーム自動設定ポップアップモーダル ★ -->
@@ -192,9 +215,7 @@
       </div>
 
       <div class="modal-body">
-        <div class="atm-status-summary" id="atm-status-summary">
-          <!-- lobby.js 等から動的に情報が挿入されるエリア -->
-        </div>
+        <div class="atm-status-summary" id="atm-status-summary"></div>
 
         <div class="atm-step-section">
           <p class="step-title">① 取引メニューを選択:</p>
@@ -222,7 +243,6 @@
           </div>
         </div>
 
-        <!-- 借金相殺チャンス起動ボタンコンテナ -->
         <div class="debt-challenge-widget-container">
           <button type="button" class="debt-challenge-btn" disabled>
             🔒 借金相殺チャンス (条件未達成)
@@ -238,15 +258,11 @@
   <div id="debt-challenge-modal" class="modal hidden">
     <div class="modal-overlay"></div>
     <div class="modal-content challenge-modal-content cliff-modal-content">
-
-      <!-- 3Dキャンバス描画コンテナ -->
       <div id="debt-challenge-3d-canvas" class="debt-challenge-3d-canvas"></div>
 
-      <!-- 水飛沫・暗転・視覚エフェクト用オーバーレイ -->
       <div id="cliff-water-splash" class="cliff-effect-overlay splash-effect hidden"></div>
       <div id="cliff-dark-overlay" class="cliff-effect-overlay dark-effect hidden"></div>
 
-      <!-- UIレイヤー（3Dシーン上に前面表示） -->
       <div class="challenge-ui-overlay">
         <div class="modal-header">
           <h2>🔥 借金相殺チャンス</h2>
@@ -259,25 +275,105 @@
             <span class="warning-text">※ 1回でも「裏」が出ると失敗となり、借金と金利が2倍に増大します！</span>
           </p>
 
-          <!-- 3回分のステップインジケーター -->
           <div class="coins-history">
             <div id="coin-step-1" class="coin-step-badge">第1投: 未挑戦</div>
             <div id="coin-step-2" class="coin-step-badge">第2投: 未挑戦</div>
             <div id="coin-step-3" class="coin-step-badge">第3投: 未挑戦</div>
           </div>
 
-          <!-- 状況アナウンスメッセージ -->
           <div id="challenge-status-msg" class="challenge-status-msg">
             「コイントス開始」を押して運命の3連勝を目指せ！
           </div>
 
-          <!-- チャレンジ開始ボタン -->
           <button id="start-toss-btn" class="start-toss-btn" type="button">
             🪙 コイントス開始
           </button>
         </div>
       </div>
+    </div>
+  </div>
 
+  <!-- ★ 開発者ツール：ログインモーダル ★ -->
+  <div id="devtools-login-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content" style="max-width: 380px;">
+      <div class="modal-header">
+        <h2 style="color: #00f3ff;">🛠️ DevTools 認証</h2>
+        <button id="devtools-login-close" class="close-btn" type="button">&times;</button>
+      </div>
+      <div class="modal-body" style="text-align: center;">
+        <p style="font-size: 0.85rem; color: #a0b0a6; margin-bottom: 12px;">管理者パスワードを入力してください</p>
+        <input type="password" id="devtools-pass-input" class="dev-input-text" style="width: 100%; margin-bottom: 15px; text-align: center;" placeholder="パスワード">
+        <button id="devtools-login-btn" class="dev-btn dev-btn-primary" style="width: 100%; padding: 10px;" type="button">認証・ログイン</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ★ 開発者ツール：メインデバッグパネルモーダル ★ -->
+  <div id="devtools-panel-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content dev-modal-content">
+      <div class="modal-header dev-modal-header">
+        <h2>🛠️ Fever Casino DevTools (デバッグパネル)</h2>
+        <button id="devtools-panel-close" class="close-btn" type="button">&times;</button>
+      </div>
+      <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
+
+        <!-- 1. プレイヤーパラメータ変更 -->
+        <div class="dev-section-box">
+          <div class="dev-section-title">💰 プレイヤーパラメータ即時編集</div>
+          <div class="dev-grid-2col">
+            <div class="dev-input-group">
+              <label>所持金 (cash):</label>
+              <input type="text" id="dev-input-cash" class="dev-input-text">
+            </div>
+            <div class="dev-input-group">
+              <label>銀行貯金 (bank):</label>
+              <input type="text" id="dev-input-bank" class="dev-input-text">
+            </div>
+            <div class="dev-input-group">
+              <label>借金額 (debt):</label>
+              <input type="text" id="dev-input-debt" class="dev-input-text">
+            </div>
+            <div class="dev-input-group">
+              <label>金利プレイ回数 (debtPlayCount):</label>
+              <input type="number" id="dev-input-playcount" class="dev-input-text">
+            </div>
+          </div>
+          <div style="margin-top: 10px; display: flex; gap: 10px;">
+            <button id="dev-apply-btn" class="dev-btn dev-btn-primary" type="button">✅ 設定を適用・保存</button>
+            <button id="dev-reset-btn" class="dev-btn dev-btn-danger" type="button">⚠️ 全データ初期化</button>
+          </div>
+        </div>
+
+        <!-- 2. ゲームデバッグ・フラグ制御 -->
+        <div class="dev-section-box">
+          <div class="dev-section-title">🎰 ゲーム物理・勝敗フラグ制御</div>
+          <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+            <label class="dev-checkbox-label">
+              <input type="checkbox" id="dev-chk-force-win"> 🟢 次回強制勝利 (Win/Jackpot)
+            </label>
+            <label class="dev-checkbox-label">
+              <input type="checkbox" id="dev-chk-force-lose"> 🔴 次回強制敗北 (Lose)
+            </label>
+          </div>
+        </div>
+
+        <!-- 3. 全プレイヤー向けお知らせ配信パネル -->
+        <div class="dev-section-box">
+          <div class="dev-section-title">📢 全ユーザー向けお知らせ配信</div>
+          <div class="dev-input-group" style="margin-bottom: 8px;">
+            <label>お知らせタイトル:</label>
+            <input type="text" id="dev-notice-title" class="dev-input-text" placeholder="例: メンテナンス完了・新ゲーム追加">
+          </div>
+          <div class="dev-input-group" style="margin-bottom: 10px;">
+            <label>お知らせ本文:</label>
+            <textarea id="dev-notice-msg" class="dev-textarea" placeholder="プレイヤーへ配信するメッセージを入力"></textarea>
+          </div>
+          <button id="dev-notice-submit-btn" class="dev-btn dev-btn-primary" style="width: 100%;" type="button">📢 お知らせを全ユーザーへ配信</button>
+        </div>
+
+      </div>
     </div>
   </div>
 
@@ -286,6 +382,7 @@
   <script src="spreadsheet.js"></script>
   <script src="keypad.js"></script>
   <script src="debt-challenge.js"></script>
+  <script src="devtools.js"></script>
 
 </body>
 </html>

@@ -1,0 +1,218 @@
+@charset "UTF-8";
+
+/* ==========================================
+   Fever Casino - 開発者ツール ＆ お知らせ専用スタイル (devtools.css)
+   ========================================== */
+
+/* --- お知らせベルボタン ＆ 未読バッジ --- */
+.notice-btn-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.notice-bell-btn {
+  background: linear-gradient(135deg, #2a3b50 0%, #172433 100%);
+  color: #dfb15b;
+  border: 1px solid #dfb15b;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
+}
+
+.notice-bell-btn:hover {
+  background: #dfb15b;
+  color: #000;
+  transform: translateY(-2px);
+}
+
+.notice-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 12px;
+  height: 12px;
+  background-color: #ff4d4d;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 8px #ff4d4d;
+  animation: badgePulse 1.2s infinite alternate;
+}
+
+@keyframes badgePulse {
+  from { transform: scale(0.9); opacity: 0.8; }
+  to { transform: scale(1.2); opacity: 1; }
+}
+
+/* --- お知らせ一覧モーダル --- */
+.notice-modal-content {
+  max-width: 600px !important;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.notice-list-container {
+  overflow-y: auto;
+  max-height: 55vh;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-right: 5px;
+}
+
+.notice-item-card {
+  background: rgba(18, 22, 20, 0.85);
+  border: 1px solid rgba(223, 177, 91, 0.3);
+  border-radius: 8px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.notice-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px dashed rgba(223, 177, 91, 0.2);
+  padding-bottom: 4px;
+}
+
+.notice-item-title {
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: #dfb15b;
+}
+
+.notice-item-date {
+  font-size: 0.75rem;
+  color: #a0b0a6;
+}
+
+.notice-item-body {
+  font-size: 0.88rem;
+  color: #f0f4f1;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+.empty-notice-msg {
+  text-align: center;
+  color: #a0b0a6;
+  padding: 30px;
+  font-style: italic;
+}
+
+/* --- 開発者ツール（デバッグパネル）モーダル --- */
+.dev-modal-content {
+  max-width: 650px !important;
+  background-color: #121820 !important;
+  border-color: #00f3ff !important;
+  box-shadow: 0 0 30px rgba(0, 243, 255, 0.3) !important;
+}
+
+.dev-modal-header h2 {
+  color: #00f3ff !important;
+}
+
+.dev-section-box {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(0, 243, 255, 0.2);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 15px;
+}
+
+.dev-section-title {
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #00f3ff;
+  margin-bottom: 10px;
+  border-left: 3px solid #00f3ff;
+  padding-left: 8px;
+}
+
+.dev-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.dev-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dev-input-group label {
+  font-size: 0.78rem;
+  color: #a0b0a6;
+}
+
+.dev-input-text {
+  background: #090d12;
+  border: 1px solid #2a3b50;
+  color: #00f3ff;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+.dev-input-text:focus {
+  border-color: #00f3ff;
+  outline: none;
+}
+
+.dev-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: #f0f4f1;
+  cursor: pointer;
+}
+
+.dev-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s;
+}
+
+.dev-btn-primary {
+  background: linear-gradient(135deg, #00f3ff 0%, #0088cc 100%);
+  color: #000;
+}
+
+.dev-btn-primary:hover {
+  filter: brightness(1.2);
+}
+
+.dev-btn-danger {
+  background: linear-gradient(135deg, #ff4d4d 0%, #c0392b 100%);
+  color: #fff;
+}
+
+.dev-textarea {
+  width: 100%;
+  height: 80px;
+  background: #090d12;
+  border: 1px solid #2a3b50;
+  color: #fff;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  resize: vertical;
+}

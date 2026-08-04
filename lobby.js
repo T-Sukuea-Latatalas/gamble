@@ -1,11 +1,13 @@
 /**
  * ==========================================
  * Fever Casino - データ管理＆全共通制御スクリプト (lobby.js)
+ * お知らせ既読管理・デバッグリアルタイム同期対応版
  * ==========================================
  */
 
 const STORAGE_KEY = 'fever_casino_player_data';
 const VIEW_MODE_KEY = 'fever_casino_view_mode';
+const READ_NOTICES_KEY = 'fever_casino_read_notices';
 
 function toBigInt(val, defaultValue = 0n) {
   if (val === null || val === undefined) return defaultValue;
@@ -54,13 +56,13 @@ window.formatCurrency = formatCurrency;
 let playerData = {
   userId: '',
   userName: '新規ユーザー',
-  isNameSet: false, // プレイヤー名が確定・設定済みかのフラグ
+  isNameSet: false,
   cash: 1000n,
   bank: 0n,
   debt: 0n,
   debtPlayCount: 0,
-  debtChallengeFailCount: 0, // 借金相殺チャンス連続失敗回数
-  nextDebtChallengeTime: 0,  // 次回挑戦可能タイムスタンプ(ms)
+  debtChallengeFailCount: 0,
+  nextDebtChallengeTime: 0,
   highScores: {
     blackjack: 0n,
     slots: 0n,
@@ -213,6 +215,71 @@ function applyDebtInterest() {
   saveData();
 }
 
+/**
+ * お知らせモーダル ＆ 未読インジケーター（赤丸バッジ）制御
+ */
+function setupNoticeModal() {
+  const openBtn = document.getElementById('open-notice-btn');
+  const closeBtn = document.getElementById('close-notice-btn');
+  const modal = document.getElementById('notice-modal');
+
+  if (!modal) return;
+
+  if (openBtn) {
+    openBtn.addEventListener('click', () => {
+      modal.classList.remove('hidden');
+      markAllNoticesAsRead();
+    });
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+      modal.classList.add('hidden');
+    });
+  }
+
+  const overlay = modal.querySelector('.modal-overlay');
+  if (overlay) {
+    overlay.addEventListener('click', () => {
+      modal.classList.add('hidden');
+    });
+  }
+}
+
+function getReadNoticeIds() {
+  try {
+    return JSON.parse(localStorage.getItem(READ_NOTICES_KEY) || '[]');
+  } catch (e) {
+    return [];
+  }
+}
+
+function markAllNoticesAsRead() {
+  const notices = window.fetchedNoticeList || [];
+  const readIds = notices.map(n => n.noticeId);
+  localStorage.setItem(READ_NOTICES_KEY, JSON.stringify(readIds));
+
+  const badge = document.getElementById('notice-unread-badge');
+  if (badge) badge.classList.add('hidden');
+}
+
+function updateNoticeUnreadBadge(notices) {
+  window.fetchedNoticeList = notices;
+  const readIds = getReadNoticeIds();
+  const hasUnread = notices.some(n => !readIds.includes(n.noticeId));
+
+  const badge = document.getElementById('notice-unread-badge');
+  if (badge) {
+    if (hasUnread) {
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  }
+}
+
+window.updateNoticeUnreadBadge = updateNoticeUnreadBadge;
+
 function setupUsernameChange() {
   const changeBtn = document.getElementById('change-username-btn');
   const usernameInput = document.getElementById('username-input');
@@ -228,9 +295,6 @@ function setupUsernameChange() {
   });
 }
 
-/**
- * ユーザーネーム設定モーダルの制御 ＆ チェック機能
- */
 function checkUsernameSetup() {
   const modal = document.getElementById('username-modal');
   const input = document.getElementById('modal-username-input');
@@ -239,7 +303,6 @@ function checkUsernameSetup() {
   const defaultNames = ['新規ユーザー', 'ゲスト', 'ゲストプレイヤー', 'Unknown', 'ゲストユーザー'];
   const isDefaultName = defaultNames.includes(playerData.userName) || !playerData.userName || playerData.userName.trim() === '';
 
-  // 初期ネームかつまだ名前確定フラグが立っていない場合、ポップアップを表示
   if (isDefaultName && !playerData.isNameSet) {
     if (input) {
       input.value = playerData.userName || '新規ユーザー';
@@ -313,9 +376,6 @@ function setupViewModeToggle() {
   });
 }
 
-/**
- * ランキングスライダー ＆ インジケーターボタンのクリック・スクロール追従制御
- */
 function setupRankingSlider() {
   const slider = document.getElementById('ranking-slider');
   const indicatorWrapper = document.querySelector('.ranking-indicators-wrapper');
@@ -323,7 +383,6 @@ function setupRankingSlider() {
 
   if (!slider || indicatorBtns.length === 0) return;
 
-  // 指定のインデックスのボタンを active にし、画面外にあればスクロール追従させる
   function setActiveIndicator(index) {
     indicatorBtns.forEach((btn, i) => {
       if (i === index) {
@@ -346,7 +405,6 @@ function setupRankingSlider() {
     });
   }
 
-  // 1. インジケーターボタンのクリックイベント設定
   indicatorBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       const index = parseInt(btn.getAttribute('data-index'), 10);
@@ -362,7 +420,6 @@ function setupRankingSlider() {
     });
   });
 
-  // 2. スライダー手動スクロール時のボタンアクティブ状態連動
   slider.addEventListener('scroll', () => {
     const slideWidth = slider.clientWidth;
     if (slideWidth <= 0) return;
@@ -379,8 +436,7 @@ function initLobby() {
   setupUsernameModalEvents();
   setupViewModeToggle();
   setupRankingSlider();
-  
-  // 初期名前チェック＆ポップアップ表示
+  setupNoticeModal();
   checkUsernameSetup();
 }
 
