@@ -7,7 +7,7 @@
 
 (function () {
     // デフォルト管理者パスワード "admin1234" のSHA-256ハッシュ
-    const ADMIN_PASS_HASH = "03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4";
+    const ADMIN_PASS_HASH = "20ff152810c1744037fa997a6c8993b156255a277aea7db584d2a587aa95f95d";
 
     // グローバルゲームデバッグフラグ
     window.debugFlags = {
