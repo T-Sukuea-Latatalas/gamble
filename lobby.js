@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - データ管理＆全共通制御スクリプト (lobby.js)
- * お知らせ既読管理・デバッグリアルタイム同期対応版
+ * 巨大数値・科学的記法(1.01E+50)パース・完全表示対応版
  * ==========================================
  */
 
@@ -14,30 +14,54 @@ function toBigInt(val, defaultValue = 0n) {
   if (typeof val === 'bigint') return val;
   if (typeof val === 'number') {
     if (isNaN(val) || !isFinite(val)) return defaultValue;
-    try {
-      return BigInt(Math.trunc(val));
-    } catch (e) {
-      return defaultValue;
-    }
+    val = val.toString();
   }
-  if (typeof val === 'string') {
-    const cleanStr = val.replace(/[\$,\s]/g, '').trim();
-    if (cleanStr === '' || cleanStr === '-') return defaultValue;
-    try {
-      const dotIndex = cleanStr.indexOf('.');
-      const strToParse = dotIndex !== -1 ? cleanStr.substring(0, dotIndex) : cleanStr;
-      if (strToParse.includes('e') || strToParse.includes('E')) {
-        const numVal = Number(strToParse);
-        if (!isNaN(numVal) && isFinite(numVal)) {
-          return BigInt(Math.trunc(numVal));
-        }
+  
+  const cleanStr = String(val).replace(/[\$,\s]/g, '').trim();
+  if (cleanStr === '' || cleanStr === '-') return defaultValue;
+
+  try {
+    // 科学的記法 (e.g. 1.01e+50, -1.01E+50) の展開
+    const match = cleanStr.match(/^([+-]?\d*(?:\.\d+)?)[eE]([+-]?\d+)$/);
+    if (match) {
+      let coefStr = match[1];
+      const exp = parseInt(match[2], 10);
+      let sign = '';
+      if (coefStr.startsWith('-')) {
+        sign = '-';
+        coefStr = coefStr.slice(1);
+      } else if (coefStr.startsWith('+')) {
+        coefStr = coefStr.slice(1);
       }
-      return BigInt(strToParse);
-    } catch (e) {
-      return defaultValue;
+      const parts = coefStr.split('.');
+      const intPart = parts[0] || '0';
+      const decPart = parts[1] || '';
+
+      if (exp >= 0) {
+        if (exp >= decPart.length) {
+          const zeros = '0'.repeat(exp - decPart.length);
+          const digits = (intPart === '0' ? '' : intPart) + decPart + zeros;
+          return BigInt(sign + (digits || '0'));
+        } else {
+          const digits = (intPart === '0' ? '' : intPart) + decPart.slice(0, exp);
+          return BigInt(sign + (digits || '0'));
+        }
+      } else {
+        return defaultValue;
+      }
     }
+
+    // 通常の整数文字列（小数点がある場合は切り捨て）
+    let strToParse = cleanStr;
+    const dotIndex = strToParse.indexOf('.');
+    if (dotIndex !== -1) {
+      strToParse = strToParse.substring(0, dotIndex);
+    }
+    if (!strToParse || strToParse === '-') return defaultValue;
+    return BigInt(strToParse);
+  } catch (e) {
+    return defaultValue;
   }
-  return defaultValue;
 }
 
 window.toBigInt = toBigInt;

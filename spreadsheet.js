@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - Googleスプレッドシート連携 (spreadsheet.js)
- * ランキングデータ同期 ＆ お知らせ配信・取得API機能拡張版
+ * 巨大数値・指数表記(1.01E+50)パース・安全描画対応版
  * ==========================================
  */
 
@@ -10,12 +10,53 @@ const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzUjFUO4ZqCHsxcgsMN
 
 function safeToBigInt(v) {
   if (typeof window.toBigInt === 'function') return window.toBigInt(v);
+  if (v === null || v === undefined) return 0n;
+  if (typeof v === 'bigint') return v;
+  if (typeof v === 'number') {
+    if (isNaN(v) || !isFinite(v)) return 0n;
+    v = v.toString();
+  }
+
+  const cleanStr = String(v).replace(/[\$,\s]/g, '').trim();
+  if (cleanStr === '' || cleanStr === '-') return 0n;
+
   try {
-    if (v === null || v === undefined) return 0n;
-    var clean = String(v).replace(/[\$,\s]/g, '').trim();
-    var dot = clean.indexOf('.');
-    if (dot !== -1) clean = clean.substring(0, dot);
-    return BigInt(clean || 0);
+    const match = cleanStr.match(/^([+-]?\d*(?:\.\d+)?)[eE]([+-]?\d+)$/);
+    if (match) {
+      let coefStr = match[1];
+      const exp = parseInt(match[2], 10);
+      let sign = '';
+      if (coefStr.startsWith('-')) {
+        sign = '-';
+        coefStr = coefStr.slice(1);
+      } else if (coefStr.startsWith('+')) {
+        coefStr = coefStr.slice(1);
+      }
+      const parts = coefStr.split('.');
+      const intPart = parts[0] || '0';
+      const decPart = parts[1] || '';
+
+      if (exp >= 0) {
+        if (exp >= decPart.length) {
+          const zeros = '0'.repeat(exp - decPart.length);
+          const digits = (intPart === '0' ? '' : intPart) + decPart + zeros;
+          return BigInt(sign + (digits || '0'));
+        } else {
+          const digits = (intPart === '0' ? '' : intPart) + decPart.slice(0, exp);
+          return BigInt(sign + (digits || '0'));
+        }
+      } else {
+        return 0n;
+      }
+    }
+
+    let strToParse = cleanStr;
+    const dotIndex = strToParse.indexOf('.');
+    if (dotIndex !== -1) {
+      strToParse = strToParse.substring(0, dotIndex);
+    }
+    if (!strToParse || strToParse === '-') return 0n;
+    return BigInt(strToParse);
   } catch (e) {
     return 0n;
   }
