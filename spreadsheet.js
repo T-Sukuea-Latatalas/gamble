@@ -10,7 +10,15 @@ const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzUjFUO4ZqCHsxcgsMN
 
 function safeToBigInt(v) {
   if (typeof window.toBigInt === 'function') return window.toBigInt(v);
-  try { return BigInt(v || 0); } catch (e) { return 0n; }
+  try {
+    if (v === null || v === undefined) return 0n;
+    var clean = String(v).replace(/[\$,\s]/g, '').trim();
+    var dot = clean.indexOf('.');
+    if (dot !== -1) clean = clean.substring(0, dot);
+    return BigInt(clean || 0);
+  } catch (e) {
+    return 0n;
+  }
 }
 
 function ensurePlayerDataInitialized() {
@@ -149,12 +157,8 @@ async function fetchRankingFromSpreadsheet() {
 }
 
 /**
- * ------------------------------------------
- * お知らせ（通知）機能 API
- * ------------------------------------------
+ * お知らせ機能 API
  */
-
-// 1. お知らせ一覧の取得
 async function fetchNoticesFromSpreadsheet() {
   if (!GAS_API_URL || GAS_API_URL.includes("YOUR_GAS")) return;
 
@@ -175,7 +179,6 @@ async function fetchNoticesFromSpreadsheet() {
   }
 }
 
-// 2. お知らせ一覧のUI描画
 function renderNoticeList(notices) {
   const container = document.getElementById('notice-list-container');
   if (!container) return;
@@ -212,7 +215,6 @@ function escapeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
-// 3. 管理者からお知らせの配信送信
 async function sendNoticeToSpreadsheet(title, message, passHash) {
   if (!GAS_API_URL || GAS_API_URL.includes("YOUR_GAS")) {
     throw new Error("GAS API URLが正しく設定されていません。");

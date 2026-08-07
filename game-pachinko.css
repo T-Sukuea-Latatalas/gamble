@@ -1,15 +1,19 @@
-game-pachinko.css@charset "UTF-8";
+@charset "UTF-8";
 
 /* ==========================================
-   CR FEVER CASINO パチンコ専用スタイル (game-pachinko.css)
+   ヴィンテージ正村ゲージ・パチンコ専用スタイル (game-pachinko.css)
    ========================================== */
 
 :root {
   --pachinko-gold: #dfb15b;
+  --pachinko-gold-bright: #fcd581;
   --pachinko-neon-pink: #ff2a6d;
   --pachinko-neon-blue: #05d9e8;
+  --pachinko-purple: #9b59b6;
+  --wood-dark: #3a2212;
+  --wood-light: #6a4223;
   --bg-dark: #0a0814;
-  --panel-bg: #151124;
+  --panel-bg: #1a1226;
   --text-main: #f0f4f1;
   --text-sub: #a0b0a6;
   --danger-red: #ff4d4d;
@@ -35,20 +39,32 @@ body {
 
 .hidden { display: none !important; }
 
-.game-container {
+/* ヴィンテージ木枠キャビネット構造 */
+.game-container.pachinko-vintage-cabinet {
   width: 100%;
-  max-width: 480px;
-  background-color: var(--panel-bg);
-  border: 3px solid var(--pachinko-gold);
-  border-radius: 20px;
+  max-width: 520px;
+  background: linear-gradient(135deg, var(--wood-dark) 0%, #1e110a 50%, var(--wood-dark) 100%);
+  border: 8px solid #5a351a;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 0 30px rgba(223, 177, 91, 0.4), 0 0 15px rgba(255, 42, 109, 0.2);
+  box-shadow: 0 0 45px rgba(0, 0, 0, 0.9), 0 0 25px rgba(223, 177, 91, 0.4);
   position: relative;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.game-container.fever-mode {
+  border-color: var(--pachinko-neon-pink);
+  box-shadow: 0 0 50px rgba(255, 42, 109, 0.9), 0 0 25px rgba(5, 217, 232, 0.6);
+}
+
+.game-container.jitan-mode {
+  border-color: var(--pachinko-neon-blue);
+  box-shadow: 0 0 40px rgba(5, 217, 232, 0.7);
 }
 
 /* ヘッダー */
 .game-header {
-  background: linear-gradient(180deg, #2a1b40 0%, #150e26 100%);
+  background: linear-gradient(180deg, #2a150e 0%, #150906 100%);
   padding: 12px 15px;
   display: flex;
   justify-content: space-between;
@@ -67,7 +83,7 @@ body {
 .header-btn {
   color: var(--text-main);
   text-decoration: none;
-  background-color: #2e1a47;
+  background-color: #3d1e12;
   padding: 5px 10px;
   border-radius: 6px;
   font-size: 0.8rem;
@@ -112,24 +128,74 @@ body {
 
 .open-atm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* 確変バナー */
+/* 確変/RUSH/時短モードバナー */
 .fever-banner {
-  background: linear-gradient(90deg, #ff2a6d, #9b59b6, #ff2a6d);
-  color: #fff;
   text-align: center;
   padding: 8px;
   font-weight: bold;
-  font-size: 0.9rem;
-  box-shadow: 0 0 15px rgba(255, 42, 109, 0.8);
-  animation: feverPulse 0.8s infinite alternate;
+  font-size: 0.95rem;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.8);
+  letter-spacing: 1px;
+}
+
+.fever-banner.mode-normal {
+  background: linear-gradient(90deg, #2b1810, #4a2818, #2b1810);
+  color: var(--pachinko-gold-bright);
+}
+
+.fever-banner.mode-rush {
+  background: linear-gradient(90deg, #ff2a6d, #9b59b6, #05d9e8, #ff2a6d);
+  background-size: 200% 100%;
+  color: #ffffff;
+  animation: rushGradient 2s linear infinite, feverPulse 0.6s infinite alternate;
+}
+
+.fever-banner.mode-jitan {
+  background: linear-gradient(90deg, #05d9e8, #1b4965, #05d9e8);
+  color: #ffffff;
+}
+
+@keyframes rushGradient {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
 }
 
 @keyframes feverPulse {
-  from { opacity: 0.8; }
+  from { opacity: 0.85; transform: scale(1); }
   to { opacity: 1; transform: scale(1.01); }
 }
 
-/* メイン筐体エリア */
+/* レトロデータカウンタ */
+.pachinko-stats-bar {
+  display: flex;
+  justify-content: space-around;
+  background-color: #0d0604;
+  border-bottom: 2px solid rgba(223, 177, 91, 0.4);
+  padding: 8px 10px;
+}
+
+.stat-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-label {
+  font-size: 0.7rem;
+  color: var(--text-sub);
+}
+
+.stat-val {
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.stat-box.highlight .stat-val {
+  color: var(--pachinko-gold-bright);
+}
+
+/* メイン領域 */
 .pachinko-main {
   padding: 12px;
   display: flex;
@@ -138,23 +204,85 @@ body {
   align-items: center;
 }
 
+/* 木目背景の盤面枠 */
 .pachinko-board-wrapper {
-  background: #000;
-  border: 4px solid var(--pachinko-gold);
-  border-radius: 16px;
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.9), 0 0 15px rgba(223, 177, 91, 0.3);
+  background: radial-gradient(circle, #fceecb 0%, #e0c896 60%, #a88858 100%);
+  border: 6px solid #8c5322;
+  border-radius: 20px;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 0, 0, 0.8);
   overflow: hidden;
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
+  width: 100%;
 }
 
 #pachinko-canvas {
   display: block;
-  background-color: #050510;
+  background-color: #fceeca;
   width: 100%;
-  max-width: 400px;
+  max-width: 440px;
   height: auto;
+}
+
+/* PUSHボタン一撃決動演出オーバーレイ */
+.push-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  z-index: 50;
+  animation: overlayFadeIn 0.3s ease-out forwards;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.push-msg {
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 0 15px var(--pachinko-neon-pink), 0 0 25px var(--pachinko-gold);
+  animation: pushTextPulse 0.5s infinite alternate;
+}
+
+@keyframes pushTextPulse {
+  from { transform: scale(0.95); }
+  to { transform: scale(1.05); }
+}
+
+.screen-push-btn {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #ff5252 0%, #c62828 70%, #8e0000 100%);
+  border: 6px solid #ffffff;
+  color: #ffffff;
+  font-size: 1.5rem;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 0 30px #ff2a6d, inset 0 0 20px rgba(255, 255, 255, 0.8);
+  animation: pushBtnPulse 0.4s infinite alternate;
+}
+
+.screen-push-btn:active {
+  transform: scale(0.92);
+  box-shadow: 0 0 15px #ff2a6d;
+}
+
+@keyframes pushBtnPulse {
+  from { transform: scale(1); box-shadow: 0 0 25px #ff2a6d; }
+  to { transform: scale(1.12); box-shadow: 0 0 45px #ff2a6d, 0 0 20px #05d9e8; }
 }
 
 /* アナウンスメッセージ */
@@ -163,16 +291,17 @@ body {
   text-align: center;
   font-size: 0.9rem;
   font-weight: bold;
-  color: var(--pachinko-neon-blue);
-  background-color: #080612;
+  color: var(--pachinko-gold-bright);
+  background-color: #120905;
   padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid var(--pachinko-neon-blue);
-  box-shadow: 0 0 10px rgba(5, 217, 232, 0.3);
-  min-height: 40px;
+  border: 1px solid var(--pachinko-gold);
+  box-shadow: 0 0 12px rgba(223, 177, 91, 0.3);
+  min-height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
+  line-height: 1.3;
 }
 
 /* コントロールパネル */
@@ -180,11 +309,11 @@ body {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  background: rgba(0, 0, 0, 0.4);
+  gap: 12px;
+  background: rgba(20, 10, 5, 0.85);
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid rgba(223, 177, 91, 0.3);
+  border: 1px solid rgba(223, 177, 91, 0.4);
 }
 
 .bet-input-group {
@@ -193,32 +322,147 @@ body {
   align-items: center;
 }
 
+/* 保留ランプ表示 */
 .hold-indicator {
-  font-size: 0.9rem;
-  font-weight: bold;
-  color: var(--pachinko-gold);
+  display: flex;
+  align-items: center;
+  gap: 6px;
   background: #000;
-  padding: 6px 12px;
+  padding: 6px 10px;
   border-radius: 20px;
   border: 1px solid var(--pachinko-gold);
 }
 
+.hold-title {
+  font-size: 0.75rem;
+  color: var(--pachinko-gold);
+  font-weight: bold;
+}
+
+.hold-lamps-container {
+  display: flex;
+  gap: 5px;
+}
+
+.hold-lamp {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: #222222;
+  border: 1px solid #444444;
+  transition: all 0.2s ease;
+}
+
+.hold-lamp.white {
+  background: radial-gradient(circle, #ffffff, #b0b0b0);
+  box-shadow: 0 0 8px #ffffff;
+}
+
+.hold-lamp.blue {
+  background: radial-gradient(circle, #05d9e8, #0077b6);
+  box-shadow: 0 0 8px #05d9e8;
+}
+
+.hold-lamp.green {
+  background: radial-gradient(circle, #2ecc71, #1b4332);
+  box-shadow: 0 0 8px #2ecc71;
+}
+
+.hold-lamp.red {
+  background: radial-gradient(circle, #ff2a6d, #900c3f);
+  box-shadow: 0 0 10px #ff2a6d;
+}
+
+.hold-lamp.gold {
+  background: radial-gradient(circle, #fcd581, #b8860b);
+  box-shadow: 0 0 12px #fcd581;
+  animation: lampGlow 0.4s infinite alternate;
+}
+
+@keyframes lampGlow {
+  from { opacity: 0.7; }
+  to { opacity: 1; transform: scale(1.15); }
+}
+
+/* 打ち出しパワー調整ハンドル */
+.power-control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(30, 15, 8, 0.8);
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(223, 177, 91, 0.3);
+}
+
+.power-label {
+  font-size: 0.78rem;
+  color: var(--text-sub);
+  display: flex;
+  justify-content: space-between;
+}
+
+.power-label b {
+  color: var(--pachinko-gold-bright);
+}
+
+.power-slider-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.power-slider-wrapper input[type="range"] {
+  flex: 1;
+  accent-color: var(--pachinko-gold);
+  cursor: pointer;
+}
+
+.power-min, .power-max {
+  font-size: 0.7rem;
+  color: var(--text-sub);
+}
+
+.power-preset-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.preset-btn {
+  flex: 1;
+  background: #2e180d;
+  color: var(--text-sub);
+  border: 1px solid #57311c;
+  padding: 4px;
+  font-size: 0.72rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.preset-btn.active, .preset-btn:hover {
+  background: var(--pachinko-gold);
+  color: #000;
+  font-weight: bold;
+}
+
+/* 下段操作ボタン群 */
 .action-btn-group {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 .shoot-btn {
   flex: 2;
-  background: linear-gradient(135deg, #ff2a6d 0%, #c0392b 100%);
-  color: #fff;
-  font-size: 1.05rem;
+  background: linear-gradient(135deg, #dfb15b 0%, #b8860b 100%);
+  color: #000;
+  font-size: 0.95rem;
   font-weight: bold;
-  padding: 12px;
-  border: 2px solid #ff793f;
-  border-radius: 30px;
+  padding: 10px;
+  border: 2px solid #fcd581;
+  border-radius: 20px;
   cursor: pointer;
-  box-shadow: 0 4px 15px rgba(255, 42, 109, 0.4);
+  box-shadow: 0 4px 12px rgba(223, 177, 91, 0.4);
   transition: all 0.1s;
 }
 
@@ -226,14 +470,14 @@ body {
 .shoot-btn:active:not(:disabled) { transform: translateY(1px); }
 
 .auto-btn {
-  flex: 1;
-  background: #2e1a47;
+  flex: 1.5;
+  background: #3a1e12;
   color: var(--pachinko-gold);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: bold;
-  padding: 12px;
+  padding: 10px;
   border: 1px solid var(--pachinko-gold);
-  border-radius: 30px;
+  border-radius: 20px;
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -242,6 +486,23 @@ body {
   background: var(--pachinko-gold);
   color: #000;
   box-shadow: 0 0 10px var(--pachinko-gold);
+}
+
+.manual-push-btn {
+  flex: 1;
+  background: linear-gradient(135deg, #e74c3c, #900c3f);
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: bold;
+  padding: 10px;
+  border: 1px solid #ffffff;
+  border-radius: 20px;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(231, 76, 60, 0.6);
+}
+
+.manual-push-btn:active {
+  transform: scale(0.95);
 }
 
 /* 粒子エフェクト */

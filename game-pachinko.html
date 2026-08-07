@@ -16,7 +16,8 @@
   <!-- 当たり時のお祝い粒子コンテナ -->
   <div id="particle-container"></div>
 
-  <div class="game-container" id="pachinko-container">
+  <!-- ヴィンテージ木枠風 パチンコ筐体コンテナ -->
+  <div class="game-container pachinko-vintage-cabinet" id="pachinko-container">
     
     <!-- ヘッダーエリア -->
     <header class="game-header">
@@ -37,44 +38,98 @@
       </div>
     </header>
 
-    <!-- 確変（FEVER MODE）ステータスバー -->
-    <div id="fever-banner" class="fever-banner hidden">
-      🔥 超確変FEVER MODE突入中！ (大当り確率大幅UP) 🔥
+    <!-- モードバナー（通常 / 超確変RUSH / 時短ゾーン） -->
+    <div id="fever-banner" class="fever-banner mode-normal">
+      <span id="mode-badge-text">通常モード (大当り確率 1/99)</span>
     </div>
 
-    <!-- メイン領域 -->
+    <!-- 液晶上部 レトロデータカウンタ -->
+    <div class="pachinko-stats-bar">
+      <div class="stat-box">
+        <span class="stat-label">回転数</span>
+        <span id="stat-spins" class="stat-val">0</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-label">大当り</span>
+        <span id="stat-jackpots" class="stat-val">0</span>
+      </div>
+      <div class="stat-box">
+        <span class="stat-label">RUSH連打</span>
+        <span id="stat-rush-count" class="stat-val">0</span>
+      </div>
+      <div class="stat-box highlight">
+        <span class="stat-label">獲得出玉</span>
+        <span id="stat-payout" class="stat-val">$0</span>
+      </div>
+    </div>
+
+    <!-- メイン筐体領域 -->
     <main class="pachinko-main">
 
-      <!-- パチンコ筐体盤面（Canvas） -->
+      <!-- パチンコ盤面（正村ゲージ・真鍮円形レール Canvas） -->
       <section class="pachinko-board-wrapper">
-        <canvas id="pachinko-canvas" width="400" height="520"></canvas>
+        <canvas id="pachinko-canvas" width="440" height="600"></canvas>
+        
+        <!-- PUSHボタン一撃決動演出用オーバーレイ -->
+        <div id="push-overlay" class="push-overlay hidden">
+          <div class="push-msg">ボタンをPUSHせよ!!</div>
+          <button id="screen-push-btn" class="screen-push-btn" type="button">
+            🔴 PUSH!
+          </button>
+        </div>
       </section>
 
       <!-- アナウンスディスプレイ -->
       <div id="pachinko-message" class="pachinko-message">
-        玉を購入して「玉を発射」を押すか「自動発射 ON」にしてください！
+        ハンドルを調整し「玉を発射」または「自動発射 ON」で正村ゲージへ打ち込め！
       </div>
 
       <!-- コントロールパネル -->
       <section class="control-panel">
+        
+        <!-- 上段：1球価格設定 ＆ 保留ランプ表示 -->
         <div class="bet-input-group">
-          <!-- 玉1球の価格選択（テンキー連動） -->
           <button type="button" 
                   id="bet-select-btn" 
-                  class="amount-select-btn" 
+                  class="amount-select-btn use-keypad" 
                   data-amount="10" 
                   data-label="1球価格: ">
             1球価格: $10
           </button>
           
           <div class="hold-indicator">
-            保留: <span id="hold-count">0</span> / 4
+            <span class="hold-title">保留:</span>
+            <div id="hold-lamps" class="hold-lamps-container">
+              <span class="hold-lamp" id="hl-0"></span>
+              <span class="hold-lamp" id="hl-1"></span>
+              <span class="hold-lamp" id="hl-2"></span>
+              <span class="hold-lamp" id="hl-3"></span>
+            </div>
           </div>
         </div>
 
+        <!-- 中段：打ち出しパワー調整ハンドルコントロール -->
+        <div class="power-control-group">
+          <label for="power-slider" class="power-label">
+            打ち出し強度 (ハンドル): <b id="power-val-text">75%</b>
+          </label>
+          <div class="power-slider-wrapper">
+            <span class="power-min">弱</span>
+            <input type="range" id="power-slider" min="30" max="100" value="75" step="1">
+            <span class="power-max">強</span>
+          </div>
+          <div class="power-preset-btns">
+            <button type="button" class="preset-btn" data-power="50">弱打ち (50%)</button>
+            <button type="button" class="preset-btn active" data-power="75">ブッコミ (75%)</button>
+            <button type="button" class="preset-btn" data-power="95">強打ち (95%)</button>
+          </div>
+        </div>
+
+        <!-- 下段：操作ボタン群 -->
         <div class="action-btn-group">
           <button id="shoot-btn" class="shoot-btn" type="button">⚡ 玉を発射 (1球)</button>
           <button id="auto-btn" class="auto-btn" type="button">🔄 自動発射: OFF</button>
+          <button id="manual-push-btn" class="manual-push-btn" type="button">🔴 PUSH</button>
         </div>
       </section>
 
