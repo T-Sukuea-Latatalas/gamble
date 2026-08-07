@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - リアルリールスロット 3x3 制御スクリプト (game-slot.js)
- * BigInt & 超巨大数値完全対応版
+ * BigInt & 重み付き抽選アシスト・確変バランス調整版
  * ==========================================
  */
 
@@ -65,6 +65,104 @@ function initReels() {
   }
 }
 
+/**
+ * 重み付き確率による当選絵柄決定
+ */
+function chooseWeightedSymbol(isFever) {
+  const weights = isFever ? [
+    { sym: '🍒', weight: 30 },
+    { sym: '🍋', weight: 25 },
+    { sym: '🔔', weight: 20 },
+    { sym: '🫚', weight: 12 },
+    { sym: '🔞', weight: 7 },
+    { sym: '🎎', weight: 4.5 },
+    { sym: '🗜️', weight: 1.5 }
+  ] : [
+    { sym: '🍒', weight: 42 },
+    { sym: '🍋', weight: 26 },
+    { sym: '🔔', weight: 16 },
+    { sym: '🫚', weight: 9 },
+    { sym: '🔞', weight: 4 },
+    { sym: '🎎', weight: 2.2 },
+    { sym: '🗜️', weight: 0.8 }
+  ];
+
+  const totalWeight = weights.reduce((sum, item) => sum + item.weight, 0);
+  let random = Math.random() * totalWeight;
+
+  for (const item of weights) {
+    if (random < item.weight) {
+      return item.sym;
+    }
+    random -= item.weight;
+  }
+  return '🍒';
+}
+
+/**
+ * 指定した絵柄がラインに揃うリール停止インデックスを計算
+ */
+function getWinningIndicesForSymbol(sym) {
+  const results = [];
+  for (let col = 0; col < 3; col++) {
+    const strip = REEL_STRIPS[col];
+    const len = strip.length;
+    const matchTargetIndices = [];
+
+    for (let j = 0; j < len; j++) {
+      // 中央コマ (j+1) % len が sym になる targetIndex (j)
+      if (strip[(j + 1) % len] === sym) {
+        matchTargetIndices.push(j);
+      }
+    }
+
+    if (matchTargetIndices.length > 0) {
+      const chosen = matchTargetIndices[Math.floor(Math.random() * matchTargetIndices.length)];
+      results.push(chosen);
+    } else {
+      results.push(Math.floor(Math.random() * len));
+    }
+  }
+  return results;
+}
+
+/**
+ * 完全ハズレとなるリール停止インデックスを計算
+ */
+function getForcedLoseIndices() {
+  let indices = [];
+  let attempts = 0;
+  while (attempts < 50) {
+    indices = [
+      Math.floor(Math.random() * REEL_STRIPS[0].length),
+      Math.floor(Math.random() * REEL_STRIPS[1].length),
+      Math.floor(Math.random() * REEL_STRIPS[2].length)
+    ];
+
+    let isWin = false;
+    const grid = new Array(9);
+    for (let col = 0; col < 3; col++) {
+      const idx = indices[col];
+      const len = REEL_STRIPS[col].length;
+      grid[col] = REEL_STRIPS[col][idx];
+      grid[col + 3] = REEL_STRIPS[col][(idx + 1) % len];
+      grid[col + 6] = REEL_STRIPS[col][(idx + 2) % len];
+    }
+
+    for (const line of PAYLINES) {
+      const [a, b, c] = line;
+      if (grid[a] && grid[a] === grid[b] && grid[b] === grid[c]) {
+        isWin = true;
+        break;
+      }
+    }
+
+    if (!isWin) return indices;
+    attempts++;
+  }
+  return indices;
+}
+
 async function startSpin() {
   if (isSpinning) return;
 
@@ -97,11 +195,20 @@ async function startSpin() {
 
   let targetIndices = [];
 
-  if (isFeverNow && Math.random() < 0.45) {
-    targetIndices = getForcedWinIndices();
+  // デバッグフラグ優先
+  if (window.debugFlags?.forceWin) {
+    targetIndices = getWinningIndicesForSymbol('🗜️');
+  } else if (window.debugFlags?.forceLose) {
+    targetIndices = getForcedLoseIndices();
   } else {
-    for (let i = 0; i < 3; i++) {
-      targetIndices.push(Math.floor(Math.random() * REEL_STRIPS[i].length));
+    // 当選アシスト判定（通常時約33%、確変時約60%で小役〜大当りアシスト）
+    const winAssistChance = isFeverNow ? 0.60 : 0.33;
+
+    if (Math.random() < winAssistChance) {
+      const selectedSym = chooseWeightedSymbol(isFeverNow);
+      targetIndices = getWinningIndicesForSymbol(selectedSym);
+    } else {
+      targetIndices = getForcedLoseIndices();
     }
   }
 
@@ -119,42 +226,6 @@ async function startSpin() {
   isSpinning = false;
   document.getElementById('spin-btn').disabled = false;
   document.getElementById('open-atm-btn').disabled = false;
-}
-
-function getForcedWinIndices() {
-  const weights = [
-    { sym: '🍒', weight: 40 },
-    { sym: '🍋', weight: 25 },
-    { sym: '🔔', weight: 15 },
-    { sym: '🫚', weight: 10 },
-    { sym: '🔞', weight: 7 },
-    { sym: '🎎', weight: 3 },
-  ];
-  
-  const totalWeight = weights.reduce((s, w) => s + w.weight, 0);
-  let random = Math.random() * totalWeight;
-  let selectedSymbol = '🍒';
-  for (const w of weights) {
-    if (random < w.weight) {
-      selectedSymbol = w.sym;
-      break;
-    }
-    random -= w.weight;
-  }
-
-  const results = [];
-  for (let i = 0; i < 3; i++) {
-    const strip = REEL_STRIPS[i];
-    const possibleIndices = [];
-    for (let j = 0; j < strip.length; j++) {
-      if (strip[j] === selectedSymbol) {
-        possibleIndices.push((j - 1 + strip.length) % strip.length);
-      }
-    }
-    const chosen = possibleIndices[Math.floor(Math.random() * possibleIndices.length)];
-    results.push(chosen !== undefined ? chosen : Math.floor(Math.random() * strip.length));
-  }
-  return results;
 }
 
 function spinSingleReel(colIndex, targetIndex, stopDelay, gridResults) {
@@ -236,7 +307,7 @@ function checkResults(gridResults, betVal, isFeverNow) {
       document.getElementById(`cell-${b}`).classList.add('win-line');
       document.getElementById(`cell-${c}`).classList.add('win-line');
 
-      if (symChar === '🗜️') {
+      if (symChar === '🎎' || symChar === '🗜️') {
         triggeredFever = true;
       }
     }

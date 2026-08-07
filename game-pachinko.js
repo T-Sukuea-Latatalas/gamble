@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - CR FEVER PACHINKO 本格正村ゲージシミュレーター (game-pachinko.js)
- * 極座標アーチ発射エンジン・スタック解除・ステージ誘導・正村ゲージ完全対応版
+ * 正村ゲージ釘配置最適化・命釘バランス調整・極座標アーチ発射エンジン対応版
  * ==========================================
  */
 
@@ -97,7 +97,7 @@
     spinners = [];
     tulips = [];
 
-    // 1-1. 正村ゲージ（幾何学的・左右対称の美しい釘配列）
+    // 1-1. 正村ゲージ（幾何学的・左右対称の美しい釘配列 ＆ 入賞率最適化調整）
     // 天釘・天山釘
     pegs.push({ x: CX - 25, y: 95, r: 3.5 });
     pegs.push({ x: CX + 25, y: 95, r: 3.5 });
@@ -110,21 +110,38 @@
       pegs.push({ x: CX + 88 + i * 16, y: 125 + i * 14, r: 3 });
     }
 
+    // ★ 増設：中央分流・散乱釘（真上からの直下を左右谷ルートへ分岐させる）
+    pegs.push({ x: CX, y: 180, r: 3.5 }); // 中央トップ分流釘
+    pegs.push({ x: CX - 20, y: 200, r: 3 });
+    pegs.push({ x: CX + 20, y: 200, r: 3 });
+    pegs.push({ x: CX - 40, y: 220, r: 3 });
+    pegs.push({ x: CX + 40, y: 220, r: 3 });
+
     // 谷釘・鎧釘（中央ユニット両脇の流れ）
     for (let i = 0; i < 6; i++) {
       pegs.push({ x: CX - 75 - i * 10, y: 220 + i * 22, r: 3 });
       pegs.push({ x: CX + 75 + i * 10, y: 220 + i * 22, r: 3 });
     }
 
-    // ハカマ（チャッカー上部のV字釘）
-    pegs.push({ x: CX - 28, y: 380, r: 3 });
-    pegs.push({ x: CX + 28, y: 380, r: 3 });
-    pegs.push({ x: CX - 18, y: 398, r: 3 });
-    pegs.push({ x: CX + 18, y: 398, r: 3 });
+    // ★ 増設：液晶両脇の散乱・誘導釘
+    pegs.push({ x: CX - 46, y: 270, r: 3 });
+    pegs.push({ x: CX + 46, y: 270, r: 3 });
+    pegs.push({ x: CX - 38, y: 310, r: 3 });
+    pegs.push({ x: CX + 38, y: 310, r: 3 });
 
-    // 命釘（ヘソ直上）
-    pegs.push({ x: CX - 20, y: 418, r: 3.5 });
-    pegs.push({ x: CX + 20, y: 418, r: 3.5 });
+    // ★ 増設：ハカマ直上・ジャンプ釘（ヘソ手前のV字分流）
+    pegs.push({ x: CX - 15, y: 350, r: 3 });
+    pegs.push({ x: CX + 15, y: 350, r: 3 });
+
+    // ハカマ（チャッカー上部のV字釘）
+    pegs.push({ x: CX - 26, y: 372, r: 3 });
+    pegs.push({ x: CX + 26, y: 372, r: 3 });
+    pegs.push({ x: CX - 16, y: 394, r: 3 });
+    pegs.push({ x: CX + 16, y: 394, r: 3 });
+
+    // ★ 調整：命釘（ヘソ直上・パチンコ特有の絶妙な開口幅へ調整）
+    pegs.push({ x: CX - 11.5, y: 416, r: 3.5 });
+    pegs.push({ x: CX + 11.5, y: 416, r: 3.5 });
 
     // 1-2. 風車（回転ギミック 左右2箇所）
     spinners.push({ x: CX - 120, y: 310, radius: 16, angle: 0, speed: 0 });
@@ -168,9 +185,9 @@
     if (typeof window.saveData === 'function') window.saveData();
     updateCashDisplay();
 
-    // ハンドルパワー (30 ~ 100 ➔ 初速 13.5 ~ 20.5)
-    const baseSpeed = 13.2 + (shootPower / 100) * 7.2;
-    const speed = baseSpeed + (Math.random() - 0.5) * 0.4;
+    // ハンドルパワー (30 ~ 100 ➔ 初速 13.5 ~ 20.8)
+    const baseSpeed = 13.5 + (shootPower / 100) * 7.3;
+    const speed = baseSpeed + (Math.random() - 0.5) * 0.35;
 
     balls.push({
       x: CX + RAIL_R, // 416
@@ -179,11 +196,11 @@
       vy: -speed,
       r: 4.5,
       cost: ballCost,
-      inShooter: true,    // シューター線状/円弧走行フラグ
-      shooterMode: 'LINE', // 'LINE' (直線) ➔ 'ARC' (極座標アーチ)
-      arcAngle: 0,        // アーチ区間の角度 (0 = 真右, -PI/2 = 真上, -PI = 真左)
-      arcSpeed: speed / RAIL_R, // 角速度
-      stuckFrames: 0      // スタック検出カウンタ
+      inShooter: true,
+      shooterMode: 'LINE',
+      arcAngle: 0,
+      arcSpeed: speed / RAIL_R,
+      stuckFrames: 0
     });
   }
 
@@ -614,7 +631,7 @@
     ctx.lineTo(CX + RAIL_R - 12, CY);
     ctx.stroke();
 
-    // 8-2. 中央10番モチーフ円形ドラムユニット（液晶）描画
+    // 8-2. 中央10番モチーフ円形ドラムユニット（液晶）描画（見た目はそのまま維持）
     ctx.save();
     ctx.beginPath();
     ctx.arc(CX, CY, 54, 0, Math.PI * 2);
@@ -746,7 +763,7 @@
     for (let i = balls.length - 1; i >= 0; i--) {
       const b = balls[i];
 
-      // ★ スタック（挟まり・詰まり）判定・自動復帰
+      // スタック（挟まり・詰まり）判定・自動復帰
       const speed = Math.hypot(b.vx, b.vy);
       if (speed < 0.25) {
         b.stuckFrames = (b.stuckFrames || 0) + 1;
@@ -766,33 +783,52 @@
         continue;
       }
 
-      // ★ A. 発射レーン通過中 (`inShooter === true`) - 極座標・アーチ完璧シミュレーション
+      // ★ A. 発射レーン通過中 (`inShooter === true`) - 極座標アーチシミュレーション
       if (b.inShooter) {
         if (b.shooterMode === 'LINE') {
-          b.vy += gravity * 0.8; // 直線部は低摩擦
+          b.vy += gravity * 0.75; // 直線部は低摩擦
           b.y += b.vy;
 
-          // 発射直後のy=260 (円弧開始位置) に達したら極座標アーチモードに移行
+          // 発射直後の y <= CY (260) に達したら円弧（極座標）モードへ移行
           if (b.y <= CY) {
             b.shooterMode = 'ARC';
-            b.arcAngle = 0; // 0 = 真右 (CX + RAIL_R, CY)
-            b.arcSpeed = Math.abs(b.vy) / RAIL_R; // 角速度に変換
+            b.arcAngle = 0; // 0 rad = 真右 (CX + RAIL_R, CY)
+            b.arcSpeed = Math.abs(b.vy) / RAIL_R;
           }
         } else if (b.shooterMode === 'ARC') {
-          // 重力による角減速
-          const gravityAngleEffect = gravity * Math.cos(b.arcAngle) / RAIL_R;
-          b.arcSpeed -= gravityAngleEffect * 0.8;
-          b.arcAngle -= b.arcSpeed; // 反時計回り（角度減少）
+          // アーチ上の運動：重力による角減速
+          const gravityAngleEffect = (gravity * 0.85) * Math.cos(b.arcAngle) / RAIL_R;
+          b.arcSpeed -= gravityAngleEffect;
+          b.arcAngle -= b.arcSpeed; // 反時計回り（角度が負の方向へ）
 
           b.x = CX + RAIL_R * Math.cos(b.arcAngle);
           b.y = CY + RAIL_R * Math.sin(b.arcAngle);
 
-          // アーチを抜け出す（角度が -0.28*PI 以降、または失速してvy>0）
-          if (b.arcAngle < -Math.PI * 0.28 || b.arcSpeed <= 0) {
-            // 極座標から直交座標速度 (vx, vy) に変換して盤面内へ放出！
-            const tangentialSpeed = b.arcSpeed * RAIL_R;
-            b.vx = -tangentialSpeed * Math.sin(b.arcAngle) + (Math.random() - 0.5) * 0.5;
-            b.vy = tangentialSpeed * Math.cos(b.arcAngle);
+          // アーチ脱出判定（天頂付近 -Math.PI * 0.55 ≈ -99度 を通過、または失速）
+          if (b.arcAngle <= -Math.PI * 0.55 || b.arcSpeed <= 0) {
+            const tangentialSpeed = Math.max(1.8, b.arcSpeed * RAIL_R);
+            
+            // 接線方向の速度ベクトル算出
+            let releaseVx = -tangentialSpeed * Math.sin(b.arcAngle);
+            let releaseVy = tangentialSpeed * Math.cos(b.arcAngle);
+
+            if (b.arcSpeed <= 0) {
+              // 途中で失速した場合（弱打ち等）：天頂手前から左・下へ滑らかにフォール
+              releaseVx = -1.8 - Math.random() * 0.8;
+              releaseVy = 0.5 + Math.random() * 1.0;
+            } else {
+              // 勢いよく天頂を抜けた場合（ブッコミ/強打ち）：しっかり左・下向きのベクトルを与える
+              releaseVx = Math.min(-2.5, releaseVx - 1.2);
+            }
+
+            b.vx = releaseVx;
+            b.vy = releaseVy;
+
+            // 離脱直後に右外枠壁(192px)にすぐひっかかるのを防ぐため、位置を少し内側(半径185px)へシフト
+            const innerR = 185;
+            b.x = CX + innerR * Math.cos(b.arcAngle);
+            b.y = CY + innerR * Math.sin(b.arcAngle);
+
             b.inShooter = false;
           }
         }
@@ -807,36 +843,15 @@
         const distFromCenter = Math.hypot(b.x - CX, b.y - CY);
         if (distFromCenter > 192 && b.y < 420) {
           const angle = Math.atan2(b.y - CY, b.x - CX);
-          b.x = CX + Math.cos(angle) * 191;
-          b.y = CY + Math.sin(angle) * 191;
+          b.x = CX + Math.cos(angle) * 190;
+          b.y = CY + Math.sin(angle) * 190;
           
           const normalX = Math.cos(angle);
           const normalY = Math.sin(angle);
           const dot = b.vx * normalX + b.vy * normalY;
 
-          b.vx = (b.vx - 2 * dot * normalX) * bounce + (Math.random() - 0.5) * 0.5;
+          b.vx = (b.vx - 2 * dot * normalX) * bounce + (Math.random() - 0.5) * 0.4;
           b.vy = (b.vy - 2 * dot * normalY) * bounce;
-        }
-
-        // ★ 中央10番ドラムユニット（反発 ＆ ステージヘソ誘導効果）
-        if (distFromCenter < 58) {
-          const angle = Math.atan2(b.y - CY, b.x - CX);
-          b.x = CX + Math.cos(angle) * 59;
-          b.y = CY + Math.sin(angle) * 59;
-          
-          // ステージ効果：ユニット真上（b.y < CY - 30）付近に乗った球は円のフチを滑り落ちてヘソに吸い込まれやすくするアシスト
-          if (b.y < CY - 20 && Math.abs(b.x - CX) < 30) {
-            b.vx = (b.x < CX) ? 0.8 : -0.8; // 中央真下へ向かう滑り
-            b.vy = 1.2;
-          } else {
-            // カツンとリアルな弾性反発 (0.72)
-            const normalX = Math.cos(angle);
-            const normalY = Math.sin(angle);
-            const dot = b.vx * normalX + b.vy * normalY;
-
-            b.vx = (b.vx - 2 * dot * normalX) * 0.72 + (Math.random() - 0.5) * 0.4;
-            b.vy = (b.vy - 2 * dot * normalY) * 0.72;
-          }
         }
 
         // 風車との衝突
