@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - リアルリールスロット 3x3 制御スクリプト (game-slot.js)
- * BigInt & 重み付き抽選アシスト・確変バランス調整版
+ * BigInt & 重み付き抽選アシスト・確変バランス調整・完全チラつきゼロ滑らか目押し対応版
  * ==========================================
  */
 
@@ -10,6 +10,9 @@ const REEL_STRIPS = [
   ['🍋', '🍒', '🫚', '🎎', '🔔', '🍋', '🍒', '🔞', '🚮', '🔔', '🫚', '🍒', '🗜️', '🍋'],
   ['🔔', '🫚', '🍒', '🍋', '🎎', '🔞', '🍒', '🚮', '🗜️', '🔔', '🫚', '🍋', '🍒', '🔔']
 ];
+
+const ONE_ROUND_CELLS = 14;
+const ONE_ROUND_HEIGHT = ONE_ROUND_CELLS * 80; // 1120px
 
 const SYMBOL_PAYOUTS = {
   '🍒': 2n,
@@ -23,18 +26,25 @@ const SYMBOL_PAYOUTS = {
 };
 
 const PAYLINES = [
-  [0, 1, 2],
-  [3, 4, 5],
-  [6, 7, 8],
-  [0, 4, 8],
-  [2, 4, 6]
+  [0, 1, 2], // 上段横
+  [3, 4, 5], // 中段横
+  [6, 7, 8], // 下段横
+  [0, 4, 8], // 斜め右下がり
+  [2, 4, 6]  // 斜め右上がり
 ];
 
 let isSpinning = false;
 let feverSpinsLeft = 0;
-let currentIndices = [0, 0, 0];
 
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+// 各リールの回転・停止ステータス管理: 'stopped' | 'spinning' | 'stopping'
+let reelStates = ['stopped', 'stopped', 'stopped'];
+let targetIndices = [0, 0, 0];
+let stopTopCellIndices = [0, 0, 0]; // 停止時のトップ（最上段）セルインデックス
+let stopCurrentY = [0, 0, 0];        // 停止時の最終Yトランスフォーム位置
+
+let currentGridResults = new Array(9);
+let currentBetVal = 0n;
+let isFeverAtSpinStart = false;
 
 function safeToBigInt(v) {
   if (typeof window.toBigInt === 'function') return window.toBigInt(v);
@@ -47,6 +57,9 @@ function updateCashDisplay() {
   }
 }
 
+/**
+ * リール初期表示構築（チラつき防止のためリール配列を5周分生成）
+ */
 function initReels() {
   for (let i = 0; i < 3; i++) {
     const strip = document.getElementById(`strip-${i}`);
@@ -55,13 +68,20 @@ function initReels() {
     strip.innerHTML = '';
     const arr = REEL_STRIPS[i];
 
-    for (let j = 0; j < 3; j++) {
-      const cell = document.createElement('div');
-      cell.className = 'symbol-cell';
-      cell.id = `cell-${i * 3 + j}`;
-      cell.textContent = arr[j];
-      strip.appendChild(cell);
+    // DOM要素の再作成によるチラつきを防ぐため、5周分（70コマ）配置
+    for (let loop = 0; loop < 5; loop++) {
+      for (let j = 0; j < ONE_ROUND_CELLS; j++) {
+        const cell = document.createElement('div');
+        cell.className = 'symbol-cell';
+        cell.textContent = arr[j];
+        strip.appendChild(cell);
+      }
     }
+
+    strip.style.transition = 'none';
+    strip.style.transform = 'translateY(0px)';
+    stopCurrentY[i] = 0;
+    stopTopCellIndices[i] = 0;
   }
 }
 
@@ -105,13 +125,12 @@ function chooseWeightedSymbol(isFever) {
 function getWinningIndicesForSymbol(sym) {
   const results = [];
   for (let col = 0; col < 3; col++) {
-    const strip = REEL_STRIPS[col];
-    const len = strip.length;
+    const stripArr = REEL_STRIPS[col];
     const matchTargetIndices = [];
 
-    for (let j = 0; j < len; j++) {
-      // 中央コマ (j+1) % len が sym になる targetIndex (j)
-      if (strip[(j + 1) % len] === sym) {
+    for (let j = 0; j < ONE_ROUND_CELLS; j++) {
+      // 中央コマ (j+1) % ONE_ROUND_CELLS が sym になる targetIndex (j)
+      if (stripArr[(j + 1) % ONE_ROUND_CELLS] === sym) {
         matchTargetIndices.push(j);
       }
     }
@@ -120,7 +139,7 @@ function getWinningIndicesForSymbol(sym) {
       const chosen = matchTargetIndices[Math.floor(Math.random() * matchTargetIndices.length)];
       results.push(chosen);
     } else {
-      results.push(Math.floor(Math.random() * len));
+      results.push(Math.floor(Math.random() * ONE_ROUND_CELLS));
     }
   }
   return results;
@@ -134,19 +153,19 @@ function getForcedLoseIndices() {
   let attempts = 0;
   while (attempts < 50) {
     indices = [
-      Math.floor(Math.random() * REEL_STRIPS[0].length),
-      Math.floor(Math.random() * REEL_STRIPS[1].length),
-      Math.floor(Math.random() * REEL_STRIPS[2].length)
+      Math.floor(Math.random() * ONE_ROUND_CELLS),
+      Math.floor(Math.random() * ONE_ROUND_CELLS),
+      Math.floor(Math.random() * ONE_ROUND_CELLS)
     ];
 
     let isWin = false;
     const grid = new Array(9);
     for (let col = 0; col < 3; col++) {
       const idx = indices[col];
-      const len = REEL_STRIPS[col].length;
-      grid[col] = REEL_STRIPS[col][idx];
-      grid[col + 3] = REEL_STRIPS[col][(idx + 1) % len];
-      grid[col + 6] = REEL_STRIPS[col][(idx + 2) % len];
+      const stripArr = REEL_STRIPS[col];
+      grid[col] = stripArr[idx];
+      grid[col + 3] = stripArr[(idx + 1) % ONE_ROUND_CELLS];
+      grid[col + 6] = stripArr[(idx + 2) % ONE_ROUND_CELLS];
     }
 
     for (const line of PAYLINES) {
@@ -163,15 +182,18 @@ function getForcedLoseIndices() {
   return indices;
 }
 
+/**
+ * レバーオン (スピン開始)
+ */
 async function startSpin() {
   if (isSpinning) return;
 
   const betBtn = document.getElementById('bet-select-btn');
   const betVal = safeToBigInt(betBtn ? betBtn.getAttribute('data-amount') : '0');
 
-  const isFeverNow = feverSpinsLeft > 0;
+  isFeverAtSpinStart = feverSpinsLeft > 0;
 
-  if (!isFeverNow) {
+  if (!isFeverAtSpinStart) {
     if (betVal <= 0n) {
       alert('1以上の賭け金を選択してください。');
       return;
@@ -186,101 +208,135 @@ async function startSpin() {
     feverSpinsLeft--;
   }
 
+  currentBetVal = betVal;
   isSpinning = true;
+
+  // UI制御
   document.getElementById('spin-btn').disabled = true;
-  document.getElementById('open-atm-btn').disabled = true; 
-  document.getElementById('slot-message').textContent = isFeverNow ? '🔥 FEVER SPIN...!' : '🎰 スピン中...!';
+  document.getElementById('open-atm-btn').disabled = true;
+  document.getElementById('slot-message').textContent = isFeverAtSpinStart ? '🔥 FEVER SPIN! 各ボタンで目押しせよ！' : '🎰 各STOPボタンで目押し停止！';
 
-  document.querySelectorAll('.symbol-cell').forEach(c => c.classList.remove('win-line'));
+  // 過去の発光演出全削除
+  document.querySelectorAll('.symbol-cell.win-line').forEach(c => c.classList.remove('win-line'));
 
-  let targetIndices = [];
-
-  // デバッグフラグ優先
+  // 内部当選判定（アシストまたはデバッグ）
   if (window.debugFlags?.forceWin) {
     targetIndices = getWinningIndicesForSymbol('🗜️');
   } else if (window.debugFlags?.forceLose) {
     targetIndices = getForcedLoseIndices();
   } else {
-    // 当選アシスト判定（通常時約33%、確変時約60%で小役〜大当りアシスト）
-    const winAssistChance = isFeverNow ? 0.60 : 0.33;
-
+    const winAssistChance = isFeverAtSpinStart ? 0.60 : 0.33;
     if (Math.random() < winAssistChance) {
-      const selectedSym = chooseWeightedSymbol(isFeverNow);
+      const selectedSym = chooseWeightedSymbol(isFeverAtSpinStart);
       targetIndices = getWinningIndicesForSymbol(selectedSym);
     } else {
       targetIndices = getForcedLoseIndices();
     }
   }
 
-  const stopDelays = [1000, 1500, 2000];
-  const gridResults = new Array(9);
+  currentGridResults = new Array(9);
 
+  // 3つのリールの回転を開始
   for (let col = 0; col < 3; col++) {
-    spinSingleReel(col, targetIndices[col], stopDelays[col], gridResults);
+    reelStates[col] = 'spinning';
+    startSingleReelAnimation(col);
+    const stopBtn = document.getElementById(`stop-btn-${col}`);
+    if (stopBtn) stopBtn.disabled = false;
   }
-
-  await delay(2200);
-
-  checkResults(gridResults, betVal, isFeverNow);
-
-  isSpinning = false;
-  document.getElementById('spin-btn').disabled = false;
-  document.getElementById('open-atm-btn').disabled = false;
 }
 
-function spinSingleReel(colIndex, targetIndex, stopDelay, gridResults) {
+/**
+ * リールのシームレス高速回転を開始
+ */
+function startSingleReelAnimation(colIndex) {
+  const strip = document.getElementById(`strip-${colIndex}`);
+  if (!strip) return;
+
+  // 前回の停止位置が深すぎる（3周目以降）場合は同配色の1周目にシームレス移動
+  let startY = stopCurrentY[colIndex] % ONE_ROUND_HEIGHT;
+  strip.style.transition = 'none';
+  strip.style.transform = `translateY(-${startY}px)`;
+  
+  // 無限ループアニメーションを付与
+  strip.classList.add('is-spinning');
+}
+
+/**
+ * チラつきを100%防止する目押し停止処理
+ */
+function stopSingleReel(colIndex) {
+  if (reelStates[colIndex] !== 'spinning') return;
+
+  reelStates[colIndex] = 'stopping';
+  const stopBtn = document.getElementById(`stop-btn-${colIndex}`);
+  if (stopBtn) stopBtn.disabled = true;
+
   const strip = document.getElementById(`strip-${colIndex}`);
   const arr = REEL_STRIPS[colIndex];
-  const len = arr.length;
+  const targetIndex = targetIndices[colIndex];
 
-  const extraRounds = 3;
-  const totalSteps = extraRounds * len + ((targetIndex - currentIndices[colIndex] + len) % len);
+  // ① 現在のアニメーション計算座標（Y位置）を正確にキャプチャ
+  const style = window.getComputedStyle(strip);
+  const matrix = new WebKitCSSMatrix(style.transform);
+  let currentY = Math.abs(matrix.m42) || 0;
 
-  strip.style.transition = 'none';
-  strip.style.transform = 'translateY(0px)';
-  strip.innerHTML = '';
+  // ② is-spinning を解除し、一瞬のチラつきを防ぐため現在地で座標固定＆リフロー強制
+  strip.classList.remove('is-spinning');
+  strip.style.transform = `translateY(-${currentY}px)`;
+  void strip.offsetHeight; // 強制リフロー (ブラウザに一瞬の飛躍をさせない)
 
-  const buildSymbols = [];
-  let curr = currentIndices[colIndex];
-
-  for (let s = 0; s <= totalSteps + 2; s++) {
-    buildSymbols.push(arr[(curr + s) % len]);
+  // ③ パチスロ風の滑らかな減速引き込み（現在地より前方の目標コマを算出）
+  let currentRound = Math.floor(currentY / ONE_ROUND_HEIGHT);
+  let targetYInRound = targetIndex * 80;
+  
+  // 最低1周〜2周分の自然な減速（滑りコマ）を保証
+  let finalY = (currentRound + 1) * ONE_ROUND_HEIGHT + targetYInRound;
+  if (finalY - currentY < 240) { // 滑り距離が短すぎる場合は次の周へ
+    finalY += ONE_ROUND_HEIGHT;
   }
 
-  buildSymbols.forEach((sym) => {
-    const cell = document.createElement('div');
-    cell.className = 'symbol-cell';
-    cell.textContent = sym;
-    strip.appendChild(cell);
-  });
+  // ④ CSS Transitionによるピタッと止まる減速アニメーションの開始
+  strip.style.transition = 'transform 0.42s cubic-bezier(0.08, 0.85, 0.18, 1)';
+  strip.style.transform = `translateY(-${finalY}px)`;
 
+  // ⑤ 減速停止完了時の処理（DOM要素のリセット・再生成は一切行わず位置維持）
   setTimeout(() => {
-    const moveDistance = totalSteps * 80;
-    strip.style.transition = `transform ${stopDelay / 1000}s cubic-bezier(0.1, 0.9, 0.2, 1)`;
-    strip.style.transform = `translateY(-${moveDistance}px)`;
-  }, 20);
+    stopCurrentY[colIndex] = finalY;
+    const topCellIndex = Math.round(finalY / 80);
+    stopTopCellIndices[colIndex] = topCellIndex;
 
-  setTimeout(() => {
-    currentIndices[colIndex] = targetIndex;
+    reelStates[colIndex] = 'stopped';
 
-    const topSym = arr[targetIndex];
-    const midSym = arr[(targetIndex + 1) % len];
-    const botSym = arr[(targetIndex + 2) % len];
+    // 確定コマのシンボル取得
+    const topSym = arr[topCellIndex % ONE_ROUND_CELLS];
+    const midSym = arr[(topCellIndex + 1) % ONE_ROUND_CELLS];
+    const botSym = arr[(topCellIndex + 2) % ONE_ROUND_CELLS];
 
-    gridResults[colIndex] = topSym;
-    gridResults[colIndex + 3] = midSym;
-    gridResults[colIndex + 6] = botSym;
+    currentGridResults[colIndex] = topSym;
+    currentGridResults[colIndex + 3] = midSym;
+    currentGridResults[colIndex + 6] = botSym;
 
-    strip.style.transition = 'none';
-    strip.style.transform = 'translateY(0px)';
-    strip.innerHTML = `
-      <div id="cell-${colIndex}" class="symbol-cell">${topSym}</div>
-      <div id="cell-${colIndex + 3}" class="symbol-cell">${midSym}</div>
-      <div id="cell-${colIndex + 6}" class="symbol-cell">${botSym}</div>
-    `;
-  }, stopDelay + 50);
+    // 3リール全ての停止チェック
+    checkAllReelsStopped();
+  }, 440);
 }
 
+/**
+ * 3リール全停止確認と配当チェックの実行
+ */
+function checkAllReelsStopped() {
+  if (reelStates.every(state => state === 'stopped')) {
+    checkResults(currentGridResults, currentBetVal, isFeverAtSpinStart);
+
+    isSpinning = false;
+    document.getElementById('spin-btn').disabled = false;
+    document.getElementById('open-atm-btn').disabled = false;
+  }
+}
+
+/**
+ * 配当判定および確変・演出処理
+ */
 function checkResults(gridResults, betVal, isFeverNow) {
   let totalPayout = 0n;
   let winningLinesCount = 0;
@@ -303,9 +359,10 @@ function checkResults(gridResults, betVal, isFeverNow) {
       totalPayout += linePayout;
       winningLinesCount++;
 
-      document.getElementById(`cell-${a}`).classList.add('win-line');
-      document.getElementById(`cell-${b}`).classList.add('win-line');
-      document.getElementById(`cell-${c}`).classList.add('win-line');
+      // 当たり成立マスの直接発光演出（DOM要素に直接クラスを付与）
+      highlightWinCell(a);
+      highlightWinCell(b);
+      highlightWinCell(c);
 
       if (symChar === '🎎' || symChar === '🗜️') {
         triggeredFever = true;
@@ -340,11 +397,27 @@ function checkResults(gridResults, betVal, isFeverNow) {
   const formattedPayout = (typeof window.formatCurrency === 'function') ? window.formatCurrency(totalPayout) : '$' + totalPayout.toLocaleString();
 
   if (triggeredFever) {
-    msgEl.textContent = `🔥 確変モード突入/継続！ 777揃いでフリースピン獲得！`;
+    msgEl.textContent = `🔥 確変モード突入/継続！ フリースピン10回獲得！`;
   } else if (winningLinesCount > 0) {
     msgEl.textContent = `🎉 【${winningLinesCount}ライン当選】 ${formattedPayout} 獲得！ ${isFeverNow ? '(確変2倍!)' : ''}`;
   } else {
     msgEl.textContent = isFeverNow ? '確変中... 次に期待！' : 'ハズレ！もう一度挑戦しよう！';
+  }
+}
+
+/**
+ * 停止中リール要素内の該当コマを直接発光させる
+ */
+function highlightWinCell(gridIndex) {
+  const col = gridIndex % 3;
+  const row = Math.floor(gridIndex / 3);
+  const strip = document.getElementById(`strip-${col}`);
+  if (!strip) return;
+
+  const targetCellIndex = stopTopCellIndices[col] + row;
+  const cellEl = strip.children[targetCellIndex];
+  if (cellEl) {
+    cellEl.classList.add('win-line');
   }
 }
 
@@ -388,6 +461,39 @@ function triggerWinEffects() {
   }
 }
 
+/**
+ * キーボード操作（Z/X/C または 1/2/3 キー）での個別目押し停止対応
+ */
+function handleKeyDown(e) {
+  if (e.repeat) return;
+
+  // モーダルや入力エリアが開いている場合はスキップ
+  if (document.activeElement && ['INPUT', 'TEXTAREA', 'BUTTON'].includes(document.activeElement.tagName) && document.activeElement.id !== 'spin-btn') {
+    if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+  }
+
+  const key = e.key.toLowerCase();
+
+  // SPIN操作 (Space / Enter)
+  if ((key === ' ' || key === 'enter') && !isSpinning) {
+    e.preventDefault();
+    startSpin();
+    return;
+  }
+
+  // 個別ストップ操作 (1,2,3 / Z,X,C)
+  if (key === '1' || key === 'z') {
+    e.preventDefault();
+    stopSingleReel(0);
+  } else if (key === '2' || key === 'x') {
+    e.preventDefault();
+    stopSingleReel(1);
+  } else if (key === '3' || key === 'c') {
+    e.preventDefault();
+    stopSingleReel(2);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof loadData === 'function') loadData();
   updateCashDisplay();
@@ -396,4 +502,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const spinBtn = document.getElementById('spin-btn');
   if (spinBtn) spinBtn.addEventListener('click', startSpin);
+
+  for (let i = 0; i < 3; i++) {
+    const stopBtn = document.getElementById(`stop-btn-${i}`);
+    if (stopBtn) {
+      stopBtn.addEventListener('click', () => stopSingleReel(i));
+    }
+  }
+
+  // キーボードイベント登録
+  window.addEventListener('keydown', handleKeyDown);
 });

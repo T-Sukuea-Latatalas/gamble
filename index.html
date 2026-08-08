@@ -8,7 +8,6 @@
   <link rel="stylesheet" href="keypad.css">
   <link rel="stylesheet" href="debt-challenge.css">
   <link rel="stylesheet" href="devtools.css">
-  <!-- Three.js (3D空間描画用CDN) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
@@ -40,6 +39,8 @@
           <button class="indicator-btn" data-index="4" type="button">ポーカー</button>
           <button class="indicator-btn" data-index="5" type="button">宝くじ</button>
           <button class="indicator-btn" data-index="6" type="button">パチンコ</button>
+          <button class="indicator-btn" data-index="7" type="button">チンチロ</button>
+          <button class="indicator-btn" data-index="8" type="button">プッシャー</button>
         </div>
       </div>
 
@@ -73,6 +74,14 @@
             <h3 class="slide-title">🎰 パチンコ最高勝利</h3>
             <ol id="ranking-pachinko" class="ranking-list"><li class="loading-text">データを読み込み中... 🏆</li></ol>
           </div>
+          <div class="ranking-slide">
+            <h3 class="slide-title">🎲 チンチロ最高勝利</h3>
+            <ol id="ranking-chinchiro" class="ranking-list"><li class="loading-text">データを読み込み中... 🏆</li></ol>
+          </div>
+          <div class="ranking-slide">
+            <h3 class="slide-title">🪙 プッシャー最高勝利</h3>
+            <ol id="ranking-coinpusher" class="ranking-list"><li class="loading-text">データを読み込み中... 🏆</li></ol>
+          </div>
         </div>
       </div>
     </aside>
@@ -87,7 +96,6 @@
           <button class="view-btn" data-mode="desktop" type="button">PC</button>
           <button class="view-btn" data-mode="mobile" type="button">スマホ</button>
           
-          <!-- ★ お知らせベルボタン（未読赤丸バッジ付） ★ -->
           <div class="notice-btn-wrapper" style="margin-left: auto;">
             <button type="button" id="open-notice-btn" class="notice-bell-btn">
               🔔 お知らせ <span id="notice-unread-badge" class="notice-badge hidden"></span>
@@ -124,33 +132,35 @@
         <div class="game-grid">
           <div class="game-card">
             <h3>🎰 スロット</h3>
-            <p>一攫千金を狙おう！</p>
             <a href="game-slot.html" class="play-game-btn">ゲーム開始</a>
           </div>
           <div class="game-card">
             <h3>🃏 ブラックジャック</h3>
-            <p>ディーラーとの真剣勝負！</p>
             <a href="game-blackjack.html" class="play-game-btn">ゲーム開始</a>
           </div>
           <div class="game-card">
             <h3>🎡 ルーレット</h3>
-            <p>運命の数字に賭けよう！</p>
             <a href="game-roulette.html" class="play-game-btn">ゲーム開始</a>
           </div>
           <div class="game-card">
             <h3>♠ ポーカー</h3>
-            <p>最強の手札を目指せ！</p>
             <a href="game-poker.html" class="play-game-btn">ゲーム開始</a>
           </div>
           <div class="game-card">
-            <h3>🎟️ 宝くじ (LOTTERY)</h3>
-            <p>毎週金曜8:15抽選！一攫千金を目指せ！</p>
+            <h3>🎟️ 宝くじ</h3>
             <a href="game-lottery.html" class="play-game-btn">ゲーム開始</a>
           </div>
           <div class="game-card">
-            <h3>🎰 パチンコ (PACHINKO)</h3>
-            <p>フィーバー乱舞！一撃大量出玉を狙え！</p>
+            <h3>🎰 パチンコ</h3>
             <a href="game-pachinko.html" class="play-game-btn">ゲーム開始</a>
+          </div>
+          <div class="game-card">
+            <h3>🎲 チンチロ</h3>
+            <a href="game-chinchiro.html" class="play-game-btn">ゲーム開始</a>
+          </div>
+          <div class="game-card">
+            <h3>🪙 コインプッシャー</h3>
+            <a href="game-coinpusher.html" class="play-game-btn">ゲーム開始</a>
           </div>
         </div>
       </section>
@@ -159,7 +169,7 @@
 
   </div>
 
-  <!-- ★ お知らせ（通知）一覧モーダル ★ -->
+  <!-- お知らせモーダル -->
   <div id="notice-modal" class="modal hidden">
     <div class="modal-overlay"></div>
     <div class="modal-content notice-modal-content">
@@ -175,7 +185,7 @@
     </div>
   </div>
 
-  <!-- ★ ユーザーネーム自動設定ポップアップモーダル ★ -->
+  <!-- ユーザーネーム設定モーダル -->
   <div id="username-modal" class="modal hidden">
     <div class="modal-overlay"></div>
     <div class="modal-content username-modal-content">
@@ -205,7 +215,7 @@
     </div>
   </div>
 
-  <!-- ATMモーダルウィンドウ -->
+  <!-- ATMモーダル -->
   <div id="atm-modal" class="modal hidden">
     <div class="modal-overlay"></div>
     <div class="modal-content">
@@ -254,7 +264,7 @@
     </div>
   </div>
 
-  <!-- ★ 借金相殺チャンス（3Dコイントス）専用モーダル ★ -->
+  <!-- 3Dコイントスモーダル -->
   <div id="debt-challenge-modal" class="modal hidden">
     <div class="modal-overlay"></div>
     <div class="modal-content challenge-modal-content cliff-modal-content">
@@ -293,7 +303,7 @@
     </div>
   </div>
 
-  <!-- ★ 開発者ツール：ログインモーダル ★ -->
+  <!-- DevTools ログインモーダル -->
   <div id="devtools-login-modal" class="modal hidden">
     <div class="modal-overlay"></div>
     <div class="modal-content" style="max-width: 380px;">
@@ -309,7 +319,7 @@
     </div>
   </div>
 
-  <!-- ★ 開発者ツール：メインデバッグパネルモーダル ★ -->
+  <!-- DevTools パネルモーダル -->
   <div id="devtools-panel-modal" class="modal hidden">
     <div class="modal-overlay"></div>
     <div class="modal-content dev-modal-content">
@@ -319,7 +329,6 @@
       </div>
       <div class="modal-body" style="max-height: 75vh; overflow-y: auto;">
 
-        <!-- 1. プレイヤーパラメータ変更 -->
         <div class="dev-section-box">
           <div class="dev-section-title">💰 プレイヤーパラメータ即時編集</div>
           <div class="dev-grid-2col">
@@ -346,7 +355,6 @@
           </div>
         </div>
 
-        <!-- 2. ゲームデバッグ・フラグ制御 -->
         <div class="dev-section-box">
           <div class="dev-section-title">🎰 ゲーム物理・勝敗フラグ制御</div>
           <div style="display: flex; gap: 20px; flex-wrap: wrap;">
@@ -359,7 +367,6 @@
           </div>
         </div>
 
-        <!-- 3. 全プレイヤー向けお知らせ配信パネル -->
         <div class="dev-section-box">
           <div class="dev-section-title">📢 全ユーザー向けお知らせ配信</div>
           <div class="dev-input-group" style="margin-bottom: 8px;">

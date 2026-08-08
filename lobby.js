@@ -21,7 +21,6 @@ function toBigInt(val, defaultValue = 0n) {
   if (cleanStr === '' || cleanStr === '-') return defaultValue;
 
   try {
-    // 科学的記法 (e.g. 1.01e+50, -1.01E+50) の展開
     const match = cleanStr.match(/^([+-]?\d*(?:\.\d+)?)[eE]([+-]?\d+)$/);
     if (match) {
       let coefStr = match[1];
@@ -51,7 +50,6 @@ function toBigInt(val, defaultValue = 0n) {
       }
     }
 
-    // 通常の整数文字列（小数点がある場合は切り捨て）
     let strToParse = cleanStr;
     const dotIndex = strToParse.indexOf('.');
     if (dotIndex !== -1) {
@@ -93,7 +91,9 @@ let playerData = {
     roulette: 0n,
     poker: 0n,
     lottery: 0n,
-    pachinko: 0n
+    pachinko: 0n,
+    chinchiro: 0n,
+    coinpusher: 0n
   }
 };
 
@@ -132,7 +132,9 @@ function saveData() {
         roulette: toBigInt(playerData.highScores?.roulette, 0n).toString(),
         poker: toBigInt(playerData.highScores?.poker, 0n).toString(),
         lottery: toBigInt(playerData.highScores?.lottery, 0n).toString(),
-        pachinko: toBigInt(playerData.highScores?.pachinko, 0n).toString()
+        pachinko: toBigInt(playerData.highScores?.pachinko, 0n).toString(),
+        chinchiro: toBigInt(playerData.highScores?.chinchiro, 0n).toString(),
+        coinpusher: toBigInt(playerData.highScores?.coinpusher, 0n).toString()
       }
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(serializedData));
@@ -164,7 +166,9 @@ function loadData() {
         roulette: toBigInt(hs.roulette, 0n),
         poker: toBigInt(hs.poker, 0n),
         lottery: toBigInt(hs.lottery, 0n),
-        pachinko: toBigInt(hs.pachinko, 0n)
+        pachinko: toBigInt(hs.pachinko, 0n),
+        chinchiro: toBigInt(hs.chinchiro, 0n),
+        coinpusher: toBigInt(hs.coinpusher, 0n)
       };
     } else {
       if (!playerData.userId) playerData.userId = generateUserId();
@@ -239,9 +243,6 @@ function applyDebtInterest() {
   saveData();
 }
 
-/**
- * お知らせモーダル ＆ 未読インジケーター（赤丸バッジ）制御
- */
 function setupNoticeModal() {
   const openBtn = document.getElementById('open-notice-btn');
   const closeBtn = document.getElementById('close-notice-btn');

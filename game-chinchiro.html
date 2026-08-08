@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>チンチロ PRO - Fever Casino</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="keypad.css">
+  <link rel="stylesheet" href="game-chinchiro.css">
+</head>
+<body>
+
+  <!-- お祝い粒子コンテナ -->
+  <div id="particle-container"></div>
+
+  <!-- 勝敗オーバーレイ -->
+  <div id="win-overlay" class="result-overlay win-overlay hidden">
+    <div class="overlay-text">YOU WIN! 🎉</div>
+  </div>
+  <div id="lose-overlay" class="result-overlay lose-overlay hidden">
+    <div class="overlay-text">YOU LOSE... 💀</div>
+  </div>
+
+  <div class="game-container" id="chinchiro-container">
+    
+    <!-- ヘッダーエリア -->
+    <header class="game-header">
+      <a href="index.html" class="header-btn">🏠 ロビーに戻る</a>
+      <h1 class="game-title">🎲 究極 チンチロ PRO</h1>
+      
+      <div class="player-status">
+        <div class="status-item">
+          <span class="status-label">所持金:</span>
+          <span id="cash-display" class="status-value">$0</span>
+        </div>
+        <div class="status-item">
+          <span class="status-label">借金:</span>
+          <span id="debt-display" class="status-value debt-value">$0</span>
+        </div>
+        <button type="button" id="open-atm-btn" class="open-atm-btn">🏦 ATM</button>
+      </div>
+    </header>
+
+    <main class="chinchiro-main">
+
+      <!-- 配当＆役表 -->
+      <section class="paytable-section">
+        <div class="paytable-title">🏆 役 ＆ 配当一覧</div>
+        <div class="paytable-grid">
+          <div class="pay-item"><span>ピンゾロ (1-1-1)</span><b>5倍総取り</b></div>
+          <div class="pay-item"><span>ゾロ目 (2~6)</span><b>3倍総取り</b></div>
+          <div class="pay-item"><span>シゴロ (4-5-6)</span><b>2倍総取り</b></div>
+          <div class="pay-item"><span>通常の目 (ペア+出目)</span><b>目(1~6)の強さ勝負</b></div>
+          <div class="pay-item"><span>ヒフミ (1-2-3)</span><b>2倍没収 (敗北)</b></div>
+          <div class="pay-item"><span>ションベン (椀外落下)</span><b>即没収 (敗北)</b></div>
+        </div>
+      </section>
+
+      <!-- 対戦ステータス表示 -->
+      <div class="battle-status-bar">
+        <div class="dealer-hand-box">
+          <span class="role-label">親（ディーラー）:</span>
+          <span id="dealer-hand-text" class="hand-result-badge">---</span>
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="player-hand-box">
+          <span class="role-label">子（あなた）:</span>
+          <span id="player-hand-text" class="hand-result-badge">---</span>
+        </div>
+      </div>
+
+      <!-- アナウンスディスプレイ -->
+      <div id="chinchiro-message" class="chinchiro-message">
+        賭け金を選択して「勝負開始 (振る)」を押してください！
+      </div>
+
+      <!-- 丼（どんぶり）＆ 3D/2Dサイコロ振出しステージ -->
+      <section class="bowl-stage">
+        <div class="bowl-rim">
+          <canvas id="dice-canvas" width="380" height="260"></canvas>
+        </div>
+      </section>
+
+      <!-- 操作コントロールパネル -->
+      <section class="control-panel">
+        <div class="bet-input-group">
+          <button type="button" 
+                  id="bet-select-btn" 
+                  class="amount-select-btn use-keypad" 
+                  data-amount="100" 
+                  data-label="賭け金: ">
+            賭け金: $100
+          </button>
+        </div>
+
+        <div class="action-btn-group">
+          <button id="roll-btn" class="roll-btn" type="button">🎲 サイコロを振る (勝負)</button>
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- ATMモーダル -->
+  <div id="atm-modal" class="modal hidden">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>🏦 カジノ銀行（ATM）</h2>
+        <button id="close-atm-btn" class="close-btn" type="button">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="atm-step-section">
+          <p class="step-title">① 取引メニューを選択:</p>
+          <div class="atm-mode-grid">
+            <button class="mode-btn deposit" type="button" data-mode="deposit">預ける</button>
+            <button class="mode-btn withdraw" type="button" data-mode="withdraw">引き出す</button>
+            <button class="mode-btn repay" type="button" data-mode="repay">返済する</button>
+            <button class="mode-btn borrow" type="button" data-mode="borrow">借金する</button>
+          </div>
+        </div>
+        <div id="atm-action-panel" class="atm-action-panel hidden">
+          <div class="selected-mode-badge">選択中: <b id="selected-mode-text">-</b></div>
+          <p class="step-title">② 金額を指定して確定:</p>
+          <div class="action-row">
+            <button type="button" id="atm-amount-btn" class="amount-select-btn" data-amount="0" data-label="取引額: ">金額を入力: $0</button>
+            <button id="atm-execute-btn" class="execute-btn" type="button">✅ 取引を確定</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="lobby.js"></script>
+  <script src="atm.js"></script>
+  <script src="spreadsheet.js"></script>
+  <script src="keypad.js"></script>
+  <script src="game-chinchiro.js"></script>
+
+</body>
+</html>

@@ -1,7 +1,7 @@
 /**
  * ==========================================
- * Fever Casino - CR FEVER PACHINKO 本格正村ゲージシミュレーター (game-pachinko.js)
- * 正村ゲージ釘配置最適化・命釘バランス調整・極座標アーチ発射エンジン対応版
+ * Fever Casino - CR FEVER PACHINKO (game-pachinko.js)
+ * 完全ガード壁・天井アーチ＆フリッパー間スロープ＆無駄のない打ち出し実装版
  * ==========================================
  */
 
@@ -12,8 +12,7 @@
   // ゲーム状態・フラグ
   let isAutoFiring = false;
   let autoFireInterval = null;
-  let shootPower = 75; // 打ち出し強度 (30~100)
-  
+
   // モード定義: 'NORMAL' (1/99), 'RUSH' (1/15), 'JITAN' (1/99 時短100回)
   let currentMode = 'NORMAL';
   let jitanSpinsLeft = 0;
@@ -50,17 +49,77 @@
   let currentBallCost = 10n;
 
   // 盤面中心・寸法定数
-  const CX = 220; // 盤面中心X
-  const CY = 260; // 中央ユニット中心Y
-  const RAIL_R = 196; // 発射真鍮ガイドレール半径
+  const CX = 210; // 盤面中心X
+  const CY = 260; // 盤面中心Y
+  const RIGHT_LANE_X = 405; // 右側プランジャー発射レーンX
 
-  // 盤面物理オブジェクト群
+  // 盤面基本オブジェクト
   let balls = [];
-  let pegs = []; // 正村ゲージの釘
-  let spinners = []; // 風車
-  let tulips = []; // 開閉式チューリップ入賞口
-  let chacker = { x: CX, y: 430, w: 34, h: 20 }; // ヘソ（スタートチャッカー）
-  let attacker = { x: CX, y: 535, w: 84, h: 26 }; // 電動アタッカー
+  let pegs = [];         // 釘
+  let chacker = { x: CX, y: 430, w: 32, h: 18 };  // スタートチャッカー（ヘソ）
+  let attacker = { x: CX, y: 565, w: 84, h: 22 }; // 電動アタッカー
+
+  // ★ 左右青い壁セグメント（天井アーチ・左右壁最下部延長・フリッパー外側遮断ガイド含む） ★
+  const outerWalls = [
+    // 天井アーチ (右発射口上部から左上へ流れる)
+    { p1: { x: 430, y: 35 }, p2: { x: 380, y: 15 } },
+    { p1: { x: 380, y: 15 }, p2: { x: 200, y: 15 } },
+    { p1: { x: 200, y: 15 }, p2: { x: 20, y: 55 } },
+
+    // 左外壁 (天井からフリッパー支点直横まで隙間なく完全連動)
+    { p1: { x: 20, y: 55 }, p2: { x: 12, y: 200 } },
+    { p1: { x: 12, y: 200 }, p2: { x: 10, y: 380 } },
+    { p1: { x: 10, y: 380 }, p2: { x: 10, y: 502 } },
+    { p1: { x: 10, y: 502 }, p2: { x: 138, y: 512 } }, // 左フリッパー支点外側遮断
+
+    // 右遊技エリア外壁 (右レーン仕切り壁からフリッパー支点直横まで完全連動)
+    { p1: { x: 385, y: 80 }, p2: { x: 380, y: 200 } },
+    { p1: { x: 380, y: 200 }, p2: { x: 380, y: 380 } },
+    { p1: { x: 380, y: 380 }, p2: { x: 380, y: 502 } },
+    { p1: { x: 380, y: 502 }, p2: { x: 282, y: 512 } }, // 右フリッパー支点外側遮断
+
+    // 右発射レーン右外壁
+    { p1: { x: 430, y: 35 }, p2: { x: 430, y: 580 } },
+
+    // 右発射レーン左仕切り壁 (y=80 以降を開放して流入口確保)
+    { p1: { x: 385, y: 80 }, p2: { x: 385, y: 580 } }
+  ];
+
+  // ★ 最下部V字傾斜床（アウトスロープ）座標定義 ★
+  const drainSlopes = [
+    // 左から中央凹みへ滑り下りる坂
+    { p1: { x: 20, y: 575 }, p2: { x: CX - 18, y: 594 }, normalX: 0.44, normalY: -0.90 },
+    // 右から中央凹みへ滑り下りる坂
+    { p1: { x: RIGHT_LANE_X - 5, y: 575 }, p2: { x: CX + 18, y: 594 }, normalX: -0.44, normalY: -0.90 }
+  ];
+
+  // ★ 左右フリッパーパラメータ（角度を深めにしてスタックを完全解消） ★
+  let flippers = {
+    left: {
+      pivotX: 138,  // 左支点
+      pivotY: 510,
+      length: 68,
+      width: 12,
+      restAngle: 0.52,       // 静止時（急な右下がりで玉溜まり防止）
+      activeAngle: -0.38,    // 稼働時（跳ね上がり）
+      currentAngle: 0.52,
+      targetAngle: 0.52,
+      isTriggered: false,
+      angularVelocity: 0
+    },
+    right: {
+      pivotX: 282,  // 右支点
+      pivotY: 510,
+      length: 68,
+      width: 12,
+      restAngle: Math.PI - 0.52,    // 静止時（急な左下がりで玉溜まり防止）
+      activeAngle: Math.PI + 0.38,  // 稼働時（跳ね上がり）
+      currentAngle: Math.PI - 0.52,
+      targetAngle: Math.PI - 0.52,
+      isTriggered: false,
+      angularVelocity: 0
+    }
+  };
 
   function safeToBigInt(v) {
     if (typeof window.toBigInt === 'function') return window.toBigInt(v);
@@ -87,81 +146,60 @@
     if (payEl) payEl.textContent = formatMoney(currentSessionProfit);
   }
 
-  // 1. 正村ゲージ盤面初期化・釘・風車・チューリップ配置
+  // 1. パチンコ盤面初期化（正村ゲージ釘配置）
   function initBoard() {
     canvas = document.getElementById('pachinko-canvas');
     if (!canvas) return;
     ctx = canvas.getContext('2d');
 
     pegs = [];
-    spinners = [];
-    tulips = [];
 
-    // 1-1. 正村ゲージ（幾何学的・左右対称の美しい釘配列 ＆ 入賞率最適化調整）
-    // 天釘・天山釘
-    pegs.push({ x: CX - 25, y: 95, r: 3.5 });
-    pegs.push({ x: CX + 25, y: 95, r: 3.5 });
-    pegs.push({ x: CX - 50, y: 110, r: 3.5 });
-    pegs.push({ x: CX + 50, y: 110, r: 3.5 });
+    // 1-1. 天釘・天山釘
+    pegs.push({ x: CX - 30, y: 70, r: 3.5 });
+    pegs.push({ x: CX + 30, y: 70, r: 3.5 });
+    pegs.push({ x: CX - 60, y: 85, r: 3.5 });
+    pegs.push({ x: CX + 60, y: 85, r: 3.5 });
 
-    // ぶっコミ＆山釘（左右上部）
-    for (let i = 0; i < 5; i++) {
-      pegs.push({ x: CX - 88 - i * 16, y: 125 + i * 14, r: 3 });
-      pegs.push({ x: CX + 88 + i * 16, y: 125 + i * 14, r: 3 });
-    }
-
-    // ★ 増設：中央分流・散乱釘（真上からの直下を左右谷ルートへ分岐させる）
-    pegs.push({ x: CX, y: 180, r: 3.5 }); // 中央トップ分流釘
-    pegs.push({ x: CX - 20, y: 200, r: 3 });
-    pegs.push({ x: CX + 20, y: 200, r: 3 });
-    pegs.push({ x: CX - 40, y: 220, r: 3 });
-    pegs.push({ x: CX + 40, y: 220, r: 3 });
-
-    // 谷釘・鎧釘（中央ユニット両脇の流れ）
+    // 1-2. ぶっコミ ＆ 上部左右誘導釘
     for (let i = 0; i < 6; i++) {
-      pegs.push({ x: CX - 75 - i * 10, y: 220 + i * 22, r: 3 });
-      pegs.push({ x: CX + 75 + i * 10, y: 220 + i * 22, r: 3 });
+      pegs.push({ x: CX - 90 - i * 14, y: 100 + i * 16, r: 3 });
+      pegs.push({ x: CX + 90 + i * 14, y: 100 + i * 16, r: 3 });
     }
 
-    // ★ 増設：液晶両脇の散乱・誘導釘
-    pegs.push({ x: CX - 46, y: 270, r: 3 });
-    pegs.push({ x: CX + 46, y: 270, r: 3 });
-    pegs.push({ x: CX - 38, y: 310, r: 3 });
-    pegs.push({ x: CX + 38, y: 310, r: 3 });
+    // 1-3. 液晶ユニット上部 散乱釘
+    pegs.push({ x: CX, y: 140, r: 3.5 });
+    pegs.push({ x: CX - 25, y: 160, r: 3 });
+    pegs.push({ x: CX + 25, y: 160, r: 3 });
+    pegs.push({ x: CX - 50, y: 180, r: 3 });
+    pegs.push({ x: CX + 50, y: 180, r: 3 });
 
-    // ★ 増設：ハカマ直上・ジャンプ釘（ヘソ手前のV字分流）
-    pegs.push({ x: CX - 15, y: 350, r: 3 });
-    pegs.push({ x: CX + 15, y: 350, r: 3 });
+    // 1-4. 液晶両脇の鎧釘・谷釘
+    for (let i = 0; i < 7; i++) {
+      pegs.push({ x: CX - 85 - i * 8, y: 200 + i * 22, r: 3 });
+      pegs.push({ x: CX + 85 + i * 8, y: 200 + i * 22, r: 3 });
+    }
 
-    // ハカマ（チャッカー上部のV字釘）
-    pegs.push({ x: CX - 26, y: 372, r: 3 });
-    pegs.push({ x: CX + 26, y: 372, r: 3 });
-    pegs.push({ x: CX - 16, y: 394, r: 3 });
-    pegs.push({ x: CX + 16, y: 394, r: 3 });
+    // 1-5. ハカマ（スタートチャッカー上部誘導V字釘）
+    pegs.push({ x: CX - 24, y: 360, r: 3 });
+    pegs.push({ x: CX + 24, y: 360, r: 3 });
+    pegs.push({ x: CX - 15, y: 385, r: 3 });
+    pegs.push({ x: CX + 15, y: 385, r: 3 });
 
-    // ★ 調整：命釘（ヘソ直上・パチンコ特有の絶妙な開口幅へ調整）
-    pegs.push({ x: CX - 11.5, y: 416, r: 3.5 });
-    pegs.push({ x: CX + 11.5, y: 416, r: 3.5 });
+    // 1-6. 命釘（ヘソ直上）
+    pegs.push({ x: CX - 11.5, y: 412, r: 3.5 });
+    pegs.push({ x: CX + 11.5, y: 412, r: 3.5 });
 
-    // 1-2. 風車（回転ギミック 左右2箇所）
-    spinners.push({ x: CX - 120, y: 310, radius: 16, angle: 0, speed: 0 });
-    spinners.push({ x: CX + 120, y: 310, radius: 16, angle: 0, speed: 0 });
-
-    // 1-3. チューリップ入賞口（開閉ギミック）
-    // 中央（ヘソと連動）
-    tulips.push({ x: CX, y: 430, wClosed: 26, wOpen: 46, h: 18, isOpen: false, isChacker: true });
-    // 左右チューリップ
-    tulips.push({ x: CX - 110, y: 380, wClosed: 24, wOpen: 42, h: 18, isOpen: false, isChacker: false });
-    tulips.push({ x: CX + 110, y: 380, wClosed: 24, wOpen: 42, h: 18, isOpen: false, isChacker: false });
-    // 下部左右チューリップ
-    tulips.push({ x: CX - 65, y: 480, wClosed: 24, wOpen: 42, h: 18, isOpen: false, isChacker: false });
-    tulips.push({ x: CX + 65, y: 480, wClosed: 24, wOpen: 42, h: 18, isOpen: false, isChacker: false });
+    // 1-7. フリッパー横アウト誘導釘
+    pegs.push({ x: CX - 105, y: 440, r: 3 });
+    pegs.push({ x: CX + 105, y: 440, r: 3 });
+    pegs.push({ x: CX - 118, y: 475, r: 3 });
+    pegs.push({ x: CX + 118, y: 475, r: 3 });
 
     if (animFrameId) cancelAnimationFrame(animFrameId);
     gameLoop();
   }
 
-  // 2. 玉の発射処理 (極座標発射エンジン)
+  // 2. 玉の発射処理（常に最適な固定スピードで発射）
   function shootBall() {
     const betBtn = document.getElementById('bet-select-btn');
     const ballCost = safeToBigInt(betBtn ? betBtn.getAttribute('data-amount') : '10');
@@ -185,26 +223,22 @@
     if (typeof window.saveData === 'function') window.saveData();
     updateCashDisplay();
 
-    // ハンドルパワー (30 ~ 100 ➔ 初速 13.5 ~ 20.8)
-    const baseSpeed = 13.5 + (shootPower / 100) * 7.3;
-    const speed = baseSpeed + (Math.random() - 0.5) * 0.35;
+    // 天井をきれいに伝うベストな固定発射スピード
+    const speed = 19.5 + (Math.random() - 0.5) * 0.4;
 
     balls.push({
-      x: CX + RAIL_R, // 416
-      y: 540,
+      x: RIGHT_LANE_X + 12,
+      y: 530,
       vx: 0,
       vy: -speed,
       r: 4.5,
       cost: ballCost,
       inShooter: true,
-      shooterMode: 'LINE',
-      arcAngle: 0,
-      arcSpeed: speed / RAIL_R,
       stuckFrames: 0
     });
   }
 
-  // 3. 自動発射 ＆ パワーハンドル制御
+  // 3. 自動発射制御
   function toggleAutoFire() {
     const autoBtn = document.getElementById('auto-btn');
     if (isAutoFiring) {
@@ -232,24 +266,8 @@
     }
   }
 
-  function setShootPower(val) {
-    shootPower = Math.max(30, Math.min(100, parseInt(val, 10) || 75));
-    const slider = document.getElementById('power-slider');
-    const text = document.getElementById('power-val-text');
-    if (slider) slider.value = shootPower;
-    if (text) text.textContent = `${shootPower}%`;
-
-    document.querySelectorAll('.preset-btn').forEach(b => {
-      const p = parseInt(b.getAttribute('data-power'), 10);
-      if (p === shootPower) b.classList.add('active');
-      else b.classList.remove('active');
-    });
-  }
-
-  // 4. チャッカー（ヘソ）およびチューリップ入賞処理
+  // 4. チャッカー（ヘソ）入賞処理 ➔ スロット変動
   function onChackerHit(ball) {
-    if (tulips[0]) tulips[0].isOpen = true; // 中央チューリップ開口連動
-
     if (holdQueue.length < 4) {
       const winRate = (currentMode === 'RUSH') ? 15 : 99;
       
@@ -298,18 +316,6 @@
         consumeHoldAndSpin();
       }
     }
-  }
-
-  // 袖チューリップ入賞
-  function onTulipHit(tulip, ball) {
-    tulip.isOpen = !tulip.isOpen; // 開閉反転
-
-    const payout = ball.cost * 5n;
-    window.playerData.cash = safeToBigInt(window.playerData.cash) + payout;
-    currentSessionProfit += payout;
-
-    if (typeof window.saveData === 'function') window.saveData();
-    updateCashDisplay();
   }
 
   function updateHoldDisplay() {
@@ -588,6 +594,241 @@
     }
   }
 
+  // ★ 左右フリッパー角度更新 ＆ 物理演算 ★
+  function updateFlippers() {
+    ['left', 'right'].forEach(side => {
+      const f = flippers[side];
+      const prevAngle = f.currentAngle;
+      f.targetAngle = f.isTriggered ? f.activeAngle : f.restAngle;
+      
+      const diff = f.targetAngle - f.currentAngle;
+      f.currentAngle += diff * 0.40; // スピーディな跳ね上げ
+      f.angularVelocity = f.currentAngle - prevAngle;
+    });
+  }
+
+  // ★ 左右フリッパー描画 ★
+  function drawFlippers() {
+    ['left', 'right'].forEach(side => {
+      const f = flippers[side];
+      ctx.save();
+      ctx.translate(f.pivotX, f.pivotY);
+      ctx.rotate(f.currentAngle);
+
+      // 水色〜シアンの光沢フリッパー
+      const grad = ctx.createLinearGradient(0, -f.width / 2, f.length, f.width / 2);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.3, '#33c5ff');
+      grad.addColorStop(1, '#0088cc');
+
+      ctx.fillStyle = grad;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      ctx.roundRect(0, -f.width / 2, f.length, f.width, f.width / 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // 支点ピン
+      ctx.fillStyle = '#111111';
+      ctx.beginPath();
+      ctx.arc(0, 0, 5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    });
+  }
+
+  // ★ 盤面外側・天井を完全に塗りつぶす描画機能 ★
+  function drawOuterWallsAndCeiling() {
+    ctx.save();
+    ctx.fillStyle = '#0f081c'; // 外側の完全塗りつぶし色
+    ctx.strokeStyle = '#05d9e8';
+    ctx.lineWidth = 4;
+
+    // 左側〜天井外枠塗りつぶし領域
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(440, 0);
+    ctx.lineTo(440, 600);
+    ctx.lineTo(0, 600);
+    ctx.closePath();
+    ctx.fill();
+
+    // 内部の遊技エリアをくりぬいて描画（背景黒）
+    ctx.fillStyle = '#020105';
+    ctx.beginPath();
+    ctx.moveTo(20, 55);
+    ctx.lineTo(200, 15);
+    ctx.lineTo(380, 15);
+    ctx.lineTo(430, 35);
+    ctx.lineTo(430, 580);
+    ctx.lineTo(20, 580);
+    ctx.closePath();
+    ctx.fill();
+
+    // 青い壁セグメント描画（天井・外壁）
+    ctx.strokeStyle = '#413cd3';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    outerWalls.forEach(w => {
+      ctx.moveTo(w.p1.x, w.p1.y);
+      ctx.lineTo(w.p2.x, w.p2.y);
+    });
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  // ★ 玉とフリッパーの物理衝突判定・打ち返し演算 ★
+  function checkFlipperCollision(ball) {
+    ['left', 'right'].forEach(side => {
+      const f = flippers[side];
+      
+      const cos = Math.cos(f.currentAngle);
+      const sin = Math.sin(f.currentAngle);
+      const tipX = f.pivotX + f.length * cos;
+      const tipY = f.pivotY + f.length * sin;
+
+      // 線分 (Pivot -> Tip) に対する玉の最短距離点計算
+      const vx = tipX - f.pivotX;
+      const vy = tipY - f.pivotY;
+      const px = ball.x - f.pivotX;
+      const py = ball.y - f.pivotY;
+
+      const lenSq = f.length * f.length;
+      let t = (px * vx + py * vy) / lenSq;
+      t = Math.max(0, Math.min(1, t));
+
+      const closeX = f.pivotX + t * vx;
+      const closeY = f.pivotY + t * vy;
+
+      const dx = ball.x - closeX;
+      const dy = ball.y - closeY;
+      const dist = Math.hypot(dx, dy);
+      const minDist = ball.r + f.width / 2;
+
+      if (dist < minDist) {
+        // 衝突
+        const nx = dist === 0 ? 0 : dx / dist;
+        const ny = dist === 0 ? -1 : dy / dist;
+
+        ball.x = closeX + nx * minDist;
+        ball.y = closeY + ny * minDist;
+
+        const isFlippingUp = (side === 'left' && f.angularVelocity < -0.05) ||
+                             (side === 'right' && f.angularVelocity > 0.05);
+
+        if (isFlippingUp) {
+          // 強力跳ね返し
+          const hitPower = 13.0 + Math.abs(f.angularVelocity) * 20.0 + (t * 5.0);
+          ball.vx = nx * hitPower * 0.75 + (side === 'left' ? 3.0 : -3.0);
+          ball.vy = -Math.abs(hitPower * 0.98);
+        } else {
+          // ゴム反発＋傾斜すべり（フリッパー先端方向・中央回収口方向へ滑り落とす）
+          const dot = ball.vx * nx + ball.vy * ny;
+          ball.vx = (ball.vx - 1.8 * dot * nx) * 0.65;
+          ball.vy = (ball.vy - 1.8 * dot * ny) * 0.65;
+
+          // 静止角による滑り落ち補助
+          const slideForce = (side === 'left') ? 0.4 : -0.4;
+          ball.vx += slideForce;
+          ball.vy += 0.3;
+        }
+      }
+    });
+  }
+
+  // ★ 青い外壁ライン線分との正確な衝突バウンド処理 ★
+  function checkWallCollisions(ball) {
+    const wallThick = 4.0; // 壁の半厚み
+    const bounce = 0.65;
+
+    outerWalls.forEach(w => {
+      const p1 = w.p1;
+      const p2 = w.p2;
+
+      const vx = p2.x - p1.x;
+      const vy = p2.y - p1.y;
+      const px = ball.x - p1.x;
+      const py = ball.y - p1.y;
+
+      const lenSq = vx * vx + vy * vy;
+      let t = (px * vx + py * vy) / lenSq;
+      t = Math.max(0, Math.min(1, t));
+
+      const closeX = p1.x + t * vx;
+      const closeY = p1.y + t * vy;
+
+      const dx = ball.x - closeX;
+      const dy = ball.y - closeY;
+      const dist = Math.hypot(dx, dy);
+      const minDist = ball.r + wallThick;
+
+      if (dist < minDist) {
+        let nx = dist === 0 ? 0 : dx / dist;
+        let ny = dist === 0 ? -1 : dy / dist;
+
+        // 壁の押し出し位置補正
+        ball.x = closeX + nx * minDist;
+        ball.y = closeY + ny * minDist;
+
+        // 反発ベクトルの反映
+        const dot = ball.vx * nx + ball.vy * ny;
+        if (dot < 0) {
+          ball.vx = (ball.vx - (1 + bounce) * dot * nx) + (Math.random() - 0.5) * 0.2;
+          ball.vy = (ball.vy - (1 + bounce) * dot * ny);
+        }
+      }
+    });
+  }
+
+  // ★ 最下部V字傾斜床（アウトスロープ）衝突・すべり演算 ★
+  function checkSlopeCollisions(ball) {
+    const slopeThick = 3.0;
+
+    drainSlopes.forEach(s => {
+      const p1 = s.p1;
+      const p2 = s.p2;
+
+      const vx = p2.x - p1.x;
+      const vy = p2.y - p1.y;
+      const px = ball.x - p1.x;
+      const py = ball.y - p1.y;
+
+      const lenSq = vx * vx + vy * vy;
+      let t = (px * vx + py * vy) / lenSq;
+      t = Math.max(0, Math.min(1, t));
+
+      const closeX = p1.x + t * vx;
+      const closeY = p1.y + t * vy;
+
+      const dx = ball.x - closeX;
+      const dy = ball.y - closeY;
+      const dist = Math.hypot(dx, dy);
+      const minDist = ball.r + slopeThick;
+
+      if (dist < minDist) {
+        // 法線方向押し出し
+        ball.x = closeX + s.normalX * minDist;
+        ball.y = closeY + s.normalY * minDist;
+
+        // 坂に沿った加速度・速度減衰（内側中央方向へ自然に滑り落ちる）
+        const dot = ball.vx * s.normalX + ball.vy * s.normalY;
+        if (dot < 0) {
+          ball.vx = (ball.vx - 1.5 * dot * s.normalX);
+          ball.vy = (ball.vy - 1.5 * dot * s.normalY);
+        }
+
+        // 斜面すべり（中央回収口方向へ力をかける）
+        const slideDir = (closeX < CX) ? 0.45 : -0.45;
+        ball.vx += slideDir;
+        ball.vy += 0.35;
+      }
+    });
+  }
+
   // 8. メイン物理演算 ＆ Canvas描画ループ
   function gameLoop() {
     animFrameId = requestAnimationFrame(gameLoop);
@@ -601,54 +842,75 @@
       }
     }
 
-    // 風車アニメーション更新
-    spinners.forEach(s => {
-      s.angle += s.speed;
-      s.speed *= 0.95;
-    });
+    // フリッパー更新
+    updateFlippers();
 
     // 描画クリア
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // 8-1. 真鍮正円レール ＆ 外枠描画
-    ctx.strokeStyle = '#b8860b';
-    ctx.lineWidth = 6;
+    // 8-0. 盤面外側・天井の塗りつぶし描画
+    drawOuterWallsAndCeiling();
+
+    // 8-1. 右プランジャーレーン仕切り壁描画
+    ctx.strokeStyle = '#2d226a';
+    ctx.lineWidth = 5;
     ctx.beginPath();
-    ctx.arc(CX, CY, RAIL_R, Math.PI * 0.82, Math.PI * 2.18);
+    ctx.moveTo(RIGHT_LANE_X, 100);
+    ctx.lineTo(RIGHT_LANE_X, 580);
     ctx.stroke();
 
-    ctx.strokeStyle = '#fcd581';
+    // 8-2. 最下部V字傾斜床（アウトスロープ＆中央回収ドレイン）描画
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = '#dfb15b';
+    ctx.fillStyle = '#1c0d2e';
+
+    // 左傾斜床
+    ctx.beginPath();
+    ctx.moveTo(20, 580);
+    ctx.lineTo(CX - 18, 596);
+    ctx.lineTo(20, 600);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // 右傾斜床
+    ctx.beginPath();
+    ctx.moveTo(RIGHT_LANE_X - 5, 580);
+    ctx.lineTo(CX + 18, 596);
+    ctx.lineTo(RIGHT_LANE_X - 5, 600);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // 中央回収口（ドレインホッパー）
+    ctx.fillStyle = '#050308';
+    ctx.fillRect(CX - 18, 592, 36, 10);
+    ctx.strokeStyle = '#05d9e8';
     ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(CX, CY, RAIL_R - 2, Math.PI * 0.82, Math.PI * 2.18);
-    ctx.stroke();
+    ctx.strokeRect(CX - 18, 592, 36, 10);
 
-    // 発射レーン（右側仕切り壁）
-    ctx.strokeStyle = 'rgba(184, 134, 11, 0.6)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(CX + RAIL_R - 12, 570);
-    ctx.lineTo(CX + RAIL_R - 12, CY);
-    ctx.stroke();
+    // 8-3. スタートチャッカー（ヘソ）描画
+    ctx.fillStyle = '#ff2a6d';
+    ctx.fillRect(chacker.x - chacker.w / 2, chacker.y - chacker.h / 2, chacker.w, chacker.h);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(chacker.x - chacker.w / 2, chacker.y - chacker.h / 2, chacker.w, chacker.h);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('START', chacker.x, chacker.y + 1);
 
-    // 8-2. 中央10番モチーフ円形ドラムユニット（液晶）描画（見た目はそのまま維持）
+    // 8-4. 中央液晶スロットユニット描画
     ctx.save();
     ctx.beginPath();
     ctx.arc(CX, CY, 54, 0, Math.PI * 2);
-    ctx.fillStyle = '#100a06';
+    ctx.fillStyle = '#0a0614';
     ctx.fill();
     ctx.lineWidth = 5;
     ctx.strokeStyle = (currentMode === 'RUSH') ? '#ff2a6d' : '#dfb15b';
     ctx.stroke();
 
-    // 二重飾り円
-    ctx.beginPath();
-    ctx.arc(CX, CY, 48, 0, Math.PI * 2);
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = '#fcd581';
-    ctx.stroke();
-
-    // ドラム/スロット数字描画
     ctx.font = 'bold 28px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -657,81 +919,25 @@
     if (slotState === 'PUSH_WAIT') {
       ctx.fillStyle = '#ff2a6d';
       ctx.font = 'bold 18px sans-serif';
-      ctx.fillText('激熱一撃!', CX, CY);
+      ctx.fillText('PUSH!', CX, CY);
     } else {
-      ctx.fillText(slotReels[0], CX - 28, CY);
-      ctx.fillText(slotReels[1], CX, CY);
-      ctx.fillText(slotReels[2], CX + 28, CY);
+      ctx.fillText(`${slotReels[0]}${slotReels[1]}${slotReels[2]}`, CX, CY);
     }
 
-    // 大当りラウンド演出オーバーレイ
     if (slotState === 'ROUND') {
       ctx.beginPath();
-      ctx.arc(CX, CY, 48, 0, Math.PI * 2);
+      ctx.arc(CX, CY, 50, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
       ctx.fill();
 
       ctx.fillStyle = '#fcd581';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.fillText(`R ${currentRound}/${totalRounds}`, CX, CY - 16);
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillText(`R ${currentRound}/${totalRounds}`, CX, CY - 12);
       ctx.fillStyle = '#2ecc71';
-      ctx.font = 'bold 15px sans-serif';
-      ctx.fillText(`C: ${roundCount}/10`, CX, CY + 4);
-      ctx.fillStyle = '#05d9e8';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.fillText(`+${formatMoney(totalJackpotPayout)}`, CX, CY + 24);
+      ctx.font = 'bold 14px sans-serif';
+      ctx.fillText(`C: ${roundCount}/10`, CX, CY + 10);
     }
     ctx.restore();
-
-    // 8-3. 風車ギミック描画
-    spinners.forEach(s => {
-      ctx.save();
-      ctx.translate(s.x, s.y);
-      ctx.rotate(s.angle);
-      ctx.strokeStyle = '#b8860b';
-      ctx.lineWidth = 3;
-      for (let k = 0; k < 4; k++) {
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.lineTo(14 * Math.cos(k * Math.PI / 2), 14 * Math.sin(k * Math.PI / 2));
-        ctx.stroke();
-      }
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(0, 0, 4, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    });
-
-    // 8-4. チューリップ入賞口（開閉連動ギミック）描画
-    tulips.forEach(t => {
-      const w = t.isOpen ? t.wOpen : t.wClosed;
-      
-      // 中央ベース
-      ctx.fillStyle = t.isChacker ? '#ff2a6d' : '#3498db';
-      ctx.fillRect(t.x - t.wClosed / 2, t.y - t.h / 2, t.wClosed, t.h);
-
-      // 開閉羽（チューリップの花びら）
-      ctx.fillStyle = t.isOpen ? '#f39c12' : '#e74c3c';
-      ctx.beginPath();
-      // 左羽
-      ctx.moveTo(t.x - t.wClosed / 2, t.y + t.h / 2);
-      ctx.lineTo(t.x - w / 2, t.y - t.h / 2 - (t.isOpen ? 6 : 0));
-      ctx.lineTo(t.x - t.wClosed / 2, t.y - t.h / 2);
-      ctx.fill();
-
-      // 右羽
-      ctx.beginPath();
-      ctx.moveTo(t.x + t.wClosed / 2, t.y + t.h / 2);
-      ctx.lineTo(t.x + w / 2, t.y - t.h / 2 - (t.isOpen ? 6 : 0));
-      ctx.lineTo(t.x + t.wClosed / 2, t.y - t.h / 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 9px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(t.isChacker ? 'START' : 'OPEN', t.x, t.y + 3);
-    });
 
     // 8-5. 電動アタッカー描画
     ctx.fillStyle = isAttackerOpen ? '#2ecc71' : '#444444';
@@ -740,136 +946,77 @@
     ctx.lineWidth = 2;
     ctx.strokeRect(attacker.x - attacker.w / 2, attacker.y - attacker.h / 2, attacker.w, attacker.h);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 12px sans-serif';
+    ctx.font = 'bold 11px sans-serif';
     ctx.fillText(isAttackerOpen ? 'GREAT OPEN!!' : 'GREAT ATTACKER', attacker.x, attacker.y + 4);
 
-    // 8-6. 正村ゲージの真鍮釘描画
+    // 8-6. 水色フリッパーの描画
+    drawFlippers();
+
+    // 8-7. 釘描画
     pegs.forEach(p => {
       ctx.fillStyle = '#dfb15b';
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       ctx.fill();
-
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(p.x - 0.8, p.y - 0.8, p.r * 0.4, 0, Math.PI * 2);
-      ctx.fill();
     });
 
-    // 8-7. 玉の完全物理シミュレーション ＆ 描画
+    // 8-8. 玉の物理演算 ＆ 描画
     const gravity = 0.22;
-    const bounce = 0.55;
+    const bounce = 0.6;
 
     for (let i = balls.length - 1; i >= 0; i--) {
       const b = balls[i];
 
-      // スタック（挟まり・詰まり）判定・自動復帰
+      // ★ フリッパー間・中央下部での玉溜まり（スタック）防止補正 ★
       const speed = Math.hypot(b.vx, b.vy);
-      if (speed < 0.25) {
-        b.stuckFrames = (b.stuckFrames || 0) + 1;
-      } else {
-        b.stuckFrames = 0;
+      if (b.y > 480 && Math.abs(b.x - CX) < 35) {
+        // 中央ライン付近に位置する玉には常に回収口（下）へ向かう重力を付与
+        b.vy += 0.15;
+        b.vx += (b.x < CX) ? 0.1 : -0.1;
       }
 
-      // 40フレーム(約0.6秒)停止したらランダム振動インパルスで復帰！
-      if (b.stuckFrames > 40) {
-        b.vx += (Math.random() - 0.5) * 3.0;
-        b.vy += -1.5 - Math.random() * 2.0;
+      if (speed < 0.2) b.stuckFrames = (b.stuckFrames || 0) + 1;
+      else b.stuckFrames = 0;
+
+      if (b.stuckFrames > 25) {
+        b.vx += (Math.random() - 0.5) * 4.0;
+        b.vy += 2.0; // 下方向へ強制ドロップ
         b.stuckFrames = 0;
       }
-      // 120フレーム以上抜け出せない極端なスタックは安全除去
-      if (b.stuckFrames > 120) {
+      if (b.stuckFrames > 80) {
         balls.splice(i, 1);
         continue;
       }
 
-      // ★ A. 発射レーン通過中 (`inShooter === true`) - 極座標アーチシミュレーション
+      // ★ A. プランジャー発射レーン通過中
       if (b.inShooter) {
-        if (b.shooterMode === 'LINE') {
-          b.vy += gravity * 0.75; // 直線部は低摩擦
-          b.y += b.vy;
+        b.vy += gravity * 0.7;
+        b.y += b.vy;
 
-          // 発射直後の y <= CY (260) に達したら円弧（極座標）モードへ移行
-          if (b.y <= CY) {
-            b.shooterMode = 'ARC';
-            b.arcAngle = 0; // 0 rad = 真右 (CX + RAIL_R, CY)
-            b.arcSpeed = Math.abs(b.vy) / RAIL_R;
-          }
-        } else if (b.shooterMode === 'ARC') {
-          // アーチ上の運動：重力による角減速
-          const gravityAngleEffect = (gravity * 0.85) * Math.cos(b.arcAngle) / RAIL_R;
-          b.arcSpeed -= gravityAngleEffect;
-          b.arcAngle -= b.arcSpeed; // 反時計回り（角度が負の方向へ）
-
-          b.x = CX + RAIL_R * Math.cos(b.arcAngle);
-          b.y = CY + RAIL_R * Math.sin(b.arcAngle);
-
-          // アーチ脱出判定（天頂付近 -Math.PI * 0.55 ≈ -99度 を通過、または失速）
-          if (b.arcAngle <= -Math.PI * 0.55 || b.arcSpeed <= 0) {
-            const tangentialSpeed = Math.max(1.8, b.arcSpeed * RAIL_R);
-            
-            // 接線方向の速度ベクトル算出
-            let releaseVx = -tangentialSpeed * Math.sin(b.arcAngle);
-            let releaseVy = tangentialSpeed * Math.cos(b.arcAngle);
-
-            if (b.arcSpeed <= 0) {
-              // 途中で失速した場合（弱打ち等）：天頂手前から左・下へ滑らかにフォール
-              releaseVx = -1.8 - Math.random() * 0.8;
-              releaseVy = 0.5 + Math.random() * 1.0;
-            } else {
-              // 勢いよく天頂を抜けた場合（ブッコミ/強打ち）：しっかり左・下向きのベクトルを与える
-              releaseVx = Math.min(-2.5, releaseVx - 1.2);
-            }
-
-            b.vx = releaseVx;
-            b.vy = releaseVy;
-
-            // 離脱直後に右外枠壁(192px)にすぐひっかかるのを防ぐため、位置を少し内側(半径185px)へシフト
-            const innerR = 185;
-            b.x = CX + innerR * Math.cos(b.arcAngle);
-            b.y = CY + innerR * Math.sin(b.arcAngle);
-
-            b.inShooter = false;
-          }
+        // レーン上部曲がり部到達
+        if (b.y <= 50) {
+          b.inShooter = false;
+          b.x = RIGHT_LANE_X - 20;
+          b.vx = -4.5 - Math.random() * 1.5;
+          b.vy = 1.0;
         }
       } 
-      // ★ B. 通常の盤面遊技エリア通過中 (`inShooter === false`)
+      // ★ B. 通常盤面遊技エリア
       else {
         b.vy += gravity;
         b.x += b.vx;
         b.y += b.vy;
 
-        // 外枠円形ガイドレール（半径196の円弧）による跳ね返し
-        const distFromCenter = Math.hypot(b.x - CX, b.y - CY);
-        if (distFromCenter > 192 && b.y < 420) {
-          const angle = Math.atan2(b.y - CY, b.x - CX);
-          b.x = CX + Math.cos(angle) * 190;
-          b.y = CY + Math.sin(angle) * 190;
-          
-          const normalX = Math.cos(angle);
-          const normalY = Math.sin(angle);
-          const dot = b.vx * normalX + b.vy * normalY;
+        // 青い線の外壁との正確な線分衝突判定
+        checkWallCollisions(b);
 
-          b.vx = (b.vx - 2 * dot * normalX) * bounce + (Math.random() - 0.5) * 0.4;
-          b.vy = (b.vy - 2 * dot * normalY) * bounce;
-        }
+        // フリッパー衝突
+        checkFlipperCollision(b);
 
-        // 風車との衝突
-        spinners.forEach(s => {
-          const dx = b.x - s.x;
-          const dy = b.y - s.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist < b.r + s.radius) {
-            const angle = Math.atan2(dy, dx);
-            b.x = s.x + Math.cos(angle) * (b.r + s.radius);
-            b.y = s.y + Math.sin(angle) * (b.r + s.radius);
-            b.vx = Math.cos(angle) * 3.2 + (Math.random() - 0.5) * 2;
-            b.vy = Math.sin(angle) * 3.2;
-            s.speed += (b.vx > 0 ? 0.35 : -0.35);
-          }
-        });
+        // 最下部V字傾斜床（アウトスロープ）衝突
+        checkSlopeCollisions(b);
 
-        // 正村ゲージ釘との衝突判定（カツカツカツ…と微小散乱）
+        // 釘との衝突
         pegs.forEach(p => {
           const dx = b.x - p.x;
           const dy = b.y - p.y;
@@ -879,30 +1026,21 @@
             b.x = p.x + Math.cos(angle) * (b.r + p.r);
             b.y = p.y + Math.sin(angle) * (b.r + p.r);
             const speed = Math.hypot(b.vx, b.vy) * bounce;
-            
-            // 釘の反発角度にランダムな微小幅を与えて枝分かれさせる
             const spreadAngle = angle + (Math.random() - 0.5) * 0.35;
             b.vx = Math.cos(spreadAngle) * speed;
             b.vy = Math.sin(spreadAngle) * speed;
           }
         });
 
-        // チューリップ入賞判定（中央ヘソ・袖口）
-        tulips.forEach(t => {
-          const w = t.isOpen ? t.wOpen : t.wClosed;
-          if (
-            Math.abs(b.x - t.x) < w / 2 &&
-            Math.abs(b.y - t.y) < t.h / 2
-          ) {
-            if (t.isChacker) {
-              onChackerHit(b);
-            } else {
-              onTulipHit(t, b);
-            }
-            balls.splice(i, 1);
-            return;
-          }
-        });
+        // スタートチャッカー（ヘソ）入賞判定
+        if (
+          Math.abs(b.x - chacker.x) < chacker.w / 2 + b.r &&
+          Math.abs(b.y - chacker.y) < chacker.h / 2 + b.r
+        ) {
+          onChackerHit(b);
+          balls.splice(i, 1);
+          continue;
+        }
 
         // アタッカー入賞判定
         if (
@@ -916,7 +1054,11 @@
         }
       }
 
-      // 画面外（アウト）消去
+      // 最下部ドレイン回収口または画面外（アウト）消去
+      if (b.y > 585 && Math.abs(b.x - CX) < 28) {
+        balls.splice(i, 1);
+        continue;
+      }
       if (b.y > 610 || b.x < 5 || b.x > 435) {
         balls.splice(i, 1);
         continue;
@@ -951,7 +1093,7 @@
     }
   }
 
-  // 9. イベントリスナー初期化
+  // 9. イベントリスナー初期化（キーボード・ボタン・タッチイベント対応）
   document.addEventListener('DOMContentLoaded', () => {
     if (typeof window.loadData === 'function') window.loadData();
     updateCashDisplay();
@@ -959,25 +1101,14 @@
 
     const shootBtn = document.getElementById('shoot-btn');
     const autoBtn = document.getElementById('auto-btn');
-    const slider = document.getElementById('power-slider');
     const screenPushBtn = document.getElementById('screen-push-btn');
     const manualPushBtn = document.getElementById('manual-push-btn');
 
+    const leftFlipBtn = document.getElementById('flipper-left-btn');
+    const rightFlipBtn = document.getElementById('flipper-right-btn');
+
     if (shootBtn) shootBtn.addEventListener('click', shootBall);
     if (autoBtn) autoBtn.addEventListener('click', toggleAutoFire);
-
-    if (slider) {
-      slider.addEventListener('input', (e) => {
-        setShootPower(e.target.value);
-      });
-    }
-
-    document.querySelectorAll('.preset-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const p = btn.getAttribute('data-power');
-        setShootPower(p);
-      });
-    });
 
     const triggerPush = () => {
       if (isPushWaiting) {
@@ -988,12 +1119,57 @@
     if (screenPushBtn) screenPushBtn.addEventListener('click', triggerPush);
     if (manualPushBtn) manualPushBtn.addEventListener('click', triggerPush);
 
-    // SPACEキーで玉発射 / PUSHボタン操作
+    // フリッパー操作ボタンイベント結合
+    const bindFlipperBtn = (element, side) => {
+      if (!element) return;
+      
+      const press = (e) => {
+        e.preventDefault();
+        flippers[side].isTriggered = true;
+        element.classList.add('active');
+      };
+      const release = (e) => {
+        e.preventDefault();
+        flippers[side].isTriggered = false;
+        element.classList.remove('active');
+      };
+
+      element.addEventListener('mousedown', press);
+      element.addEventListener('mouseup', release);
+      element.addEventListener('mouseleave', release);
+      element.addEventListener('touchstart', press, { passive: false });
+      element.addEventListener('touchend', release, { passive: false });
+      element.addEventListener('touchcancel', release, { passive: false });
+    };
+
+    bindFlipperBtn(leftFlipBtn, 'left');
+    bindFlipperBtn(rightFlipBtn, 'right');
+
+    // キーボード操作 (A / ← で左フリッパー, D / → で右フリッパー, Spaceで玉発射)
     document.addEventListener('keydown', (e) => {
+      if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+        flippers.left.isTriggered = true;
+        if (leftFlipBtn) leftFlipBtn.classList.add('active');
+      }
+      if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+        flippers.right.isTriggered = true;
+        if (rightFlipBtn) rightFlipBtn.classList.add('active');
+      }
       if (e.code === 'Space') {
         e.preventDefault();
         if (isPushWaiting) triggerPush();
         else shootBall();
+      }
+    });
+
+    document.addEventListener('keyup', (e) => {
+      if (e.code === 'KeyA' || e.code === 'ArrowLeft') {
+        flippers.left.isTriggered = false;
+        if (leftFlipBtn) leftFlipBtn.classList.remove('active');
+      }
+      if (e.code === 'KeyD' || e.code === 'ArrowRight') {
+        flippers.right.isTriggered = false;
+        if (rightFlipBtn) rightFlipBtn.classList.remove('active');
       }
     });
   });

@@ -3,20 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CR FEVER CASINO パチンコ - Fever Casino</title>
-  <!-- ① 共通デザイン（ATMモーダル・基本スタイル）の読み込み -->
+  <title>CR FEVER PACHINKO - Fever Casino</title>
+  <!-- 共通スタイルの読み込み -->
   <link rel="stylesheet" href="style.css">
-  <!-- ② 共通テンキー用CSS -->
   <link rel="stylesheet" href="keypad.css">
-  <!-- ③ パチンコ専用デザインの読み込み -->
+  <!-- パチンコ専用スタイルの読み込み -->
   <link rel="stylesheet" href="game-pachinko.css">
 </head>
 <body>
 
-  <!-- 当たり時のお祝い粒子コンテナ -->
+  <!-- 当たり演出用パーティクルコンテナ -->
   <div id="particle-container"></div>
 
-  <!-- ヴィンテージ木枠風 パチンコ筐体コンテナ -->
+  <!-- ヴィンテージ木枠風 パチンコ＆ピンボールハイブリッド筐体 -->
   <div class="game-container pachinko-vintage-cabinet" id="pachinko-container">
     
     <!-- ヘッダーエリア -->
@@ -33,17 +32,16 @@
           <span class="status-label">借金:</span>
           <span id="debt-display" class="status-value debt-value">$0</span>
         </div>
-        <!-- ATM起動ボタン -->
         <button type="button" id="open-atm-btn" class="open-atm-btn">🏦 ATM</button>
       </div>
     </header>
 
-    <!-- モードバナー（通常 / 超確変RUSH / 時短ゾーン） -->
+    <!-- モード表示バナー（通常 / 超確変RUSH / 時短ゾーン） -->
     <div id="fever-banner" class="fever-banner mode-normal">
       <span id="mode-badge-text">通常モード (大当り確率 1/99)</span>
     </div>
 
-    <!-- 液晶上部 レトロデータカウンタ -->
+    <!-- レトロデータカウンタ -->
     <div class="pachinko-stats-bar">
       <div class="stat-box">
         <span class="stat-label">回転数</span>
@@ -66,11 +64,11 @@
     <!-- メイン筐体領域 -->
     <main class="pachinko-main">
 
-      <!-- パチンコ盤面（正村ゲージ・真鍮円形レール Canvas） -->
+      <!-- パチンコ盤面 Canvas -->
       <section class="pachinko-board-wrapper">
         <canvas id="pachinko-canvas" width="440" height="600"></canvas>
         
-        <!-- PUSHボタン一撃決動演出用オーバーレイ -->
+        <!-- 一撃PUSHボタン演出用オーバーレイ -->
         <div id="push-overlay" class="push-overlay hidden">
           <div class="push-msg">ボタンをPUSHせよ!!</div>
           <button id="screen-push-btn" class="screen-push-btn" type="button">
@@ -78,11 +76,6 @@
           </button>
         </div>
       </section>
-
-      <!-- アナウンスディスプレイ -->
-      <div id="pachinko-message" class="pachinko-message">
-        ハンドルを調整し「玉を発射」または「自動発射 ON」で正村ゲージへ打ち込め！
-      </div>
 
       <!-- コントロールパネル -->
       <section class="control-panel">
@@ -108,21 +101,10 @@
           </div>
         </div>
 
-        <!-- 中段：打ち出しパワー調整ハンドルコントロール -->
-        <div class="power-control-group">
-          <label for="power-slider" class="power-label">
-            打ち出し強度 (ハンドル): <b id="power-val-text">75%</b>
-          </label>
-          <div class="power-slider-wrapper">
-            <span class="power-min">弱</span>
-            <input type="range" id="power-slider" min="30" max="100" value="75" step="1">
-            <span class="power-max">強</span>
-          </div>
-          <div class="power-preset-btns">
-            <button type="button" class="preset-btn" data-power="50">弱打ち (50%)</button>
-            <button type="button" class="preset-btn active" data-power="75">ブッコミ (75%)</button>
-            <button type="button" class="preset-btn" data-power="95">強打ち (95%)</button>
-          </div>
+        <!-- 左右フリッパー操作ボタン群（ピンボール要素） -->
+        <div class="flipper-btn-group">
+          <button id="flipper-left-btn" class="flipper-btn left" type="button">◀ BIG Lフリッパー (A / ←)</button>
+          <button id="flipper-right-btn" class="flipper-btn right" type="button">BIG Rフリッパー (D / →) ▶</button>
         </div>
 
         <!-- 下段：操作ボタン群 -->
@@ -137,7 +119,7 @@
 
   </div>
 
-  <!-- ★ ATMモーダルウィンドウ ★ -->
+  <!-- ATMモーダルウィンドウ -->
   <div id="atm-modal" class="modal hidden">
     <div class="modal-overlay"></div>
     <div class="modal-content">
@@ -167,7 +149,7 @@
     </div>
   </div>
 
-  <!-- JavaScriptファイルの読み込み -->
+  <!-- JavaScriptスクリプト群 -->
   <script src="lobby.js"></script>
   <script src="atm.js"></script>
   <script src="spreadsheet.js"></script>

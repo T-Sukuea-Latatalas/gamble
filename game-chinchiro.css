@@ -1,0 +1,247 @@
+@charset "UTF-8";
+
+/* ==========================================
+   チンチロ PRO 専用スタイル (game-chinchiro.css)
+   ========================================== */
+
+:root {
+  --gold: #dfb15b;
+  --gold-bright: #fcd581;
+  --bg-dark: #0d0a08;
+  --tatami-green: #1a2a1c;
+  --bowl-wood: #4a2211;
+  --text-main: #f0f4f1;
+  --text-sub: #a0b0a6;
+  --danger-red: #ff4d4d;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  overflow-x: hidden;
+}
+
+.hidden { display: none !important; }
+
+.game-container {
+  width: 100%;
+  max-width: 550px;
+  background: radial-gradient(circle, #221510 0%, #0d0705 100%);
+  border: 3px solid var(--gold);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 0 35px rgba(223, 177, 91, 0.3);
+  position: relative;
+}
+
+/* ヘッダー */
+.game-header {
+  background: linear-gradient(180deg, #2c160c 0%, #150a05 100%);
+  padding: 12px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid var(--gold);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.game-title {
+  font-size: 1.1rem;
+  color: var(--gold);
+  text-shadow: 0 0 10px rgba(223, 177, 91, 0.6);
+}
+
+.header-btn {
+  color: var(--text-main);
+  text-decoration: none;
+  background-color: #3d1c10;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  border: 1px solid var(--gold);
+}
+
+.player-status { display: flex; align-items: center; gap: 12px; }
+.status-item { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; }
+.status-value { color: var(--gold); font-weight: bold; font-size: 1rem; }
+
+.debt-value, #debt-display {
+  color: var(--danger-red) !important;
+  font-weight: bold;
+  text-shadow: 0 0 8px rgba(255, 77, 77, 0.4);
+}
+
+.open-atm-btn {
+  background: linear-gradient(135deg, var(--gold), #b8860b);
+  color: #000;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 12px;
+  font-weight: bold;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.open-atm-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.chinchiro-main {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* 配当表 */
+.paytable-section {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(223, 177, 91, 0.3);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.paytable-title {
+  font-size: 0.75rem;
+  color: var(--gold);
+  text-align: center;
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.paytable-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  font-size: 0.7rem;
+}
+
+.pay-item {
+  display: flex;
+  justify-content: space-between;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 3px 6px;
+  border-radius: 4px;
+}
+
+.pay-item b { color: #2ecc71; }
+
+/* 対戦バー */
+.battle-status-bar {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  background: #000;
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+  padding: 8px;
+}
+
+.dealer-hand-box, .player-hand-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.role-label { font-size: 0.75rem; color: var(--text-sub); }
+
+.hand-result-badge {
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: var(--gold-bright);
+}
+
+.vs-badge {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: #ff2a6d;
+  text-shadow: 0 0 10px #ff2a6d;
+}
+
+/* アナウンス */
+.chinchiro-message {
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: bold;
+  color: var(--gold-bright);
+  background-color: #000;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--gold);
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 丼ステージ */
+.bowl-stage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0;
+}
+
+.bowl-rim {
+  background: radial-gradient(circle, #f5f2e9 0%, #d8d0c1 65%, var(--bowl-wood) 100%);
+  border: 10px solid #2d1308;
+  border-radius: 50%;
+  box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.8), 0 8px 25px rgba(0, 0, 0, 0.9);
+  padding: 5px;
+  width: 380px;
+  height: 260px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+}
+
+#dice-canvas {
+  display: block;
+  border-radius: 50%;
+}
+
+/* コントロール */
+.control-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bet-input-group { display: flex; justify-content: center; }
+
+.roll-btn {
+  width: 100%;
+  background: linear-gradient(135deg, var(--gold) 0%, #b8860b 100%);
+  color: #000;
+  font-size: 1.2rem;
+  font-weight: 900;
+  padding: 12px;
+  border: 2px solid var(--gold-bright);
+  border-radius: 30px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(223, 177, 91, 0.4);
+  transition: all 0.2s;
+}
+
+.roll-btn:hover:not(:disabled) { transform: translateY(-2px); filter: brightness(1.1); }
+.roll-btn:disabled { background: #555; border-color: #777; color: #888; cursor: not-allowed; box-shadow: none; }
+
+/* 粒子 */
+.particle {
+  position: fixed; top: -20px; font-size: 1.5rem; pointer-events: none;
+  animation: fall 2.5s linear forwards; z-index: 3000;
+}
+@keyframes fall { to { transform: translateY(105vh) rotate(360deg); opacity: 0; } }

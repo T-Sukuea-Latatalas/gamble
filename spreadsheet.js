@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * Fever Casino - Googleスプレッドシート連携 (spreadsheet.js)
- * 巨大数値・指数表記(1.01E+50)パース・安全描画対応版
+ * 巨大数値・指数表記(1.01E+50)パース・安全描画・全ゲーム対応版
  * ==========================================
  */
 
@@ -71,7 +71,7 @@ function ensurePlayerDataInitialized() {
       bank: 0n,
       debt: 0n,
       debtPlayCount: 0,
-      highScores: { blackjack: 0n, slots: 0n, roulette: 0n, poker: 0n, lottery: 0n, pachinko: 0n }
+      highScores: { blackjack: 0n, slots: 0n, roulette: 0n, poker: 0n, lottery: 0n, pachinko: 0n, chinchiro: 0n, coinpusher: 0n }
     };
   }
 
@@ -93,7 +93,9 @@ function ensurePlayerDataInitialized() {
         roulette: safeToBigInt(hs.roulette),
         poker: safeToBigInt(hs.poker),
         lottery: safeToBigInt(hs.lottery),
-        pachinko: safeToBigInt(hs.pachinko)
+        pachinko: safeToBigInt(hs.pachinko),
+        chinchiro: safeToBigInt(hs.chinchiro),
+        coinpusher: safeToBigInt(hs.coinpusher)
       };
     }
   } catch (e) {
@@ -138,7 +140,9 @@ async function sendDataToSpreadsheet(isManualTest = false) {
         roulette: safeToBigInt(hs.roulette).toString(),
         poker: safeToBigInt(hs.poker).toString(),
         lottery: safeToBigInt(hs.lottery).toString(),
-        pachinko: safeToBigInt(hs.pachinko).toString()
+        pachinko: safeToBigInt(hs.pachinko).toString(),
+        chinchiro: safeToBigInt(hs.chinchiro).toString(),
+        coinpusher: safeToBigInt(hs.coinpusher).toString()
       }
     };
 
@@ -190,6 +194,8 @@ async function fetchRankingFromSpreadsheet() {
     updateRankingList('ranking-poker', rankings.poker, 'poker');
     updateRankingList('ranking-lottery', rankings.lottery, 'lottery');
     updateRankingList('ranking-pachinko', rankings.pachinko, 'pachinko');
+    updateRankingList('ranking-chinchiro', rankings.chinchiro, 'chinchiro');
+    updateRankingList('ranking-coinpusher', rankings.coinpusher, 'coinpusher');
 
   } catch (error) {
     console.error("ランキングデータの取得に失敗しました:", error);
@@ -197,9 +203,6 @@ async function fetchRankingFromSpreadsheet() {
   }
 }
 
-/**
- * お知らせ機能 API
- */
 async function fetchNoticesFromSpreadsheet() {
   if (!GAS_API_URL || GAS_API_URL.includes("YOUR_GAS")) return;
 
@@ -289,7 +292,7 @@ window.fetchNoticesFromSpreadsheet = fetchNoticesFromSpreadsheet;
 window.sendNoticeToSpreadsheet = sendNoticeToSpreadsheet;
 
 function showLoadingStatus() {
-  const rankingIds = ['ranking-net-worth', 'ranking-blackjack', 'ranking-slots', 'ranking-roulette', 'ranking-poker', 'ranking-lottery', 'ranking-pachinko'];
+  const rankingIds = ['ranking-net-worth', 'ranking-blackjack', 'ranking-slots', 'ranking-roulette', 'ranking-poker', 'ranking-lottery', 'ranking-pachinko', 'ranking-chinchiro', 'ranking-coinpusher'];
   rankingIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '<li class="loading-text">データを読み込み中... 🏆</li>';
@@ -297,7 +300,7 @@ function showLoadingStatus() {
 }
 
 function showErrorStatus() {
-  const rankingIds = ['ranking-net-worth', 'ranking-blackjack', 'ranking-slots', 'ranking-roulette', 'ranking-poker', 'ranking-lottery', 'ranking-pachinko'];
+  const rankingIds = ['ranking-net-worth', 'ranking-blackjack', 'ranking-slots', 'ranking-roulette', 'ranking-poker', 'ranking-lottery', 'ranking-pachinko', 'ranking-chinchiro', 'ranking-coinpusher'];
   rankingIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '<li>ランキングの読み込みに失敗しました</li>';
